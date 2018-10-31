@@ -1,0 +1,74 @@
+apply plugin: 'java'
+apply plugin: 'eclipse'
+apply plugin: 'idea'
+apply plugin: 'maven-publish'
+
+buildscript {
+	repositories {
+		maven {
+			url "https://plugins.gradle.org/m2/"
+		}
+		jcenter()
+	}
+}
+
+sourceCompatibility = 1.8
+
+def ENV = System.getenv()
+if (ENV.BUILD_NUMBER) {
+    version = version + "." + "${System.getenv().BUILD_NUMBER}"
+}
+
+group = 'net.fabricmc'
+archivesBaseName = project.name.toLowerCase()
+
+repositories {
+	mavenCentral()
+	maven {
+		name = 'modmuss'
+		url = 'http://maven.modmuss50.me/'
+	}
+	maven {
+		name "RX14 Repository"
+		url 'http://mvn.rx14.co.uk/local/'
+	}
+}
+
+dependencies {
+	compile 'org.ow2.asm:asm:7.0'
+	compile 'org.ow2.asm:asm-commons:7.0'
+	compile 'org.ow2.asm:asm-tree:7.0'
+	compile 'org.ow2.asm:asm-util:7.0'
+	compile 'net.fabricmc:tiny-remapper:0.1.0.13'
+	compile group: 'com.google.code.findbugs', name: 'jsr305', version: '3.0.2'
+}
+
+apply from: 'https://github.com/FabricMC/fabric-docs/raw/master/gradle/maven.gradle'
+apply from: 'https://github.com/FabricMC/fabric-docs/raw/master/gradle/license.gradle'
+
+jar {
+	manifest {
+		attributes	'Implementation-Title': 'Stitch',
+				'Implementation-Version': version,
+				'Main-Class': "net.fabricmc.stitch.Main"
+	}
+}
+
+task allJar(type: Jar) {
+    from {
+		configurations.compile.collect {
+			it.isDirectory() ? it : zipTree(it)
+		}
+	}
+	manifest {
+		attributes	'Implementation-Title': 'Stitch',
+					'Implementation-Version': version,
+					'Main-Class': "net.fabricmc.stitch.Main"
+	}
+	classifier = 'all'
+	with jar
+}
+
+artifacts {
+   archives allJar
+}

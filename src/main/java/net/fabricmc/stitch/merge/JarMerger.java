@@ -99,11 +99,6 @@ public class JarMerger {
             Entry result;
             String side = null;
 
-            if (isClass && !isMinecraft) {
-                // Server bundles libraries, client doesn't - skip them
-                return null;
-            }
-
             Entry entry1 = entriesClient.get(entry);
             Entry entry2 = entriesServer.get(entry);
 
@@ -125,6 +120,11 @@ public class JarMerger {
                 side = "CLIENT";
             } else if ((result = entry2) != null) {
                 side = "SERVER";
+            }
+
+            if (isClass && !isMinecraft && result == entry2) {
+                // Server bundles libraries, client doesn't - skip them
+                return null;
             }
 
             if (result != null) {

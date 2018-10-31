@@ -99,10 +99,6 @@ class GenState {
             return null;
         }
 
-        if (c.getName().equals("ccr")) {
-            System.out.println(c + " " + m);
-        }
-
         if (newToOld != null) {
             List<ClassEntry> ccList = m.getMatchingEntries(storageNew, c);
             Set<String> names = new HashSet<>();
@@ -154,7 +150,7 @@ class GenState {
     private void addClass(BufferedWriter writer, ClassEntry c, ClassStorage storageOld, ClassStorage storage, String translatedPrefix) throws IOException {
         String cname = "";
 
-        if (c.getFullyQualifiedName().contains("/")) {
+        if (c.getName().contains("/")) {
             translatedPrefix = c.getFullyQualifiedName();
         } else {
             if (!isMappedClass(storage, c)) {

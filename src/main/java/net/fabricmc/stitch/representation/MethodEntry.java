@@ -18,13 +18,14 @@ package net.fabricmc.stitch.representation;
 
 import net.fabricmc.stitch.util.Pair;
 import net.fabricmc.stitch.util.StitchUtil;
+import org.objectweb.asm.commons.Remapper;
 
 import javax.annotation.Nullable;
 import java.util.*;
 
 public class MethodEntry extends Entry {
-    private final String desc;
-    private final String signature;
+    protected String desc;
+    protected String signature;
 
     protected MethodEntry(int access, String name, String desc, String signature) {
         super(name);
@@ -115,5 +116,12 @@ public class MethodEntry extends Entry {
         for (ClassEntry cc : c.getImplementers(storage)) {
             getMatchingEntries(entries, storage, cc, indent + 1);
         }
+    }
+
+    public void remap(ClassEntry classEntry, String oldOwner, Remapper remapper) {
+        String pastDesc = desc;
+
+        name = remapper.mapMethodName(oldOwner, name, pastDesc);
+        desc = remapper.mapMethodDesc(pastDesc);
     }
 }

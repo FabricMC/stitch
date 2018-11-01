@@ -136,9 +136,6 @@ public class JarReader {
 
                     ClassReader reader = new ClassReader(jarStream);
                     ClassVisitor visitor = new VisitorClass(Opcodes.ASM7, null);
-                    if (remapper != null) {
-                        visitor = new ClassRemapper(visitor, remapper);
-                    }
                     reader.accept(visitor, ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES);
                 }
             }
@@ -179,6 +176,7 @@ public class JarReader {
 
                         // get all matching entries
                         List<ClassEntry> mList = m.getMatchingEntries(jar, c);
+
                         if (mList.size() > 1) {
                             for (int i = 0; i < mList.size(); i++) {
                                 ClassEntry key = mList.get(i);
@@ -196,6 +194,18 @@ public class JarReader {
             }
 
             System.err.println("Joined " + joinedMethods + " MethodEntries (" + uniqueMethods + " unique, " + traversedClasses.size() + " classes).");
+        }
+
+        if (remapper != null) {
+            System.err.println("Remapping...");
+
+            Map<String, ClassEntry> classTree = new HashMap<>(jar.classTree);
+            jar.classTree.clear();
+
+            for (Map.Entry<String, ClassEntry> entry : classTree.entrySet()) {
+                entry.getValue().remap(remapper);
+                jar.classTree.put(entry.getValue().getKey(), entry.getValue());
+            }
         }
     }
 }

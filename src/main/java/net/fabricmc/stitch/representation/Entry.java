@@ -16,9 +16,11 @@
 
 package net.fabricmc.stitch.representation;
 
+import org.objectweb.asm.commons.Remapper;
+
 public abstract class Entry {
-    private final String name;
-    private int access;
+    protected String name;
+    protected int access;
 
     public Entry(String name) {
         this.name = name;

@@ -16,9 +16,11 @@
 
 package net.fabricmc.stitch.representation;
 
+import org.objectweb.asm.commons.Remapper;
+
 public class FieldEntry extends Entry {
-    private final String desc;
-    private final String signature;
+    protected String desc;
+    protected String signature;
 
     FieldEntry(int access, String name, String desc, String signature) {
         super(name);
@@ -38,5 +40,12 @@ public class FieldEntry extends Entry {
     @Override
     protected String getKey() {
         return super.getKey() + desc;
+    }
+
+    public void remap(ClassEntry classEntry, String oldOwner, Remapper remapper) {
+        String pastDesc = desc;
+
+        name = remapper.mapFieldName(oldOwner, name, pastDesc);
+        desc = remapper.mapDesc(pastDesc);
     }
 }

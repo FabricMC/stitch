@@ -16,11 +16,13 @@
 
 package net.fabricmc.stitch.representation;
 
+import org.objectweb.asm.commons.Remapper;
+
 import java.util.*;
 import java.util.stream.Collectors;
 
 public class ClassEntry extends Entry {
-    final String fullyQualifiedName;
+    String fullyQualifiedName;
     final Map<String, ClassEntry> innerClasses;
     final Map<String, FieldEntry> fields;
     final Map<String, MethodEntry> methods;
@@ -145,5 +147,43 @@ public class ClassEntry extends Entry {
     @Override
     public String getKey() {
         return getFullyQualifiedName();
+    }
+
+    public void remap(Remapper remapper) {
+        String oldName = fullyQualifiedName;
+        fullyQualifiedName = remapper.map(fullyQualifiedName);
+        String[] s = fullyQualifiedName.split("\\$");
+        name = s[s.length - 1];
+
+        if (superclass != null) {
+            superclass = remapper.map(superclass);
+        }
+
+        interfaces = interfaces.stream().map(remapper::map).collect(Collectors.toList());
+        subclasses = subclasses.stream().map(remapper::map).collect(Collectors.toList());
+        implementers = implementers.stream().map(remapper::map).collect(Collectors.toList());
+
+        Map<String, ClassEntry> innerClassOld = new HashMap<>(innerClasses);
+        Map<String, FieldEntry> fieldsOld = new HashMap<>(fields);
+        Map<String, MethodEntry> methodsOld = new HashMap<>(methods);
+
+        innerClasses.clear();
+        fields.clear();
+        methods.clear();
+
+        for (Map.Entry<String, ClassEntry> entry : innerClassOld.entrySet()) {
+            entry.getValue().remap(remapper);
+            innerClasses.put(entry.getValue().name, entry.getValue());
+        }
+
+        for (Map.Entry<String, FieldEntry> entry : fieldsOld.entrySet()) {
+            entry.getValue().remap(this, oldName, remapper);
+            fields.put(entry.getValue().getKey(), entry.getValue());
+        }
+
+        for (Map.Entry<String, MethodEntry> entry : methodsOld.entrySet()) {
+            entry.getValue().remap(this, oldName, remapper);
+            methods.put(entry.getValue().getKey(), entry.getValue());
+        }
     }
 }

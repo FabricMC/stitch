@@ -19,6 +19,8 @@ package net.fabricmc.stitch.representation;
 import net.fabricmc.stitch.util.Pair;
 import net.fabricmc.stitch.util.StitchUtil;
 import org.objectweb.asm.*;
+import org.objectweb.asm.commons.ClassRemapper;
+import org.objectweb.asm.commons.Remapper;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -28,7 +30,35 @@ import java.util.concurrent.ForkJoinPool;
 import java.util.jar.JarInputStream;
 
 public class JarReader {
+    public static class Builder {
+        private final JarReader reader;
+
+        private Builder(JarReader reader) {
+            this.reader = reader;
+        }
+
+        public static Builder create(JarEntry jar) {
+            return new Builder(new JarReader(jar));
+        }
+
+        public Builder joinMethodEntries(boolean value) {
+            reader.joinMethodEntries = value;
+            return this;
+        }
+
+        public Builder withRemapper(Remapper remapper) {
+            reader.remapper = remapper;
+            return this;
+        }
+
+        public JarReader build() {
+            return reader;
+        }
+    }
+
     private final JarEntry jar;
+    private boolean joinMethodEntries = true;
+    private Remapper remapper;
 
     public JarReader(JarEntry jar) {
         this.jar = jar;
@@ -105,7 +135,11 @@ public class JarReader {
                     }
 
                     ClassReader reader = new ClassReader(jarStream);
-                    reader.accept(new VisitorClass(Opcodes.ASM7, null), ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES);
+                    ClassVisitor visitor = new VisitorClass(Opcodes.ASM7, null);
+                    if (remapper != null) {
+                        visitor = new ClassRemapper(visitor, remapper);
+                    }
+                    reader.accept(visitor, ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES);
                 }
             }
         }
@@ -117,49 +151,51 @@ public class JarReader {
         System.err.println("Populated subclass entries.");
 
         // Stage 3: join identical MethodEntries
-        System.err.println("Joining MethodEntries...");
-        Set<ClassEntry> traversedClasses = StitchUtil.newIdentityHashSet();
+        if (joinMethodEntries) {
+            System.err.println("Joining MethodEntries...");
+            Set<ClassEntry> traversedClasses = StitchUtil.newIdentityHashSet();
 
-        int joinedMethods = 1;
-        int uniqueMethods = 0;
+            int joinedMethods = 1;
+            int uniqueMethods = 0;
 
-        Collection<MethodEntry> checkedMethods = StitchUtil.newIdentityHashSet();
+            Collection<MethodEntry> checkedMethods = StitchUtil.newIdentityHashSet();
 
-        for (ClassEntry entry : jar.getAllClasses()) {
-            if (traversedClasses.contains(entry)) {
-                continue;
-            }
+            for (ClassEntry entry : jar.getAllClasses()) {
+                if (traversedClasses.contains(entry)) {
+                    continue;
+                }
 
-            ClassPropagationTree tree = new ClassPropagationTree(jar, entry);
-            if (tree.getClasses().size() == 1) {
-                traversedClasses.add(entry);
-                continue;
-            }
+                ClassPropagationTree tree = new ClassPropagationTree(jar, entry);
+                if (tree.getClasses().size() == 1) {
+                    traversedClasses.add(entry);
+                    continue;
+                }
 
-            for (ClassEntry c : tree.getClasses()) {
-                for (MethodEntry m : c.getMethods()) {
-                    if (!checkedMethods.add(m)) {
-                        continue;
-                    }
+                for (ClassEntry c : tree.getClasses()) {
+                    for (MethodEntry m : c.getMethods()) {
+                        if (!checkedMethods.add(m)) {
+                            continue;
+                        }
 
-                    // get all matching entries
-                    List<ClassEntry> mList = m.getMatchingEntries(jar, c);
-                    if (mList.size() > 1) {
-                        for (int i = 0; i < mList.size(); i++) {
-                            ClassEntry key = mList.get(i);
-                            MethodEntry value = key.getMethod(m.getKey());
-                            if (value != m) {
-                                key.methods.put(m.getKey(), m);
-                                joinedMethods++;
+                        // get all matching entries
+                        List<ClassEntry> mList = m.getMatchingEntries(jar, c);
+                        if (mList.size() > 1) {
+                            for (int i = 0; i < mList.size(); i++) {
+                                ClassEntry key = mList.get(i);
+                                MethodEntry value = key.getMethod(m.getKey());
+                                if (value != m) {
+                                    key.methods.put(m.getKey(), m);
+                                    joinedMethods++;
+                                }
                             }
                         }
                     }
                 }
+
+                traversedClasses.addAll(tree.getClasses());
             }
 
-            traversedClasses.addAll(tree.getClasses());
+            System.err.println("Joined " + joinedMethods + " MethodEntries (" + uniqueMethods + " unique, " + traversedClasses.size() + " classes).");
         }
-
-        System.err.println("Joined " + joinedMethods + " MethodEntries (" + uniqueMethods + " unique, " + traversedClasses.size() + " classes).");
     }
 }

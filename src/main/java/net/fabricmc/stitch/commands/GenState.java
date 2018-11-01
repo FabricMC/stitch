@@ -62,15 +62,15 @@ class GenState {
         }
     }
 
-    private boolean isMappedClass(ClassStorage storage, ClassEntry c) {
+    public static boolean isMappedClass(ClassStorage storage, ClassEntry c) {
         return !c.isAnonymous();
     }
 
-    private boolean isMappedField(ClassStorage storage, ClassEntry c, FieldEntry f) {
+    public static boolean isMappedField(ClassStorage storage, ClassEntry c, FieldEntry f) {
         return f.getName().length() <= 2;
     }
 
-    private boolean isMappedMethod(ClassStorage storage, ClassEntry c, MethodEntry m) {
+    public static boolean isMappedMethod(ClassStorage storage, ClassEntry c, MethodEntry m) {
         return m.getName().length() <= 2 && m.getName().charAt(0) != '<' && m.isSource(storage, c);
     }
 

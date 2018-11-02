@@ -49,7 +49,7 @@ class GenState {
     public void generate(File file, JarEntry jarEntry, JarEntry jarOld) throws IOException {
         try (FileWriter fileWriter = new FileWriter(file)) {
             try (BufferedWriter writer = new BufferedWriter(fileWriter)) {
-                writer.write("v1\tmojang\tintermediary\n");
+                writer.write("v1\tofficial\tintermediary\n");
 
                 for (ClassEntry c : jarEntry.getClasses()) {
                     addClass(writer, c, jarOld, jarEntry, "net/minecraft/");
@@ -225,7 +225,7 @@ class GenState {
 
         try (FileReader fileReader = new FileReader(oldMappings)) {
             try (BufferedReader reader = new BufferedReader(fileReader)) {
-                TinyUtils.read(reader, "mojang", "intermediary", oldToIntermediary::addClass, oldToIntermediary::addField, oldToIntermediary::addMethod);
+                TinyUtils.read(reader, "official", "intermediary", oldToIntermediary::addClass, oldToIntermediary::addField, oldToIntermediary::addMethod);
             }
         }
 

@@ -205,56 +205,74 @@ public class CommandMergeTiny extends Command {
 		return count >= 4;
 	}
 
+	private TinyFile inputA, inputB;
+
 	private String fixMatch(TinyEntry a, TinyEntry b, String matchA, String index) {
 		if (a == null || matchA == null) {
 			return matchA;
 		}
 
-		if (b == null) {
-			b = a;
-		}
+		if (a.type == TinyEntryType.CLASS && a.getParent() != null && a.getParent().type == TinyEntryType.CLASS) {
+			// First, map to the shared index name ("official")
+			String officialPath = a.names.get("official");
+			TinyEntry officialEntry = a.getParent();
+			while (officialEntry.type == TinyEntryType.CLASS) {
+				officialPath = officialEntry.names.get("official") + "$" + officialPath;
+				officialEntry = officialEntry.getParent();
+			}
 
-		if (a.type == TinyEntryType.CLASS) {
-			a = a.getParent();
-			b = b.getParent();
-			while (a.type == TinyEntryType.CLASS) {
-				String m = a.names.get(index);
-				if (m == null) {
-					m = b.names.get(index);
-					if (m == null) {
-						for (String s : mappingBlankFillOrder) {
-							m = a.names.get(s);
-							if (m != null) {
-								break;
-							} else {
-								m = b.names.get(s);
-								if (m != null) {
-									break;
-								}
-							}
-						}
+			// Now, traverse it from the ROOT and get the names
+			Set<String> matchingOrder = new LinkedHashSet<>();
+			matchingOrder.add(index);
+			matchingOrder.addAll(mappingBlankFillOrder);
 
-						if (m == null) {
-							throw new RuntimeException("TODO");
-						}
+			String[] path = officialPath.split("\\$");
+			a = inputA.root;
+			b = inputB.root;
+
+			StringBuilder targetName = new StringBuilder();
+
+			for (int i = 0; i < path.length; i++) {
+				if (i > 0) {
+					targetName.append('$');
+				}
+
+				a = a != null ? a.getChild("official", path[i]) : null;
+				b = b != null ? b.getChild("official", path[i]) : null;
+				boolean appended = false;
+
+				for (String mName : matchingOrder) {
+					String nameA = a != null ? a.names.get(mName) : null;
+					String nameB = b != null ? b.names.get(mName) : null;
+
+					if (nameA != null) {
+						targetName.append(nameA);
+						appended = true;
+						break;
+					} else if (nameB != null) {
+						targetName.append(nameB);
+						appended = true;
+						break;
 					}
 				}
 
-				matchA = m + "$" + matchA;
-				a = a.getParent();
-				b = b.getParent();
+				if (!appended) {
+					throw new RuntimeException("Could not find mapping for " + officialPath + "!");
+				}
 			}
+
+			return targetName.toString();
 		}
 
 		return matchA;
 	}
 
-	private String getMatch(TinyEntry a, TinyEntry b, String index) {
+	private String getMatch(TinyEntry a, TinyEntry b, String index, String realIndex) {
 		String matchA = a != null ? a.names.get(index) : null;
 		String matchB = b != null ? b.names.get(index) : null;
 
-		matchA = fixMatch(a, b, matchA, index);
-		matchB = fixMatch(b, a, matchB, index);
+		matchA = fixMatch(a, b, matchA, realIndex);
+		matchB = fixMatch(b, a, matchB, realIndex);
 
 		if (matchA != null) {
 			if (matchB != null && !matchA.equals(matchB)) {
@@ -269,7 +287,9 @@ public class CommandMergeTiny extends Command {
 
 	private String getEntry(TinyEntry a, TinyEntry b, List<String> totalIndexList) {
 		if (a != null && b != null && !(a.header.equals(b.header))) {
-			throw new RuntimeException("Header mismatch: " + a.header + " " + b.header);
+			throw new RuntimeException("Header mismatch: " + a.header + " != " + b.header);
+		} else if (a != null && b != null && a.type != b.type) {
+			throw new RuntimeException("Type mismatch: " + a.type + " != " + b.type);
 		}
 
 		String header = a != null ? a.header : b.header;
@@ -279,10 +299,10 @@ public class CommandMergeTiny extends Command {
 		for (String index : totalIndexList) {
 			entry.append('\t');
 
-			String match = getMatch(a, b, index);
+			String match = getMatch(a, b, index, index);
 			if (match == null) {
 				for (String s : mappingBlankFillOrder) {
-					match = getMatch(a, b, s);
+					match = getMatch(a, b, s, index);
 					if (match != null) {
 						break;
 					}
@@ -303,11 +323,11 @@ public class CommandMergeTiny extends Command {
 	public void write(TinyEntry inputA, TinyEntry inputB, String index, String c, BufferedWriter writer, List<String> totalIndexList, int indent) throws IOException {
 		TinyEntry classA = inputA != null ? inputA.getChild(index, c) : null;
 		TinyEntry classB = inputB != null ? inputB.getChild(index, c) : null;
-/*
-		for (int i = 0; i <= indent; i++)
+
+		/* for (int i = 0; i <= indent; i++)
 			System.out.print("-");
-		System.out.println(" " + c + " " + (classA != null ? "Y" : "N") + " " + (classB != null ? "Y" : "N"));
-*/
+		System.out.println(" " + c + " " + (classA != null ? "Y" : "N") + " " + (classB != null ? "Y" : "N")); */
+
 		if ((classA == null || classA.names.size() == 0) && (classB == null || classB.names.size() == 0)) {
 			System.out.println("Warning: empty!");
 			return;
@@ -331,10 +351,10 @@ public class CommandMergeTiny extends Command {
 		}
 
 		System.out.println("Reading " + inputAf.getName());
-		TinyFile inputA = new TinyFile(inputAf);
+		inputA = new TinyFile(inputAf);
 
 		System.out.println("Reading " + inputBf.getName());
-		TinyFile inputB = new TinyFile(inputBf);
+		inputB = new TinyFile(inputBf);
 
 		System.out.println("Processing...");
 		BufferedWriter writer = Files.newBufferedWriter(outputf.toPath(), Charset.forName("UTF-8"));

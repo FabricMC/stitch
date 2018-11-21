@@ -16,10 +16,7 @@
 
 package net.fabricmc.stitch;
 
-import net.fabricmc.stitch.commands.CommandGenerate;
-import net.fabricmc.stitch.commands.CommandMergeJar;
-import net.fabricmc.stitch.commands.CommandMergeTiny;
-import net.fabricmc.stitch.commands.CommandUpdate;
+import net.fabricmc.stitch.commands.*;
 
 import java.util.Map;
 import java.util.TreeMap;
@@ -35,6 +32,7 @@ public class Main {
         addCommand(new CommandGenerate());
         addCommand(new CommandMergeJar());
         addCommand(new CommandMergeTiny());
+        addCommand(new CommandProposeFieldNames());
         addCommand(new CommandUpdate());
     }
 

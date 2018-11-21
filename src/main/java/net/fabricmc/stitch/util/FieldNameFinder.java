@@ -137,7 +137,7 @@ public class FieldNameFinder {
                                         if (!(c >= 'A' && c <= 'Z') && !(c >= 'a' && c <= 'z') && !(c >= '0' && c <= '9') && !(c == '_')) {
                                             s = s.substring(0, j) + "_" + s.substring(j + 1);
                                         } else if (j > 0 && Character.isUpperCase(s.charAt(j)) && Character.isLowerCase(s.charAt(j - 1))) {
-                                            s = s.substring(0, j) + "_" + s.substring(j, j).toLowerCase() + s.substring(j + 1);
+                                            s = s.substring(0, j) + "_" + s.substring(j, j + 1).toLowerCase() + s.substring(j + 1);
                                         }
                                     }
 

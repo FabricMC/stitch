@@ -106,6 +106,10 @@ public class ClassEntry extends Entry {
     }
 
     private List<ClassEntry> toClassEntryList(ClassStorage storage, List<String> stringList) {
+        if (stringList == null) {
+            return Collections.emptyList();
+        }
+
         return stringList.stream()
                 .map((s) -> storage.getClass(s, false))
                 .filter(Objects::nonNull)

@@ -24,6 +24,10 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.file.attribute.FileTime;
 import java.util.*;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ForkJoinPool;
+import java.util.concurrent.TimeUnit;
 import java.util.jar.JarEntry;
 import java.util.jar.JarInputStream;
 import java.util.jar.JarOutputStream;
@@ -68,30 +72,44 @@ public class JarMerger {
         output.close();
     }
 
-    private void readToMap(Map<String, Entry> map, JarInputStream input) throws IOException {
-        JarEntry entry;
-        while ((entry = input.getNextJarEntry()) != null) {
-            ByteArrayOutputStream stream = new ByteArrayOutputStream();
+    private void readToMap(Map<String, Entry> map, JarInputStream input) {
+        try {
             byte[] buffer = new byte[4096];
-            int l;
-            while ((l = input.read(buffer, 0, buffer.length)) > 0) {
-                stream.write(buffer, 0, l);
+            JarEntry entry;
+
+            while ((entry = input.getNextJarEntry()) != null) {
+                ByteArrayOutputStream stream = new ByteArrayOutputStream();
+                int l;
+                while ((l = input.read(buffer, 0, buffer.length)) > 0) {
+                    stream.write(buffer, 0, l);
+                }
+
+                map.put(entry.getName(), new Entry(entry, stream.toByteArray()));
             }
-
-            map.put(entry.getName(), new Entry(entry, stream.toByteArray()));
+        } catch (IOException e) {
+            e.printStackTrace();
         }
-
-        entriesAll.addAll(map.keySet());
     }
 
     private void add(JarOutputStream output, Entry entry) throws IOException {
         output.putNextEntry(entry.metadata);
         output.write(entry.data);
+        output.closeEntry();
     }
 
     public void merge() throws IOException {
-        readToMap(entriesClient, inputClient);
-        readToMap(entriesServer, inputServer);
+        ExecutorService service = Executors.newFixedThreadPool(2);
+        service.submit(() -> readToMap(entriesClient, inputClient));
+        service.submit(() -> readToMap(entriesServer, inputServer));
+        service.shutdown();
+        try {
+            service.awaitTermination(1, TimeUnit.HOURS);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
+        entriesAll.addAll(entriesClient.keySet());
+        entriesAll.addAll(entriesServer.keySet());
 
         List<Entry> entries = entriesAll.parallelStream().map((entry) -> {
             boolean isClass = entry.endsWith(".class");

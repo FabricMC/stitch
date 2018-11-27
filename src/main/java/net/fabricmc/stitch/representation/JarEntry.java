@@ -35,6 +35,10 @@ public class JarEntry extends Entry implements ClassStorage {
 
     @Override
     public ClassEntry getClass(String name, boolean create) {
+        if (name == null) {
+            return null;
+        }
+
         String[] nameSplit = name.split("\\$");
         int i = 0;
 

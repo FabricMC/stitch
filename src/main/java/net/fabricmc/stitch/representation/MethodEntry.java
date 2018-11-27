@@ -20,7 +20,6 @@ import net.fabricmc.stitch.util.Pair;
 import net.fabricmc.stitch.util.StitchUtil;
 import org.objectweb.asm.commons.Remapper;
 
-import javax.annotation.Nullable;
 import java.util.*;
 
 public class MethodEntry extends Entry {

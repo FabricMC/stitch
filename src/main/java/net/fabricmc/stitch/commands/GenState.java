@@ -19,9 +19,9 @@ package net.fabricmc.stitch.commands;
 import net.fabricmc.stitch.representation.*;
 import net.fabricmc.stitch.util.MatcherUtil;
 import net.fabricmc.tinyremapper.TinyUtils;
+import org.checkerframework.checker.nullness.qual.Nullable;
 import org.objectweb.asm.Opcodes;
 
-import javax.annotation.Nullable;
 import java.io.*;
 import java.util.*;
 

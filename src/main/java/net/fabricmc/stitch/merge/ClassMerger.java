@@ -61,15 +61,16 @@ public class ClassMerger {
         public void merge(List<T> list) {
             for (String s : entryNames) {
                 T entryClient = entriesClient.get(s);
+                T entryServer = entriesServer.get(s);
 
-                if (entryClient != null && entriesServer.containsKey(s)) {
+                if (entryClient != null && entryServer != null) {
                     list.add(entryClient);
                 } else if (entryClient != null) {
                     applySide(entryClient, "CLIENT");
                     list.add(entryClient);
                 } else {
-                    applySide(entriesServer.get(s), "SERVER");
-                    list.add(entriesServer.get(s));
+                    applySide(entryServer, "SERVER");
+                    list.add(entryServer);
                 }
             }
         }

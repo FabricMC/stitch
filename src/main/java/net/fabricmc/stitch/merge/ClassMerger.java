@@ -31,8 +31,8 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 public class ClassMerger {
-    private static final String SIDE_DESCRIPTOR = "Lnet/fabricmc/api/Side;";
-    private static final String SIDED_DESCRIPTOR = "Lnet/fabricmc/api/Sided;";
+    private static final String SIDE_DESCRIPTOR = "Lnet/fabricmc/api/EnvType;";
+    private static final String SIDED_DESCRIPTOR = "Lnet/fabricmc/api/Environment;";
 
     private abstract class Merger<T> {
         private final Map<String, T> entriesClient, entriesServer;

@@ -16,7 +16,12 @@
 
 package net.fabricmc.stitch.merge;
 
+import net.fabricmc.stitch.util.SnowmanClassVisitor;
 import net.fabricmc.stitch.util.StitchUtil;
+import org.objectweb.asm.ClassReader;
+import org.objectweb.asm.ClassVisitor;
+import org.objectweb.asm.ClassWriter;
+import org.objectweb.asm.Opcodes;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -51,6 +56,7 @@ public class JarMerger {
     private final JarOutputStream output;
     private final Map<String, Entry> entriesClient, entriesServer;
     private final Set<String> entriesAll;
+    private boolean removeSnowmen = true;
 
     public JarMerger(JarInputStream inputClient, JarInputStream inputServer, JarOutputStream output) {
         this.inputClient = inputClient;
@@ -66,6 +72,10 @@ public class JarMerger {
         this(new JarInputStream(inputClient), new JarInputStream(inputServer), new JarOutputStream(output));
     }
 
+    public void disablePostProcessing() {
+        removeSnowmen = false;
+    }
+
     public void close() throws IOException {
         inputClient.close();
         inputServer.close();
@@ -74,7 +84,7 @@ public class JarMerger {
 
     private void readToMap(Map<String, Entry> map, JarInputStream input) {
         try {
-            byte[] buffer = new byte[4096];
+            byte[] buffer = new byte[32768];
             JarEntry entry;
 
             while ((entry = input.getNextJarEntry()) != null) {
@@ -113,7 +123,7 @@ public class JarMerger {
 
         List<Entry> entries = entriesAll.parallelStream().map((entry) -> {
             boolean isClass = entry.endsWith(".class");
-            boolean isMinecraft = entry.startsWith("net/minecraft") || !entry.contains("/");
+            boolean isMinecraft = entriesClient.containsKey(entry) || entry.startsWith("net/minecraft") || !entry.contains("/");
             Entry result;
             String side = null;
 
@@ -140,14 +150,31 @@ public class JarMerger {
                 side = "SERVER";
             }
 
-            if (isClass && !isMinecraft && result == entry2) {
+            if (isClass && !isMinecraft && "SERVER".equals(side)) {
                 // Server bundles libraries, client doesn't - skip them
                 return null;
             }
 
             if (result != null) {
-                if (isMinecraft && isClass && side != null) {
-                    result = new Entry(result.metadata, CLASS_MERGER.addSideInformation(result.data, side));
+                if (isMinecraft && isClass) {
+                    byte[] data = result.data;
+                    ClassReader reader = new ClassReader(data);
+                    ClassWriter writer = new ClassWriter(0);
+                    ClassVisitor visitor = writer;
+
+                    if (side != null) {
+                        visitor = new ClassMerger.SidedClassVisitor(Opcodes.ASM7, visitor, side);
+                    }
+
+                    if (removeSnowmen) {
+                        visitor = new SnowmanClassVisitor(Opcodes.ASM7, visitor);
+                    }
+
+                    if (visitor != writer) {
+                        reader.accept(visitor, 0);
+                        data = writer.toByteArray();
+                        result = new Entry(result.metadata, data);
+                    }
                 }
 
                 return result;

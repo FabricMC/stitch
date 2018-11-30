@@ -31,7 +31,8 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 public class ClassMerger {
-    public static final String SIDED_DESCRIPTOR = "Lnet/fabricmc/api/Sided;";
+    private static final String SIDE_DESCRIPTOR = "Lnet/fabricmc/api/Side;";
+    private static final String SIDED_DESCRIPTOR = "Lnet/fabricmc/api/Sided;";
 
     private abstract class Merger<T> {
         private final Map<String, T> entriesClient, entriesServer;
@@ -76,12 +77,12 @@ public class ClassMerger {
         }
     }
 
-    private void visitSideAnnotation(AnnotationVisitor av, String side) {
-        av.visitEnum("value", "Lnet/fabricmc/api/Side;", side.toUpperCase());
+    private static void visitSideAnnotation(AnnotationVisitor av, String side) {
+        av.visitEnum("value", SIDE_DESCRIPTOR, side.toUpperCase());
         av.visitEnd();
     }
 
-    private class SidedClassVisitor extends ClassVisitor {
+    public static class SidedClassVisitor extends ClassVisitor {
         private final String side;
 
         public SidedClassVisitor(int api, ClassVisitor cv, String side) {
@@ -91,7 +92,7 @@ public class ClassMerger {
 
         @Override
         public void visitEnd() {
-            AnnotationVisitor av = cv.visitAnnotation("Lnet/fabricmc/api/Sided;", true);
+            AnnotationVisitor av = cv.visitAnnotation(SIDED_DESCRIPTOR, true);
             visitSideAnnotation(av, side);
             super.visitEnd();
         }

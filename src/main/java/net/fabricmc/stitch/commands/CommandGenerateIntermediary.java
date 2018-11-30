@@ -22,8 +22,8 @@ import net.fabricmc.stitch.representation.*;
 import java.io.*;
 import java.util.*;
 
-public class CommandGenerate extends Command {
-    public CommandGenerate() {
+public class CommandGenerateIntermediary extends Command {
+    public CommandGenerateIntermediary() {
         super("generateIntermediary");
     }
 

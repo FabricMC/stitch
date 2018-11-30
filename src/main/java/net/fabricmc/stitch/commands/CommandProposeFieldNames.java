@@ -16,7 +16,6 @@
 
 package net.fabricmc.stitch.commands;
 
-import com.sun.org.apache.bcel.internal.generic.INVOKESTATIC;
 import net.fabricmc.stitch.Command;
 import net.fabricmc.stitch.representation.JarReader;
 import net.fabricmc.stitch.util.FieldNameFinder;

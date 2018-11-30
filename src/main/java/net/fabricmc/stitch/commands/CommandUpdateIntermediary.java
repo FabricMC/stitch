@@ -25,8 +25,8 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.util.Map;
 
-public class CommandUpdate extends Command {
-    public CommandUpdate() {
+public class CommandUpdateIntermediary extends Command {
+    public CommandUpdateIntermediary() {
         super("updateIntermediary");
     }
 

@@ -29,11 +29,11 @@ public class Main {
     }
 
     static {
-        addCommand(new CommandGenerate());
+        addCommand(new CommandGenerateIntermediary());
         addCommand(new CommandMergeJar());
         addCommand(new CommandMergeTiny());
         addCommand(new CommandProposeFieldNames());
-        addCommand(new CommandUpdate());
+        addCommand(new CommandUpdateIntermediary());
     }
 
     public static void main(String[] args) {

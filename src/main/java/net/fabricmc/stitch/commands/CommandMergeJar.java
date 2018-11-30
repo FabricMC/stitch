@@ -32,12 +32,12 @@ public class CommandMergeJar extends Command {
 
     @Override
     public String getHelpString() {
-        return "<client-jar> <server-jar> <output>";
+        return "<client-jar> <server-jar> <output> [--removeSnowman]";
     }
 
     @Override
     public boolean isArgumentCountValid(int count) {
-        return count == 3;
+        return count >= 3;
     }
 
     @Override

@@ -17,13 +17,12 @@
 package net.fabricmc.stitch.util;
 
 import org.objectweb.asm.ClassVisitor;
-import org.objectweb.asm.FieldVisitor;
 import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodVisitor;
 
 public class SnowmanClassVisitor extends ClassVisitor {
-	public static class SnowmanMethodVistor extends MethodVisitor {
-		public SnowmanMethodVistor(int api, MethodVisitor methodVisitor) {
+	public static class SnowmanMethodVisitor extends MethodVisitor {
+		public SnowmanMethodVisitor(int api, MethodVisitor methodVisitor) {
 			super(api, methodVisitor);
 		}
 
@@ -57,12 +56,18 @@ public class SnowmanClassVisitor extends ClassVisitor {
 	}
 
 	@Override
+	public void visitSource(final String source, final String debug) {
+		// Don't trust the obfuscation on this.
+		super.visitSource(null, null);
+	}
+
+	@Override
 	public MethodVisitor visitMethod(
 			final int access,
 			final String name,
 			final String descriptor,
 			final String signature,
 			final String[] exceptions) {
-		return new SnowmanMethodVistor(api, super.visitMethod(access, name, descriptor, signature, exceptions));
+		return new SnowmanMethodVisitor(api, super.visitMethod(access, name, descriptor, signature, exceptions));
 	}
 }

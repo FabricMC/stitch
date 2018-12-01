@@ -47,6 +47,10 @@ public class MethodEntry extends Entry {
     }
 
     public boolean isSource(ClassStorage storage, ClassEntry c) {
+        if (Access.isPrivateOrStatic(getAccess())) {
+            return true;
+        }
+
         Set<ClassEntry> entries = StitchUtil.newIdentityHashSet();
         entries.add(c);
         getMatchingSources(entries, storage, c);
@@ -79,6 +83,8 @@ public class MethodEntry extends Entry {
             entriesNew.clear();
         }
 
+	    entries.removeIf(cc -> cc.getMethod(getKey()) == null);
+
         return new ArrayList<>(entries);
     }
 
@@ -101,12 +107,7 @@ public class MethodEntry extends Entry {
     }
 
     void getMatchingEntries(Collection<ClassEntry> entries, ClassStorage storage, ClassEntry c, int indent) {
-        MethodEntry m = c.getMethod(getKey());
-        if (m != null) {
-            if (!Access.isPrivateOrStatic(m.getAccess())) {
-                entries.add(c);
-            }
-        }
+        entries.add(c);
 
         for (ClassEntry cc : c.getSubclasses(storage)) {
             getMatchingEntries(entries, storage, cc, indent + 1);

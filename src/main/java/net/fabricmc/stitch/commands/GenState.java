@@ -29,6 +29,7 @@ class GenState {
     private final Map<String, Integer> counters = new HashMap<>();
     private final Map<Entry, Integer> values = new IdentityHashMap<>();
     private GenMap oldToIntermediary, newToOld;
+    private boolean rewriteMode = false;
 
     public String next(Entry entry, String name) {
         return name + "_" + values.computeIfAbsent(entry, (e) -> {
@@ -93,6 +94,8 @@ class GenState {
         return next(f, "field");
     }
 
+    private final Map<MethodEntry, String> methodNames = new IdentityHashMap<>();
+
     @Nullable
     private String getMethodName(ClassStorage storageOld, ClassStorage storageNew, ClassEntry c, MethodEntry m) {
         if (!isMappedMethod(storageNew, c, m)) {
@@ -100,6 +103,10 @@ class GenState {
         }
 
         if (newToOld != null) {
+            if (methodNames.containsKey(m)) {
+                return methodNames.get(m);
+            }
+
             List<ClassEntry> ccList = m.getMatchingEntries(storageNew, c);
             Set<String> names = new HashSet<>();
 
@@ -129,6 +136,21 @@ class GenState {
             }
 
             if (names.size() > 1) {
+            	if (rewriteMode) {
+		            int lowestNum = Integer.MAX_VALUE;
+		            for (String s : names) {
+						if (!s.startsWith("method_")) {
+							throw new RuntimeException("Could not rewrite method: " + s);
+						}
+
+						int v = new Integer(s.split("_")[1]);
+						if (v < lowestNum) {
+							lowestNum = v;
+						}
+		            }
+		            return "method_" + lowestNum;
+	            }
+
                 StringBuilder builder = new StringBuilder("Conflict: ");
                 int i = 0;
                 for (String s : names) {
@@ -140,7 +162,9 @@ class GenState {
 
                 throw new RuntimeException(builder.toString());
             } else if (names.size() == 1) {
-                return names.iterator().next();
+                String s = names.iterator().next();
+                methodNames.put(m, s);
+                return s;
             }
         }
 
@@ -204,6 +228,32 @@ class GenState {
         for (ClassEntry cc : c.getInnerClasses()) {
             addClass(writer, cc, storageOld, storage, translatedPrefix + cname + "$");
         }
+    }
+
+    public void prepareRewrite(File oldMappings) throws IOException {
+        oldToIntermediary = new GenMap(false);
+        newToOld = new GenMap.Dummy(false);
+
+        // TODO: only read once
+        try (FileReader fileReader = new FileReader(oldMappings)) {
+            try (BufferedReader reader = new BufferedReader(fileReader)) {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    if (line.startsWith("# INTERMEDIARY-COUNTER")) {
+                        String[] parts = line.split(" ");
+                        counters.put(parts[2], Integer.parseInt(parts[3]));
+                    }
+                }
+            }
+        }
+
+        try (FileReader fileReader = new FileReader(oldMappings)) {
+            try (BufferedReader reader = new BufferedReader(fileReader)) {
+                TinyUtils.read(reader, "official", "intermediary", oldToIntermediary::addClass, oldToIntermediary::addField, oldToIntermediary::addMethod);
+            }
+        }
+
+        rewriteMode = true;
     }
 
     public void prepareUpdate(File oldMappings, File matches) throws IOException {

@@ -175,6 +175,11 @@ public class JarReader {
                         }
 
                         // get all matching entries
+
+                        if (c.getFullyQualifiedName().contains("MinecraftServer") && m.getDescriptor().equals("()Ljava/lang/String;") && m.getName().equals("K")) {
+                            System.out.println("hmm");
+                        }
+
                         List<ClassEntry> mList = m.getMatchingEntries(jar, c);
 
                         if (mList.size() > 1) {

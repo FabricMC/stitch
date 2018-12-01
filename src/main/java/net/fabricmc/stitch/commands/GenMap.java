@@ -158,4 +158,40 @@ public class GenMap {
     public DescEntry getMethod(DescEntry entry) {
         return get(entry, (c) -> c.methodMaps);
     }
+
+    public static class Dummy extends GenMap {
+        public Dummy(boolean inverse) {
+            super(inverse);
+        }
+
+        @Nullable
+        @Override
+        public String getClass(String from) {
+            return from;
+        }
+
+        @Nullable
+        @Override
+        public DescEntry getField(String owner, String name, String desc) {
+            return new DescEntry(owner, name, desc);
+        }
+
+        @Nullable
+        @Override
+        public DescEntry getField(DescEntry entry) {
+            return entry;
+        }
+
+        @Nullable
+        @Override
+        public DescEntry getMethod(String owner, String name, String desc) {
+            return new DescEntry(owner, name, desc);
+        }
+
+        @Nullable
+        @Override
+        public DescEntry getMethod(DescEntry entry) {
+            return entry;
+        }
+    }
 }

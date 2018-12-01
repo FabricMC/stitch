@@ -33,6 +33,7 @@ public class Main {
         addCommand(new CommandMergeJar());
         addCommand(new CommandMergeTiny());
         addCommand(new CommandProposeFieldNames());
+        addCommand(new CommandRewriteIntermediary());
         addCommand(new CommandUpdateIntermediary());
     }
 

@@ -56,7 +56,7 @@ public class JarMerger {
     private final JarOutputStream output;
     private final Map<String, Entry> entriesClient, entriesServer;
     private final Set<String> entriesAll;
-    private boolean removeSnowmen = true;
+    private boolean removeSnowmen = false;
 
     public JarMerger(JarInputStream inputClient, JarInputStream inputServer, JarOutputStream output) {
         this.inputClient = inputClient;
@@ -72,8 +72,13 @@ public class JarMerger {
         this(new JarInputStream(inputClient), new JarInputStream(inputServer), new JarOutputStream(output));
     }
 
+    @Deprecated
     public void disablePostProcessing() {
         removeSnowmen = false;
+    }
+
+    public void enableSnowmanRemoval() {
+        removeSnowmen = true;
     }
 
     public void close() throws IOException {

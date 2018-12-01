@@ -24,6 +24,7 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.util.Locale;
 
 public class CommandMergeJar extends Command {
     public CommandMergeJar() {
@@ -45,6 +46,17 @@ public class CommandMergeJar extends Command {
         File in1f = new File(args[0]);
         File in2f = new File(args[1]);
         File outf = new File(args[2]);
+        boolean removeSnowman = false;
+
+        for (int i = 3; i < args.length; i++) {
+            if (args[i].startsWith("--")) {
+                switch (args[i].substring(2).toLowerCase(Locale.ROOT)) {
+                    case "removesnowman":
+                        removeSnowman = true;
+                        break;
+                }
+            }
+        }
 
         if (!in1f.exists() || !in1f.isFile()) {
             throw new FileNotFoundException("Client JAR could not be found!");
@@ -59,6 +71,9 @@ public class CommandMergeJar extends Command {
              FileOutputStream outfs = new FileOutputStream(outf)) {
 
             JarMerger merger = new JarMerger(in1fs, in2fs, outfs);
+            if (removeSnowman) {
+                merger.enableSnowmanRemoval();
+            }
 
             try {
                 System.out.println("Merging...");

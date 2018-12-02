@@ -18,12 +18,14 @@ package net.fabricmc.stitch.commands;
 import net.fabricmc.tinyremapper.TinyUtils;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.TreeMap;
 import java.util.function.Function;
 
 public class GenMap {
-    public static class DescEntry {
+    public static class DescEntry implements Comparable<DescEntry> {
         private final String owner;
         private final String name;
         private final String desc;
@@ -65,6 +67,11 @@ public class GenMap {
         @Override
         public int hashCode() {
             return 19 * name.hashCode() + desc.hashCode();
+        }
+
+        @Override
+        public int compareTo(DescEntry descEntry) {
+            return this.name.compareTo(descEntry.name);
         }
     }
 

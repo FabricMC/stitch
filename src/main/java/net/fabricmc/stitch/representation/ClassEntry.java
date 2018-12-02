@@ -37,9 +37,9 @@ public class ClassEntry extends Entry {
         super(name);
 
         this.fullyQualifiedName = fullyQualifiedName;
-        this.innerClasses = new HashMap<>();
-        this.fields = new HashMap<>();
-        this.methods = new HashMap<>();
+        this.innerClasses = new TreeMap<>(Comparator.naturalOrder());
+        this.fields = new TreeMap<>(Comparator.naturalOrder());
+        this.methods = new TreeMap<>(Comparator.naturalOrder());
 
         this.subclasses = new ArrayList<>();
         this.implementers = new ArrayList<>();

@@ -29,7 +29,7 @@ public class JarEntry extends Entry implements ClassStorage {
         super(file.getName());
 
         this.file = file;
-        this.classTree = new HashMap<>();
+        this.classTree = new TreeMap<>(Comparator.naturalOrder());
         this.allClasses = new ArrayList<>();
     }
 

@@ -29,6 +29,7 @@ class GenState {
     private final Map<String, Integer> counters = new HashMap<>();
     private final Map<Entry, Integer> values = new IdentityHashMap<>();
     private GenMap oldToIntermediary, newToOld;
+    private GenMap newToIntermediary;
     private boolean rewriteMode = false;
 
     public String next(Entry entry, String name) {
@@ -48,6 +49,16 @@ class GenState {
     }
 
     public void generate(File file, JarEntry jarEntry, JarEntry jarOld) throws IOException {
+        if (file.exists()) {
+            System.err.println("Target file exists - loading...");
+            newToIntermediary = new GenMap(false);
+            try (FileReader fileReader = new FileReader(file)) {
+                try (BufferedReader reader = new BufferedReader(fileReader)) {
+                    TinyUtils.read(reader, "official", "intermediary", newToIntermediary::addClass, newToIntermediary::addField, newToIntermediary::addMethod);
+                }
+            }
+        }
+
         try (FileWriter fileWriter = new FileWriter(file)) {
             try (BufferedWriter writer = new BufferedWriter(fileWriter)) {
                 writer.write("v1\tofficial\tintermediary\n");
@@ -68,17 +79,24 @@ class GenState {
     }
 
     public static boolean isMappedField(ClassStorage storage, ClassEntry c, FieldEntry f) {
-        return f.getName().length() <= 2;
+        return f.getName().length() <= 2 || (f.getName().length() == 3 && f.getName().charAt(2) == '_');
     }
 
     public static boolean isMappedMethod(ClassStorage storage, ClassEntry c, MethodEntry m) {
-        return m.getName().length() <= 2 && m.getName().charAt(0) != '<' && m.isSource(storage, c);
+        return (m.getName().length() <= 2 || (m.getName().length() == 3 && m.getName().charAt(2) == '_')) && m.getName().charAt(0) != '<' && m.isSource(storage, c);
     }
 
     @Nullable
     private String getFieldName(ClassStorage storage, ClassEntry c, FieldEntry f) {
         if (!isMappedField(storage, c, f)) {
             return null;
+        }
+
+        if (newToIntermediary != null) {
+            GenMap.DescEntry findEntry = newToIntermediary.getField(c.getFullyQualifiedName(), f.getName(), f.getDescriptor());
+            if (findEntry != null) {
+                return findEntry.getName();
+            }
         }
 
         if (newToOld != null) {
@@ -102,32 +120,42 @@ class GenState {
             return null;
         }
 
-        if (newToOld != null) {
-            if (methodNames.containsKey(m)) {
-                return methodNames.get(m);
-            }
+        if (methodNames.containsKey(m)) {
+            return methodNames.get(m);
+        }
 
+        if (newToOld != null || newToIntermediary != null) {
             List<ClassEntry> ccList = m.getMatchingEntries(storageNew, c);
             Set<String> names = new HashSet<>();
 
             for (ClassEntry cc : ccList) {
-                GenMap.DescEntry findEntry = newToOld.getMethod(cc.getFullyQualifiedName(), m.getName(), m.getDescriptor());
-                if (findEntry != null) {
-                    GenMap.DescEntry newToOldEntry = findEntry;
-                    findEntry = oldToIntermediary.getMethod(newToOldEntry);
+                GenMap.DescEntry findEntry = null;
+                if (newToIntermediary != null) {
+                    findEntry = newToIntermediary.getMethod(cc.getFullyQualifiedName(), m.getName(), m.getDescriptor());
                     if (findEntry != null) {
                         names.add(findEntry.getName());
-                    } else {
-                        // more involved...
-                        ClassEntry oldBase = storageOld.getClass(newToOldEntry.getOwner(), false);
-                        if (oldBase != null) {
-                            MethodEntry oldM = oldBase.getMethod(newToOldEntry.getName() + newToOldEntry.getDesc());
-                            List<ClassEntry> cccList = oldM.getMatchingEntries(storageOld, oldBase);
+                    }
+                }
 
-                            for (ClassEntry ccc : cccList) {
-                                findEntry = oldToIntermediary.getMethod(ccc.getFullyQualifiedName(), oldM.getName(), oldM.getDescriptor());
-                                if (findEntry != null) {
-                                    names.add(findEntry.getName());
+                if (findEntry == null && newToOld != null) {
+                    findEntry = newToOld.getMethod(cc.getFullyQualifiedName(), m.getName(), m.getDescriptor());
+                    if (findEntry != null) {
+                        GenMap.DescEntry newToOldEntry = findEntry;
+                        findEntry = oldToIntermediary.getMethod(newToOldEntry);
+                        if (findEntry != null) {
+                            names.add(findEntry.getName());
+                        } else {
+                            // more involved...
+                            ClassEntry oldBase = storageOld.getClass(newToOldEntry.getOwner(), false);
+                            if (oldBase != null) {
+                                MethodEntry oldM = oldBase.getMethod(newToOldEntry.getName() + newToOldEntry.getDesc());
+                                List<ClassEntry> cccList = oldM.getMatchingEntries(storageOld, oldBase);
+
+                                for (ClassEntry ccc : cccList) {
+                                    findEntry = oldToIntermediary.getMethod(ccc.getFullyQualifiedName(), oldM.getName(), oldM.getDescriptor());
+                                    if (findEntry != null) {
+                                        names.add(findEntry.getName());
+                                    }
                                 }
                             }
                         }
@@ -182,7 +210,18 @@ class GenState {
             } else {
                 cname = null;
 
-                if (newToOld != null) {
+                if (newToIntermediary != null) {
+                    String findName = newToIntermediary.getClass(c.getFullyQualifiedName());
+                    if (findName != null) {
+                        String[] r = findName.split("\\$");
+                        cname = r[r.length - 1];
+                        if (r.length == 1) {
+                            translatedPrefix = "";
+                        }
+                    }
+                }
+
+                if (cname == null && newToOld != null) {
                     String findName = newToOld.getClass(c.getFullyQualifiedName());
                     if (findName != null) {
                         findName = oldToIntermediary.getClass(findName);

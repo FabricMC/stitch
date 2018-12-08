@@ -18,6 +18,7 @@ package net.fabricmc.stitch.merge;
 
 import net.fabricmc.stitch.util.SnowmanClassVisitor;
 import net.fabricmc.stitch.util.StitchUtil;
+import net.fabricmc.stitch.util.SyntheticParameterClassVisitor;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.ClassWriter;
@@ -31,7 +32,6 @@ import java.nio.file.attribute.FileTime;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.TimeUnit;
 import java.util.jar.JarEntry;
 import java.util.jar.JarInputStream;
@@ -57,6 +57,7 @@ public class JarMerger {
     private final Map<String, Entry> entriesClient, entriesServer;
     private final Set<String> entriesAll;
     private boolean removeSnowmen = false;
+    private boolean offsetSyntheticsParams = false;
 
     public JarMerger(JarInputStream inputClient, JarInputStream inputServer, JarOutputStream output) {
         this.inputClient = inputClient;
@@ -79,6 +80,10 @@ public class JarMerger {
 
     public void enableSnowmanRemoval() {
         removeSnowmen = true;
+    }
+
+    public void enableSyntheticParamsOffset() {
+        offsetSyntheticsParams = true;
     }
 
     public void close() throws IOException {
@@ -173,6 +178,10 @@ public class JarMerger {
 
                     if (removeSnowmen) {
                         visitor = new SnowmanClassVisitor(Opcodes.ASM7, visitor);
+                    }
+
+                    if (offsetSyntheticsParams) {
+                        visitor = new SyntheticParameterClassVisitor(Opcodes.ASM7, visitor);
                     }
 
                     if (visitor != writer) {

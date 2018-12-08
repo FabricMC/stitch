@@ -33,7 +33,7 @@ public class CommandMergeJar extends Command {
 
     @Override
     public String getHelpString() {
-        return "<client-jar> <server-jar> <output> [--removeSnowman]";
+        return "<client-jar> <server-jar> <output> [--removeSnowman] [--syntheticparams]";
     }
 
     @Override
@@ -46,13 +46,16 @@ public class CommandMergeJar extends Command {
         File in1f = new File(args[0]);
         File in2f = new File(args[1]);
         File outf = new File(args[2]);
-        boolean removeSnowman = false;
+        boolean removeSnowman = false, syntheticParams = false;
 
         for (int i = 3; i < args.length; i++) {
             if (args[i].startsWith("--")) {
                 switch (args[i].substring(2).toLowerCase(Locale.ROOT)) {
                     case "removesnowman":
                         removeSnowman = true;
+                        break;
+                    case "syntheticparams":
+                        syntheticParams = true;
                         break;
                 }
             }
@@ -75,6 +78,10 @@ public class CommandMergeJar extends Command {
                 merger.enableSnowmanRemoval();
             }
 
+            if (syntheticParams) {
+                merger.enableSyntheticParamsOffset();
+            }
+
             try {
                 System.out.println("Merging...");
 
@@ -86,7 +93,7 @@ public class CommandMergeJar extends Command {
             } finally {
                 merger.close();
             }
-       } catch (IOException e) {
+        } catch (IOException e) {
             e.printStackTrace();
         }
     }

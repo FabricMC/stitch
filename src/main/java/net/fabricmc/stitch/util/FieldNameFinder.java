@@ -158,6 +158,10 @@ public class FieldNameFinder {
                 JarEntry entry;
 
                 while ((entry = jis.getNextJarEntry()) != null) {
+                    if (!entry.getName().endsWith(".class")) {
+                        continue;
+                    }
+
                     ByteArrayOutputStream stream = new ByteArrayOutputStream();
                     int l;
                     while ((l = jis.read(buffer, 0, buffer.length)) > 0) {

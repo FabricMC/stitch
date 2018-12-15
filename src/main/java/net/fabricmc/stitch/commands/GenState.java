@@ -18,6 +18,7 @@ package net.fabricmc.stitch.commands;
 
 import net.fabricmc.stitch.representation.*;
 import net.fabricmc.stitch.util.MatcherUtil;
+import net.fabricmc.stitch.util.StitchUtil;
 import net.fabricmc.tinyremapper.TinyUtils;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.objectweb.asm.Opcodes;
@@ -30,7 +31,12 @@ class GenState {
     private final Map<Entry, Integer> values = new IdentityHashMap<>();
     private GenMap oldToIntermediary, newToOld;
     private GenMap newToIntermediary;
-    private boolean rewriteMode = false;
+    private boolean interactive = true;
+    private Scanner scanner = new Scanner(System.in);
+
+    public void disableInteractive() {
+        interactive = false;
+    }
 
     public String next(Entry entry, String name) {
         return name + "_" + values.computeIfAbsent(entry, (e) -> {
@@ -114,6 +120,14 @@ class GenState {
 
     private final Map<MethodEntry, String> methodNames = new IdentityHashMap<>();
 
+    private String getNamesListEntry(ClassEntry classEntry) {
+        StringBuilder builder = new StringBuilder(classEntry.getFullyQualifiedName());
+        if (classEntry.isInterface()) {
+            builder.append("(itf)");
+        }
+        return builder.toString();
+    }
+
     @Nullable
     private String getMethodName(ClassStorage storageOld, ClassStorage storageNew, ClassEntry c, MethodEntry m) {
         if (!isMappedMethod(storageNew, c, m)) {
@@ -126,14 +140,14 @@ class GenState {
 
         if (newToOld != null || newToIntermediary != null) {
             List<ClassEntry> ccList = m.getMatchingEntries(storageNew, c);
-            Set<String> names = new HashSet<>();
+            Map<String, Set<String>> names = new HashMap<>();
 
             for (ClassEntry cc : ccList) {
                 GenMap.DescEntry findEntry = null;
                 if (newToIntermediary != null) {
                     findEntry = newToIntermediary.getMethod(cc.getFullyQualifiedName(), m.getName(), m.getDescriptor());
                     if (findEntry != null) {
-                        names.add(findEntry.getName());
+                        names.computeIfAbsent(findEntry.getName(), (s) -> new TreeSet<>()).add(getNamesListEntry(cc));
                     }
                 }
 
@@ -143,7 +157,7 @@ class GenState {
                         GenMap.DescEntry newToOldEntry = findEntry;
                         findEntry = oldToIntermediary.getMethod(newToOldEntry);
                         if (findEntry != null) {
-                            names.add(findEntry.getName());
+                            names.computeIfAbsent(findEntry.getName(), (s) -> new TreeSet<>()).add(getNamesListEntry(cc));
                         } else {
                             // more involved...
                             ClassEntry oldBase = storageOld.getClass(newToOldEntry.getOwner(), false);
@@ -154,7 +168,7 @@ class GenState {
                                 for (ClassEntry ccc : cccList) {
                                     findEntry = oldToIntermediary.getMethod(ccc.getFullyQualifiedName(), oldM.getName(), oldM.getDescriptor());
                                     if (findEntry != null) {
-                                        names.add(findEntry.getName());
+                                        names.computeIfAbsent(findEntry.getName(), (s) -> new TreeSet<>()).add(getNamesListEntry(ccc));
                                     }
                                 }
                             }
@@ -164,33 +178,36 @@ class GenState {
             }
 
             if (names.size() > 1) {
-            	if (rewriteMode) {
-		            int lowestNum = Integer.MAX_VALUE;
-		            for (String s : names) {
-						if (!s.startsWith("method_")) {
-							throw new RuntimeException("Could not rewrite method: " + s);
-						}
+                System.out.println("Conflict detected - matched same target name!");
+                List<String> nameList = new ArrayList<>(names.keySet());
 
-						int v = new Integer(s.split("_")[1]);
-						if (v < lowestNum) {
-							lowestNum = v;
-						}
-		            }
-		            return "method_" + lowestNum;
-	            }
-
-                StringBuilder builder = new StringBuilder("Conflict: ");
-                int i = 0;
-                for (String s : names) {
-                    if ((i++) > 0) {
-                        builder.append(", ");
-                    }
-                    builder.append(s);
+                for (int i = 0; i < nameList.size(); i++) {
+                    String s = nameList.get(i);
+                    System.out.println((i+1) + ") " + s + " <- " + StitchUtil.join(", ", names.get(s)));
                 }
 
-                throw new RuntimeException(builder.toString());
+                if (!interactive) {
+                    throw new RuntimeException("Conflict detected!");
+                }
+
+                while (true) {
+                    String cmd = scanner.nextLine();
+                    int i;
+                    try {
+                        i = Integer.parseInt(cmd);
+                    } catch (NumberFormatException e) {
+                        e.printStackTrace();
+                        continue;
+                    }
+
+                    if (i >= 1 && i <= nameList.size()) {
+                        methodNames.put(m, nameList.get(i - 1));
+                        System.out.println("OK!");
+                        break;
+                    }
+                }
             } else if (names.size() == 1) {
-                String s = names.iterator().next();
+                String s = names.keySet().iterator().next();
                 methodNames.put(m, s);
                 return s;
             }
@@ -291,8 +308,6 @@ class GenState {
                 TinyUtils.read(reader, "official", "intermediary", oldToIntermediary::addClass, oldToIntermediary::addField, oldToIntermediary::addMethod);
             }
         }
-
-        rewriteMode = true;
     }
 
     public void prepareUpdate(File oldMappings, File matches) throws IOException {

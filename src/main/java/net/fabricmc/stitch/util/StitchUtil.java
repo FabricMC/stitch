@@ -23,6 +23,19 @@ public final class StitchUtil {
 
     }
 
+    public static String join(String joiner, Collection<String> c) {
+        StringBuilder builder = new StringBuilder();
+        int i = 0;
+        for (String s : c) {
+            if ((i++) > 0) {
+                builder.append(joiner);
+            }
+
+            builder.append(s);
+        }
+        return builder.toString();
+    }
+
     public static <T> Set<T> newIdentityHashSet() {
         return Collections.newSetFromMap(new IdentityHashMap<>());
     }

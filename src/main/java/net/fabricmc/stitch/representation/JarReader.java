@@ -96,8 +96,13 @@ public class JarReader {
             MethodEntry method = new MethodEntry(access, name, descriptor, signature);
             this.entry.methods.put(method.getKey(), method);
 
-            return new VisitorMethod(api, super.visitMethod(access, name, descriptor, signature, exceptions),
-                    entry, method);
+            if ((access & Opcodes.ACC_BRIDGE) != 0) {
+                return new VisitorBridge(api, super.visitMethod(access, name, descriptor, signature, exceptions),
+                        entry, method);
+            } else {
+                return new VisitorMethod(api, super.visitMethod(access, name, descriptor, signature, exceptions),
+                        entry, method);
+            }
         }
     }
 
@@ -112,9 +117,32 @@ public class JarReader {
         }
     }
 
+    private class VisitorBridge extends VisitorMethod {
+        public VisitorBridge(int api, MethodVisitor methodVisitor, ClassEntry classEntry, MethodEntry entry) {
+            super(api, methodVisitor, classEntry, entry);
+        }
+
+        @Override
+        public void visitMethodInsn(
+                final int opcode,
+                final String owner,
+                final String name,
+                final String descriptor,
+                final boolean isInterface) {
+            super.visitMethodInsn(opcode, owner, name, descriptor, isInterface);
+
+            ClassEntry targetClass = jar.getClass(owner, true);
+            MethodEntry targetMethod = new MethodEntry(0, name, descriptor, null);
+            String targetKey = targetMethod.getKey();
+
+            targetClass.relatedMethods.computeIfAbsent(targetKey, (a) -> new HashSet<>()).add(Pair.of(classEntry, entry.getKey()));
+            classEntry.relatedMethods.computeIfAbsent(entry.getKey(), (a) -> new HashSet<>()).add(Pair.of(targetClass, targetKey));
+        }
+    }
+
     private class VisitorMethod extends MethodVisitor {
-        private final ClassEntry classEntry;
-        private final MethodEntry entry;
+        final ClassEntry classEntry;
+        final MethodEntry entry;
 
         public VisitorMethod(int api, MethodVisitor methodVisitor, ClassEntry classEntry, MethodEntry entry) {
             super(api, methodVisitor);

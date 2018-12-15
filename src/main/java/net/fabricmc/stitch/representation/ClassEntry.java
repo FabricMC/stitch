@@ -16,6 +16,7 @@
 
 package net.fabricmc.stitch.representation;
 
+import net.fabricmc.stitch.util.Pair;
 import org.objectweb.asm.commons.Remapper;
 
 import java.util.*;
@@ -26,6 +27,7 @@ public class ClassEntry extends Entry {
     final Map<String, ClassEntry> innerClasses;
     final Map<String, FieldEntry> fields;
     final Map<String, MethodEntry> methods;
+    final Map<String, Set<Pair<ClassEntry, String>>> relatedMethods;
 
     String signature;
     String superclass;
@@ -40,6 +42,7 @@ public class ClassEntry extends Entry {
         this.innerClasses = new TreeMap<>(Comparator.naturalOrder());
         this.fields = new TreeMap<>(Comparator.naturalOrder());
         this.methods = new TreeMap<>(Comparator.naturalOrder());
+        this.relatedMethods = new HashMap<>();
 
         this.subclasses = new ArrayList<>();
         this.implementers = new ArrayList<>();
@@ -63,6 +66,12 @@ public class ClassEntry extends Entry {
                 itf.implementers.add(fullyQualifiedName);
             }
         }
+    }
+
+    // unstable
+    public Collection<Pair<ClassEntry, String>> getRelatedMethods(MethodEntry m) {
+        //noinspection unchecked
+        return relatedMethods.getOrDefault(m.getKey(), Collections.EMPTY_SET);
     }
 
     public String getFullyQualifiedName() {
@@ -170,6 +179,7 @@ public class ClassEntry extends Entry {
         Map<String, ClassEntry> innerClassOld = new HashMap<>(innerClasses);
         Map<String, FieldEntry> fieldsOld = new HashMap<>(fields);
         Map<String, MethodEntry> methodsOld = new HashMap<>(methods);
+        Map<String, String> methodKeyRemaps = new HashMap<>();
 
         innerClasses.clear();
         fields.clear();
@@ -188,6 +198,15 @@ public class ClassEntry extends Entry {
         for (Map.Entry<String, MethodEntry> entry : methodsOld.entrySet()) {
             entry.getValue().remap(this, oldName, remapper);
             methods.put(entry.getValue().getKey(), entry.getValue());
+            methodKeyRemaps.put(entry.getKey(), entry.getValue().getKey());
+        }
+
+        // TODO: remap relatedMethods strings???
+        Map<String, Set<Pair<ClassEntry, String>>> relatedMethodsOld = new HashMap<>(relatedMethods);
+        relatedMethods.clear();
+
+        for (Map.Entry<String, Set<Pair<ClassEntry, String>>> entry : relatedMethodsOld.entrySet()) {
+            relatedMethods.put(methodKeyRemaps.getOrDefault(entry.getKey(), entry.getKey()), entry.getValue());
         }
     }
 }

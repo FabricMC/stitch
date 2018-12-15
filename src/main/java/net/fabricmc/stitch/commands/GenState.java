@@ -18,6 +18,7 @@ package net.fabricmc.stitch.commands;
 
 import net.fabricmc.stitch.representation.*;
 import net.fabricmc.stitch.util.MatcherUtil;
+import net.fabricmc.stitch.util.Pair;
 import net.fabricmc.stitch.util.StitchUtil;
 import net.fabricmc.tinyremapper.TinyUtils;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -128,6 +129,67 @@ class GenState {
         return builder.toString();
     }
 
+    private Set<MethodEntry> findNames(ClassStorage storageOld, ClassStorage storageNew, ClassEntry c, MethodEntry m, Map<String, Set<String>> names) {
+        Set<MethodEntry> allEntries = new HashSet<>();
+        findNames(storageOld, storageNew, c, m, names, allEntries);
+        return allEntries;
+    }
+
+    private void findNames(ClassStorage storageOld, ClassStorage storageNew, ClassEntry c, MethodEntry m, Map<String, Set<String>> names, Set<MethodEntry> usedMethods) {
+        if (!usedMethods.add(m)) {
+            return;
+        }
+
+        String suffix = "." + m.getName() + m.getDescriptor();
+
+        if ((m.getAccess() & Opcodes.ACC_BRIDGE) != 0) {
+            suffix += "(bridge)";
+        }
+
+        List<ClassEntry> ccList = m.getMatchingEntries(storageNew, c);
+
+        for (ClassEntry cc : ccList) {
+            GenMap.DescEntry findEntry = null;
+            if (newToIntermediary != null) {
+                findEntry = newToIntermediary.getMethod(cc.getFullyQualifiedName(), m.getName(), m.getDescriptor());
+                if (findEntry != null) {
+                    names.computeIfAbsent(findEntry.getName(), (s) -> new TreeSet<>()).add(getNamesListEntry(cc) + suffix);
+                }
+            }
+
+            if (findEntry == null && newToOld != null) {
+                findEntry = newToOld.getMethod(cc.getFullyQualifiedName(), m.getName(), m.getDescriptor());
+                if (findEntry != null) {
+                    GenMap.DescEntry newToOldEntry = findEntry;
+                    findEntry = oldToIntermediary.getMethod(newToOldEntry);
+                    if (findEntry != null) {
+                        names.computeIfAbsent(findEntry.getName(), (s) -> new TreeSet<>()).add(getNamesListEntry(cc) + suffix);
+                    } else {
+                        // more involved...
+                        ClassEntry oldBase = storageOld.getClass(newToOldEntry.getOwner(), false);
+                        if (oldBase != null) {
+                            MethodEntry oldM = oldBase.getMethod(newToOldEntry.getName() + newToOldEntry.getDesc());
+                            List<ClassEntry> cccList = oldM.getMatchingEntries(storageOld, oldBase);
+
+                            for (ClassEntry ccc : cccList) {
+                                findEntry = oldToIntermediary.getMethod(ccc.getFullyQualifiedName(), oldM.getName(), oldM.getDescriptor());
+                                if (findEntry != null) {
+                                    names.computeIfAbsent(findEntry.getName(), (s) -> new TreeSet<>()).add(getNamesListEntry(ccc) + suffix);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        for (ClassEntry mc : ccList) {
+            for (Pair<ClassEntry, String> pair : mc.getRelatedMethods(m)) {
+                findNames(storageOld, storageNew, pair.getLeft(), pair.getLeft().getMethod(pair.getRight()), names, usedMethods);
+            }
+        }
+    }
+
     @Nullable
     private String getMethodName(ClassStorage storageOld, ClassStorage storageNew, ClassEntry c, MethodEntry m) {
         if (!isMappedMethod(storageNew, c, m)) {
@@ -139,47 +201,18 @@ class GenState {
         }
 
         if (newToOld != null || newToIntermediary != null) {
-            List<ClassEntry> ccList = m.getMatchingEntries(storageNew, c);
             Map<String, Set<String>> names = new HashMap<>();
-
-            for (ClassEntry cc : ccList) {
-                GenMap.DescEntry findEntry = null;
-                if (newToIntermediary != null) {
-                    findEntry = newToIntermediary.getMethod(cc.getFullyQualifiedName(), m.getName(), m.getDescriptor());
-                    if (findEntry != null) {
-                        names.computeIfAbsent(findEntry.getName(), (s) -> new TreeSet<>()).add(getNamesListEntry(cc));
-                    }
-                }
-
-                if (findEntry == null && newToOld != null) {
-                    findEntry = newToOld.getMethod(cc.getFullyQualifiedName(), m.getName(), m.getDescriptor());
-                    if (findEntry != null) {
-                        GenMap.DescEntry newToOldEntry = findEntry;
-                        findEntry = oldToIntermediary.getMethod(newToOldEntry);
-                        if (findEntry != null) {
-                            names.computeIfAbsent(findEntry.getName(), (s) -> new TreeSet<>()).add(getNamesListEntry(cc));
-                        } else {
-                            // more involved...
-                            ClassEntry oldBase = storageOld.getClass(newToOldEntry.getOwner(), false);
-                            if (oldBase != null) {
-                                MethodEntry oldM = oldBase.getMethod(newToOldEntry.getName() + newToOldEntry.getDesc());
-                                List<ClassEntry> cccList = oldM.getMatchingEntries(storageOld, oldBase);
-
-                                for (ClassEntry ccc : cccList) {
-                                    findEntry = oldToIntermediary.getMethod(ccc.getFullyQualifiedName(), oldM.getName(), oldM.getDescriptor());
-                                    if (findEntry != null) {
-                                        names.computeIfAbsent(findEntry.getName(), (s) -> new TreeSet<>()).add(getNamesListEntry(ccc));
-                                    }
-                                }
-                            }
-                        }
-                    }
+            Set<MethodEntry> allEntries = findNames(storageOld, storageNew, c, m, names);
+            for (MethodEntry mm : allEntries) {
+                if (methodNames.containsKey(mm)) {
+                    return methodNames.get(mm);
                 }
             }
 
             if (names.size() > 1) {
                 System.out.println("Conflict detected - matched same target name!");
                 List<String> nameList = new ArrayList<>(names.keySet());
+                Collections.sort(nameList);
 
                 for (int i = 0; i < nameList.size(); i++) {
                     String s = nameList.get(i);
@@ -201,14 +234,18 @@ class GenState {
                     }
 
                     if (i >= 1 && i <= nameList.size()) {
-                        methodNames.put(m, nameList.get(i - 1));
+                        for (MethodEntry mm : allEntries) {
+                            methodNames.put(mm, nameList.get(i - 1));
+                        }
                         System.out.println("OK!");
-                        break;
+                        return nameList.get(i - 1);
                     }
                 }
             } else if (names.size() == 1) {
                 String s = names.keySet().iterator().next();
-                methodNames.put(m, s);
+                for (MethodEntry mm : allEntries) {
+                    methodNames.put(mm, s);
+                }
                 return s;
             }
         }

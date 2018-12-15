@@ -29,6 +29,7 @@ public class Main {
     }
 
     static {
+        addCommand(new CommandAsmTrace());
         addCommand(new CommandGenerateIntermediary());
         addCommand(new CommandMergeJar());
         addCommand(new CommandMergeTiny());

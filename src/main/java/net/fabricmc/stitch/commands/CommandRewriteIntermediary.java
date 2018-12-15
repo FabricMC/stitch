@@ -53,8 +53,13 @@ public class CommandRewriteIntermediary extends Command {
         System.err.println("Loading mapping file...");
         state.prepareRewrite(new File(args[1]));
 
+        File outFile = new File(args[2]);
+        if (outFile.exists()) {
+            outFile.delete();
+        }
+
         System.err.println("Rewriting mappings...");
-        state.generate(new File(args[2]), jarOld, jarOld);
+        state.generate(outFile, jarOld, jarOld);
         System.err.println("Done!");
     }
 

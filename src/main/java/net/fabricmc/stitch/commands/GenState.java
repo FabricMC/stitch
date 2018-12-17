@@ -121,11 +121,45 @@ class GenState {
 
     private final Map<MethodEntry, String> methodNames = new IdentityHashMap<>();
 
-    private String getNamesListEntry(ClassEntry classEntry) {
+    private String getPropagation(ClassStorage storage, ClassEntry classEntry) {
+        if (classEntry == null) {
+            return "";
+        }
+
         StringBuilder builder = new StringBuilder(classEntry.getFullyQualifiedName());
+        List<String> strings = new ArrayList<>();
+        String scs = getPropagation(storage, classEntry.getSuperClass(storage));
+        if (!scs.isEmpty()) {
+            strings.add(scs);
+        }
+
+        for (ClassEntry ce : classEntry.getInterfaces(storage)) {
+            scs = getPropagation(storage, ce);
+            if (!scs.isEmpty()) {
+                strings.add(scs);
+            }
+        }
+
+        if (!strings.isEmpty()) {
+            builder.append("<-");
+            if (strings.size() == 1) {
+                builder.append(strings.get(0));
+            } else {
+                builder.append("[");
+                builder.append(StitchUtil.join(",", strings));
+                builder.append("]");
+            }
+        }
+
+        return builder.toString();
+    }
+
+    private String getNamesListEntry(ClassStorage storage, ClassEntry classEntry) {
+        StringBuilder builder = new StringBuilder(getPropagation(storage, classEntry));
         if (classEntry.isInterface()) {
             builder.append("(itf)");
         }
+
         return builder.toString();
     }
 
@@ -153,7 +187,7 @@ class GenState {
             if (newToIntermediary != null) {
                 findEntry = newToIntermediary.getMethod(cc.getFullyQualifiedName(), m.getName(), m.getDescriptor());
                 if (findEntry != null) {
-                    names.computeIfAbsent(findEntry.getName(), (s) -> new TreeSet<>()).add(getNamesListEntry(cc) + suffix);
+                    names.computeIfAbsent(findEntry.getName(), (s) -> new TreeSet<>()).add(getNamesListEntry(storageNew, cc) + suffix);
                 }
             }
 
@@ -163,7 +197,7 @@ class GenState {
                     GenMap.DescEntry newToOldEntry = findEntry;
                     findEntry = oldToIntermediary.getMethod(newToOldEntry);
                     if (findEntry != null) {
-                        names.computeIfAbsent(findEntry.getName(), (s) -> new TreeSet<>()).add(getNamesListEntry(cc) + suffix);
+                        names.computeIfAbsent(findEntry.getName(), (s) -> new TreeSet<>()).add(getNamesListEntry(storageNew, cc) + suffix);
                     } else {
                         // more involved...
                         ClassEntry oldBase = storageOld.getClass(newToOldEntry.getOwner(), false);
@@ -174,7 +208,7 @@ class GenState {
                             for (ClassEntry ccc : cccList) {
                                 findEntry = oldToIntermediary.getMethod(ccc.getFullyQualifiedName(), oldM.getName(), oldM.getDescriptor());
                                 if (findEntry != null) {
-                                    names.computeIfAbsent(findEntry.getName(), (s) -> new TreeSet<>()).add(getNamesListEntry(ccc) + suffix);
+                                    names.computeIfAbsent(findEntry.getName(), (s) -> new TreeSet<>()).add(getNamesListEntry(storageOld, ccc) + suffix);
                                 }
                             }
                         }

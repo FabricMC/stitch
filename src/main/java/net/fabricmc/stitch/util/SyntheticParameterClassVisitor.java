@@ -16,51 +16,42 @@
 
 package net.fabricmc.stitch.util;
 
-import org.objectweb.asm.*;
-import org.objectweb.asm.signature.SignatureReader;
-import org.objectweb.asm.signature.SignatureVisitor;
+import org.objectweb.asm.AnnotationVisitor;
+import org.objectweb.asm.ClassVisitor;
+import org.objectweb.asm.MethodVisitor;
+import org.objectweb.asm.Opcodes;
 
 /**
  * ProGuard has a bug where parameter annotations are applied incorrectly in the presence of
  * synthetic arguments. This causes javac to balk when trying to load affected classes.
  *
- * We compute the offset between a method's descriptor and signature to determine the number
- * of synthetic arguments, then subtract that from each parameter annotation.
+ * We use several heuristics to guess what the synthetic arguments may be for a particular 
+ * constructor. We then check if the constructor matches our guess, and if so, offset all
+ * parameter annotations.
  */
 public class SyntheticParameterClassVisitor extends ClassVisitor {
-    static class SyntheticMethodVisitor extends MethodVisitor {
-        private final String descriptor;
-        private final String signature;
-        private int offset = -1;
+    private class SyntheticMethodVisitor extends MethodVisitor {
+        private final int offset;
 
-        SyntheticMethodVisitor(int api, String descriptor, String signature, MethodVisitor methodVisitor) {
+        SyntheticMethodVisitor(int api, int offset, MethodVisitor methodVisitor) {
             super(api, methodVisitor);
-            this.descriptor = descriptor;
-            this.signature = signature;
-        }
-
-        private int getOffset() {
-            if (offset >= 0) return offset;
-
-            ArgumentSignatureCounter signatureCounter = new ArgumentSignatureCounter();
-            new SignatureReader(signature).accept(signatureCounter);
-            int parameters = Type.getArgumentTypes(descriptor).length;
-
-            return this.offset = parameters - signatureCounter.count;
+            this.offset = offset;
         }
 
         @Override
         public AnnotationVisitor visitParameterAnnotation(int parameter, String descriptor, boolean visible) {
-            return super.visitParameterAnnotation(parameter - getOffset(), descriptor, visible);
+            return super.visitParameterAnnotation(parameter - offset, descriptor, visible);
         }
 
         @Override
         public void visitAnnotableParameterCount(int parameterCount, boolean visible) {
-            super.visitAnnotableParameterCount(parameterCount - getOffset(), visible);
+            super.visitAnnotableParameterCount(parameterCount - offset, visible);
         }
     }
 
-    private boolean skip;
+    private String className;
+    private int synthetic;
+    private String syntheticArgs;
 
     public SyntheticParameterClassVisitor(int api, ClassVisitor cv) {
         super(api, cv);
@@ -68,8 +59,28 @@ public class SyntheticParameterClassVisitor extends ClassVisitor {
 
     @Override
     public void visit(int version, int access, String name, String signature, String superName, String[] interfaces) {
-        skip = (access & Opcodes.ACC_ENUM) == 0;
         super.visit(version, access, name, signature, superName, interfaces);
+
+        this.className = name;
+
+        // Enums will always have a string name and then the ordinal
+        if ((access & Opcodes.ACC_ENUM) != 0) {
+            synthetic = 2;
+            syntheticArgs = "(Ljava/lang/String;I";
+        }
+    }
+
+    @Override
+    public void visitInnerClass(String name, String outerName, String innerName, int access) {
+        super.visitInnerClass(name, outerName, innerName, access);
+
+        // If we're a non-static, non-anonymous inner class then we can assume the first argument 
+        // is the parent class.
+        // See https://docs.oracle.com/javase/specs/jls/se11/html/jls-8.html#jls-8.8.1
+        if (synthetic == 0 && name.equals(this.className) && innerName != null && outerName != null && (access & Opcodes.ACC_STATIC) == 0) {
+            this.synthetic = 1;
+            this.syntheticArgs = "(L" + outerName + ";";
+        }
     }
 
     @Override
@@ -80,21 +91,9 @@ public class SyntheticParameterClassVisitor extends ClassVisitor {
         final String signature,
         final String[] exceptions) {
         MethodVisitor mv = super.visitMethod(access, name, descriptor, signature, exceptions);
-        return signature == null || mv == null || skip
-            ? mv : new SyntheticMethodVisitor(api, descriptor, signature, mv);
-    }
 
-    private static final class ArgumentSignatureCounter extends SignatureVisitor {
-        int count;
-
-        ArgumentSignatureCounter() {
-            super(Opcodes.ASM7);
-        }
-
-        @Override
-        public SignatureVisitor visitParameterType() {
-            count++;
-            return super.visitParameterType();
-        }
+        return mv != null && synthetic != 0 && name.equals("<init>") && descriptor.startsWith(syntheticArgs)
+               ? new SyntheticMethodVisitor(api, synthetic, mv)
+               : mv;
     }
 }

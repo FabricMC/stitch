@@ -31,6 +31,7 @@ import java.net.URI;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.channels.FileChannel;
+import java.nio.charset.Charset;
 import java.nio.file.*;
 import java.nio.file.attribute.BasicFileAttributeView;
 import java.nio.file.attribute.BasicFileAttributes;
@@ -105,7 +106,12 @@ public class JarMerger {
                     }
 
                     if (!path.getFileName().toString().endsWith(".class")) {
-                        map.put(path.toString().substring(1), new Entry(path, attr, null));
+                        if (path.toString().equals("/META-INF/MANIFEST.MF")) {
+                            map.put("META-INF/MANIFEST.MF", new Entry(path, attr,
+                                    "Manifest-Version: 1.0\nMain-Class: net.minecraft.client.Main\n".getBytes(Charset.forName("UTF-8"))));
+                        } else {
+                            map.put(path.toString().substring(1), new Entry(path, attr, null));
+                        }
                         return FileVisitResult.CONTINUE;
                     }
 

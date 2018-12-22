@@ -69,11 +69,9 @@ public class CommandMergeJar extends Command {
             throw new FileNotFoundException("Server JAR could not be found!");
         }
 
-        try (FileInputStream in1fs = new FileInputStream(in1f);
-             FileInputStream in2fs = new FileInputStream(in2f);
-             FileOutputStream outfs = new FileOutputStream(outf)) {
-
-            JarMerger merger = new JarMerger(in1fs, in2fs, outfs);
+        JarMerger merger = null;
+        try {
+            merger = new JarMerger(in1f, in2f, outf);
             if (removeSnowman) {
                 merger.enableSnowmanRemoval();
             }
@@ -82,19 +80,17 @@ public class CommandMergeJar extends Command {
                 merger.enableSyntheticParamsOffset();
             }
 
-            try {
-                System.out.println("Merging...");
+            System.out.println("Merging...");
 
-                merger.merge();
+            merger.merge();
 
-                System.out.println("Merge completed!");
-            } catch (IOException e) {
-                e.printStackTrace();
-            } finally {
-                merger.close();
-            }
+            System.out.println("Merge completed!");
         } catch (IOException e) {
             e.printStackTrace();
+        } finally {
+            if (merger != null) {
+                merger.close();
+            }
         }
     }
 }

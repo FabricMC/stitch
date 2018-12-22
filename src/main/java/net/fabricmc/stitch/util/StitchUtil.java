@@ -16,11 +16,54 @@
 
 package net.fabricmc.stitch.util;
 
+import java.io.File;
+import java.io.IOException;
+import java.net.URI;
+import java.nio.file.FileSystem;
+import java.nio.file.FileSystemAlreadyExistsException;
+import java.nio.file.FileSystems;
 import java.util.*;
 
 public final class StitchUtil {
+    public static class FileSystemDelegate implements AutoCloseable {
+        private final FileSystem fileSystem;
+        private final boolean owner;
+
+        public FileSystemDelegate(FileSystem fileSystem, boolean owner) {
+            this.fileSystem = fileSystem;
+            this.owner = owner;
+        }
+
+        public FileSystem get() {
+            return fileSystem;
+        }
+
+        @Override
+        public void close() throws IOException {
+            if (owner) {
+                fileSystem.close();
+            }
+        }
+    }
+
     private StitchUtil() {
 
+    }
+
+    private static final Map<String, String> jfsArgsCreate = new HashMap<>();
+    private static final Map<String, String> jfsArgsEmpty = new HashMap<>();
+
+    static {
+        jfsArgsCreate.put("create", "true");
+    }
+
+    public static FileSystemDelegate getJarFileSystem(File f, boolean create) throws IOException {
+        URI jarUri = URI.create("jar:file:" + f.toURI().getPath());
+        try {
+            return new FileSystemDelegate(FileSystems.newFileSystem(jarUri, create ? jfsArgsCreate : jfsArgsEmpty), true);
+        } catch (FileSystemAlreadyExistsException e) {
+            return new FileSystemDelegate(FileSystems.getFileSystem(jarUri), false);
+        }
     }
 
     public static String join(String joiner, Collection<String> c) {

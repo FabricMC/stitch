@@ -16,6 +16,8 @@
 
 package net.fabricmc.stitch.merge;
 
+import com.google.common.collect.ImmutableMap;
+import com.sun.nio.zipfs.ZipFileAttributes;
 import net.fabricmc.stitch.util.SnowmanClassVisitor;
 import net.fabricmc.stitch.util.StitchUtil;
 import net.fabricmc.stitch.util.SyntheticParameterClassVisitor;
@@ -24,10 +26,14 @@ import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.Opcodes;
 
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
+import java.io.*;
+import java.net.URI;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+import java.nio.channels.FileChannel;
+import java.nio.file.*;
+import java.nio.file.attribute.BasicFileAttributeView;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.attribute.FileTime;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
@@ -40,42 +46,39 @@ import java.util.stream.Collectors;
 
 public class JarMerger {
     public class Entry {
-        public final JarEntry metadata;
+        public final Path path;
+        public final BasicFileAttributes metadata;
         public final byte[] data;
 
-        public Entry(JarEntry metadata, byte[] data) {
-            this.metadata = new JarEntry(metadata.getName());
-            this.metadata.setTime(metadata.getTime());
-
+        public Entry(Path path, BasicFileAttributes metadata, byte[] data) {
+            this.path = path;
+            this.metadata = metadata;
             this.data = data;
         }
     }
 
     private static final ClassMerger CLASS_MERGER = new ClassMerger();
-    private final JarInputStream inputClient, inputServer;
-    private final JarOutputStream output;
+    private final StitchUtil.FileSystemDelegate inputClientFs, inputServerFs, outputFs;
+    private final Path inputClient, inputServer;
     private final Map<String, Entry> entriesClient, entriesServer;
     private final Set<String> entriesAll;
     private boolean removeSnowmen = false;
     private boolean offsetSyntheticsParams = false;
 
-    public JarMerger(JarInputStream inputClient, JarInputStream inputServer, JarOutputStream output) {
-        this.inputClient = inputClient;
-        this.inputServer = inputServer;
-        this.output = output;
+    public JarMerger(File inputClient, File inputServer, File output) throws IOException {
+        if (output.exists()) {
+            if (!output.delete()) {
+                throw new IOException("Could not delete " + output.getName());
+            }
+        }
+
+        this.inputClient = (inputClientFs = StitchUtil.getJarFileSystem(inputClient, false)).get().getPath("/");
+        this.inputServer = (inputServerFs = StitchUtil.getJarFileSystem(inputServer, false)).get().getPath("/");
+        this.outputFs = StitchUtil.getJarFileSystem(output, true);
 
         this.entriesClient = new HashMap<>();
         this.entriesServer = new HashMap<>();
         this.entriesAll = new TreeSet<>();
-    }
-
-    public JarMerger(InputStream inputClient, InputStream inputServer, OutputStream output) throws IOException {
-        this(new JarInputStream(inputClient), new JarInputStream(inputServer), new JarOutputStream(output));
-    }
-
-    @Deprecated
-    public void disablePostProcessing() {
-        removeSnowmen = false;
     }
 
     public void enableSnowmanRemoval() {
@@ -87,40 +90,63 @@ public class JarMerger {
     }
 
     public void close() throws IOException {
-        inputClient.close();
-        inputServer.close();
-        output.close();
+        inputClientFs.close();
+        inputServerFs.close();
+        outputFs.close();
     }
 
-    private void readToMap(Map<String, Entry> map, JarInputStream input) {
+    private void readToMap(Map<String, Entry> map, Path input, boolean isServer) {
         try {
-            byte[] buffer = new byte[32768];
-            JarEntry entry;
+            Files.walkFileTree(input, new SimpleFileVisitor<Path>() {
+                @Override
+                public FileVisitResult visitFile(Path path, BasicFileAttributes attr) throws IOException {
+                    if (Files.isDirectory(path)) {
+                        return FileVisitResult.CONTINUE;
+                    }
 
-            while ((entry = input.getNextJarEntry()) != null) {
-                ByteArrayOutputStream stream = new ByteArrayOutputStream();
-                int l;
-                while ((l = input.read(buffer, 0, buffer.length)) > 0) {
-                    stream.write(buffer, 0, l);
+                    if (!path.getFileName().toString().endsWith(".class")) {
+                        map.put(path.toString().substring(1), new Entry(path, attr, null));
+                        return FileVisitResult.CONTINUE;
+                    }
+
+                    try (FileChannel ch = FileChannel.open(path, StandardOpenOption.READ)) {
+                        byte[] output = new byte[(int) ch.size()];
+                        ByteBuffer outputBuffer = ByteBuffer.wrap(output);
+                        ch.read(outputBuffer);
+                        map.put(path.toString().substring(1), new Entry(path, attr, output));
+                    }
+                    return FileVisitResult.CONTINUE;
                 }
-
-                map.put(entry.getName(), new Entry(entry, stream.toByteArray()));
-            }
+            });
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
-    private void add(JarOutputStream output, Entry entry) throws IOException {
-        output.putNextEntry(entry.metadata);
-        output.write(entry.data);
-        output.closeEntry();
+    private void add(Entry entry) throws IOException {
+        Path outPath = outputFs.get().getPath(entry.path.toString());
+        if (outPath.getParent() != null) {
+            Files.createDirectories(outPath.getParent());
+        }
+
+        if (entry.data != null) {
+            Files.write(outPath, entry.data, StandardOpenOption.CREATE_NEW);
+        } else {
+            Files.copy(entry.path, outPath);
+        }
+
+        Files.getFileAttributeView(entry.path, BasicFileAttributeView.class)
+                .setTimes(
+                        entry.metadata.creationTime(),
+                        entry.metadata.lastAccessTime(),
+                        entry.metadata.lastModifiedTime()
+                );
     }
 
     public void merge() throws IOException {
         ExecutorService service = Executors.newFixedThreadPool(2);
-        service.submit(() -> readToMap(entriesClient, inputClient));
-        service.submit(() -> readToMap(entriesServer, inputServer));
+        service.submit(() -> readToMap(entriesClient, inputClient, false));
+        service.submit(() -> readToMap(entriesServer, inputServer, true));
         service.shutdown();
         try {
             service.awaitTermination(1, TimeUnit.HOURS);
@@ -145,10 +171,7 @@ public class JarMerger {
                     result = entry1;
                 } else {
                     if (isClass) {
-                        JarEntry metadata = new JarEntry(entry1.metadata);
-                        metadata.setLastModifiedTime(FileTime.fromMillis(StitchUtil.getTime()));
-
-                        result = new Entry(metadata, CLASS_MERGER.merge(entry1.data, entry2.data));
+                        result = new Entry(entry1.path, entry1.metadata, CLASS_MERGER.merge(entry1.data, entry2.data));
                     } else {
                         // FIXME: More heuristics?
                         result = entry1;
@@ -187,7 +210,7 @@ public class JarMerger {
                     if (visitor != writer) {
                         reader.accept(visitor, 0);
                         data = writer.toByteArray();
-                        result = new Entry(result.metadata, data);
+                        result = new Entry(result.path, result.metadata, data);
                     }
                 }
 
@@ -198,7 +221,7 @@ public class JarMerger {
         }).filter(Objects::nonNull).collect(Collectors.toList());
 
         for (Entry e : entries) {
-            add(output, e);
+            add(e);
         }
 ;    }
 }

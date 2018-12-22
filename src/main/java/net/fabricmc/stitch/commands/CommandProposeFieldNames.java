@@ -19,6 +19,7 @@ package net.fabricmc.stitch.commands;
 import net.fabricmc.stitch.Command;
 import net.fabricmc.stitch.representation.JarReader;
 import net.fabricmc.stitch.util.FieldNameFinder;
+import net.fabricmc.stitch.util.StitchUtil;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.MethodVisitor;

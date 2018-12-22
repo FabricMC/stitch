@@ -110,6 +110,12 @@ public class JarMerger {
                             map.put("META-INF/MANIFEST.MF", new Entry(path, attr,
                                     "Manifest-Version: 1.0\nMain-Class: net.minecraft.client.Main\n".getBytes(Charset.forName("UTF-8"))));
                         } else {
+                            if (path.toString().startsWith("/META-INF/")) {
+                                if (path.toString().endsWith(".SF") || path.toString().endsWith(".RSA")) {
+                                    return FileVisitResult.CONTINUE;
+                                }
+                            }
+
                             map.put(path.toString().substring(1), new Entry(path, attr, null));
                         }
                         return FileVisitResult.CONTINUE;

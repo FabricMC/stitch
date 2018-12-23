@@ -76,7 +76,7 @@ public class CommandMatcherToTiny extends Command {
 			}
 
 			for (String s : methodNames.keySet()) {
-				writer.write("METHOD\t" + s + "\t" + fieldNames.get(s) + "\n");
+				writer.write("METHOD\t" + s + "\t" + methodNames.get(s) + "\n");
 			}
 		}
 

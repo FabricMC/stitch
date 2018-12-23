@@ -118,6 +118,7 @@ public class JarMerger {
 
                             map.put(path.toString().substring(1), new Entry(path, attr, null));
                         }
+                        
                         return FileVisitResult.CONTINUE;
                     }
 

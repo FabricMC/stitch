@@ -31,6 +31,7 @@ public class Main {
     static {
         addCommand(new CommandAsmTrace());
         addCommand(new CommandGenerateIntermediary());
+        addCommand(new CommandMatcherToTiny());
         addCommand(new CommandMergeJar());
         addCommand(new CommandMergeTiny());
         addCommand(new CommandProposeFieldNames());

@@ -19,14 +19,11 @@ package net.fabricmc.stitch.representation;
 import net.fabricmc.stitch.util.Pair;
 import net.fabricmc.stitch.util.StitchUtil;
 import org.objectweb.asm.*;
-import org.objectweb.asm.commons.ClassRemapper;
 import org.objectweb.asm.commons.Remapper;
 
-import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.*;
-import java.util.concurrent.ForkJoinPool;
 import java.util.jar.JarInputStream;
 
 public class JarReader {
@@ -96,12 +93,36 @@ public class JarReader {
             MethodEntry method = new MethodEntry(access, name, descriptor, signature);
             this.entry.methods.put(method.getKey(), method);
 
-            if ((access & Opcodes.ACC_BRIDGE) != 0) {
-                return new VisitorBridge(api, super.visitMethod(access, name, descriptor, signature, exceptions),
+            return new VisitorMethod(api, super.visitMethod(access, name, descriptor, signature, exceptions),
+                    entry, method);
+        }
+    }
+
+    private class VisitorClassStageTwo extends ClassVisitor {
+        private ClassEntry entry;
+
+        public VisitorClassStageTwo(int api, ClassVisitor classVisitor) {
+            super(api, classVisitor);
+        }
+
+        @Override
+        public void visit(final int version, final int access, final String name, final String signature,
+                          final String superName, final String[] interfaces) {
+            this.entry = jar.getClass(name, true);
+            super.visit(version, access, name, signature, superName, interfaces);
+        }
+
+        @Override
+        public MethodVisitor visitMethod(final int access, final String name, final String descriptor,
+                                         final String signature, final String[] exceptions) {
+            MethodEntry method = new MethodEntry(access, name, descriptor, signature);
+            this.entry.methods.put(method.getKey(), method);
+
+            if ((access & (Opcodes.ACC_BRIDGE | Opcodes.ACC_SYNTHETIC)) != 0) {
+                return new VisitorBridge(api, access, super.visitMethod(access, name, descriptor, signature, exceptions),
                         entry, method);
             } else {
-                return new VisitorMethod(api, super.visitMethod(access, name, descriptor, signature, exceptions),
-                        entry, method);
+                return super.visitMethod(access, name, descriptor, signature, exceptions);
             }
         }
     }
@@ -117,9 +138,23 @@ public class JarReader {
         }
     }
 
+    private static class MethodRef {
+        final String owner, name, descriptor;
+
+        MethodRef(String owner, String name, String descriptor) {
+            this.owner = owner;
+            this.name = name;
+            this.descriptor = descriptor;
+        }
+    }
+
     private class VisitorBridge extends VisitorMethod {
-        public VisitorBridge(int api, MethodVisitor methodVisitor, ClassEntry classEntry, MethodEntry entry) {
+        private final boolean hasBridgeFlag;
+        private final List<MethodRef> methodRefs = new ArrayList<>();
+
+        public VisitorBridge(int api, int access, MethodVisitor methodVisitor, ClassEntry classEntry, MethodEntry entry) {
             super(api, methodVisitor, classEntry, entry);
+            hasBridgeFlag = ((access & Opcodes.ACC_BRIDGE) != 0);
         }
 
         @Override
@@ -130,13 +165,27 @@ public class JarReader {
                 final String descriptor,
                 final boolean isInterface) {
             super.visitMethodInsn(opcode, owner, name, descriptor, isInterface);
+            methodRefs.add(new MethodRef(owner, name, descriptor));
+        }
 
-            ClassEntry targetClass = jar.getClass(owner, true);
-            MethodEntry targetMethod = new MethodEntry(0, name, descriptor, null);
-            String targetKey = targetMethod.getKey();
+        @Override
+        public void visitEnd() {
+            boolean isBridge = hasBridgeFlag;
 
-            targetClass.relatedMethods.computeIfAbsent(targetKey, (a) -> new HashSet<>()).add(Pair.of(classEntry, entry.getKey()));
-            classEntry.relatedMethods.computeIfAbsent(entry.getKey(), (a) -> new HashSet<>()).add(Pair.of(targetClass, targetKey));
+            if (!isBridge && methodRefs.size() == 1) {
+                System.out.println("Found suspicious bridge-looking method: " + classEntry.getFullyQualifiedName() + ":" + entry);
+            }
+
+            if (isBridge) {
+                for (MethodRef ref : methodRefs) {
+                    ClassEntry targetClass = jar.getClass(ref.owner, true);
+                    MethodEntry targetMethod = new MethodEntry(0, ref.name, ref.descriptor, null);
+                    String targetKey = targetMethod.getKey();
+
+                    targetClass.relatedMethods.computeIfAbsent(targetKey, (a) -> new HashSet<>()).add(Pair.of(classEntry, entry.getKey()));
+                    classEntry.relatedMethods.computeIfAbsent(entry.getKey(), (a) -> new HashSet<>()).add(Pair.of(targetClass, targetKey));
+                }
+            }
         }
     }
 
@@ -152,7 +201,7 @@ public class JarReader {
     }
 
     public void apply() throws IOException {
-        // Stage 1: read .JAR
+        // Stage 1: read .JAR class/field/method meta
         try (FileInputStream fileStream = new FileInputStream(jar.file)) {
             try (JarInputStream jarStream = new JarInputStream(fileStream)) {
                 java.util.jar.JarEntry entry;
@@ -164,7 +213,7 @@ public class JarReader {
 
                     ClassReader reader = new ClassReader(jarStream);
                     ClassVisitor visitor = new VisitorClass(Opcodes.ASM7, null);
-                    reader.accept(visitor, ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES);
+                    reader.accept(visitor, ClassReader.SKIP_CODE | ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES);
                 }
             }
         }
@@ -224,6 +273,25 @@ public class JarReader {
             System.err.println("Joined " + joinedMethods + " MethodEntries (" + uniqueMethods + " unique, " + traversedClasses.size() + " classes).");
         }
 
+        System.err.println("Collecting additional information...");
+
+        // Stage 4: collect additional info
+        try (FileInputStream fileStream = new FileInputStream(jar.file)) {
+            try (JarInputStream jarStream = new JarInputStream(fileStream)) {
+                java.util.jar.JarEntry entry;
+
+                while ((entry = jarStream.getNextJarEntry()) != null) {
+                    if (!entry.getName().endsWith(".class")) {
+                        continue;
+                    }
+
+                    ClassReader reader = new ClassReader(jarStream);
+                    ClassVisitor visitor = new VisitorClassStageTwo(Opcodes.ASM7, null);
+                    reader.accept(visitor, ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES);
+                }
+            }
+        }
+
         if (remapper != null) {
             System.err.println("Remapping...");
 
@@ -235,5 +303,7 @@ public class JarReader {
                 jar.classTree.put(entry.getValue().getKey(), entry.getValue());
             }
         }
+
+        System.err.println("- Done. -");
     }
 }

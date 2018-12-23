@@ -19,6 +19,8 @@ package net.fabricmc.stitch.util;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.URLEncoder;
 import java.nio.file.FileSystem;
 import java.nio.file.FileSystemAlreadyExistsException;
 import java.nio.file.FileSystems;
@@ -58,7 +60,13 @@ public final class StitchUtil {
     }
 
     public static FileSystemDelegate getJarFileSystem(File f, boolean create) throws IOException {
-        URI jarUri = URI.create("jar:file:" + f.toURI().getPath());
+        URI jarUri;
+        try {
+            jarUri = new URI("jar:file", null, f.toURI().getPath(), "");
+        } catch (URISyntaxException e) {
+            throw new IOException(e);
+        }
+        
         try {
             return new FileSystemDelegate(FileSystems.newFileSystem(jarUri, create ? jfsArgsCreate : jfsArgsEmpty), true);
         } catch (FileSystemAlreadyExistsException e) {

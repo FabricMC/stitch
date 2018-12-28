@@ -80,14 +80,12 @@ public class ClassMerger {
     }
 
     private static void visitItfAnnotation(AnnotationVisitor av, String side, List<String> itfDescriptors) {
-        AnnotationVisitor avItf = av.visitAnnotation(null, ITF_DESCRIPTOR);
-        avItf.visitEnum("value", SIDE_DESCRIPTOR, side.toUpperCase(Locale.ROOT));
-        AnnotationVisitor array = avItf.visitArray("itf");
         for (String itf : itfDescriptors) {
-            array.visit(null, Type.getType("L" + itf + ";"));
+            AnnotationVisitor avItf = av.visitAnnotation(null, ITF_DESCRIPTOR);
+            avItf.visitEnum("value", SIDE_DESCRIPTOR, side.toUpperCase(Locale.ROOT));
+            avItf.visit("itf", Type.getType("L" + itf + ";"));
+            avItf.visitEnd();
         }
-        array.visitEnd();
-        avItf.visitEnd();
     }
 
     public static class SidedClassVisitor extends ClassVisitor {

@@ -172,8 +172,6 @@ public class ClassMerger {
         }
 
         if (!clientItfs.isEmpty() || !serverItfs.isEmpty()) {
-            System.out.println(nodeOut.name);
-
             AnnotationVisitor envInterfaces = nodeOut.visitAnnotation(ITF_LIST_DESCRIPTOR, false);
             AnnotationVisitor eiArray = envInterfaces.visitArray("value");
 

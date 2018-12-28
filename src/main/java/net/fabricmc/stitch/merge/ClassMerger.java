@@ -17,21 +17,16 @@
 package net.fabricmc.stitch.merge;
 
 import net.fabricmc.stitch.util.StitchUtil;
-import org.objectweb.asm.AnnotationVisitor;
-import org.objectweb.asm.ClassReader;
-import org.objectweb.asm.ClassVisitor;
-import org.objectweb.asm.ClassWriter;
-import org.objectweb.asm.Opcodes;
-import org.objectweb.asm.tree.ClassNode;
-import org.objectweb.asm.tree.FieldNode;
-import org.objectweb.asm.tree.InnerClassNode;
-import org.objectweb.asm.tree.MethodNode;
+import org.objectweb.asm.*;
+import org.objectweb.asm.tree.*;
 
 import java.util.*;
 import java.util.stream.Collectors;
 
 public class ClassMerger {
     private static final String SIDE_DESCRIPTOR = "Lnet/fabricmc/api/EnvType;";
+    private static final String ITF_DESCRIPTOR = "Lnet/fabricmc/api/EnvironmentInterface;";
+    private static final String ITF_LIST_DESCRIPTOR = "Lnet/fabricmc/api/EnvironmentInterfaces;";
     private static final String SIDED_DESCRIPTOR = "Lnet/fabricmc/api/Environment;";
 
     private abstract class Merger<T> {
@@ -39,11 +34,11 @@ public class ClassMerger {
         private final List<String> entryNames;
 
         public Merger(List<T> entriesClient, List<T> entriesServer) {
-            this.entriesClient = toMap(entriesClient);
-            this.entriesServer = toMap(entriesServer);
+            this.entriesClient = new LinkedHashMap<>();
+            this.entriesServer = new LinkedHashMap<>();
 
-            List<String> listClient = entriesClient.stream().map(this::getName).collect(Collectors.toList());
-            List<String> listServer = entriesServer.stream().map(this::getName).collect(Collectors.toList());
+            List<String> listClient = toMap(entriesClient, this.entriesClient);
+            List<String> listServer = toMap(entriesServer, this.entriesServer);
 
             this.entryNames = StitchUtil.mergePreserveOrder(listClient, listServer);
         }
@@ -51,12 +46,14 @@ public class ClassMerger {
         public abstract String getName(T entry);
         public abstract void applySide(T entry, String side);
 
-        private final Map<String, T> toMap(List<T> entries) {
-            Map<String, T> map = new LinkedHashMap<>();
+        private final List<String> toMap(List<T> entries, Map<String, T> map) {
+            List<String> list = new ArrayList<>(entries.size());
             for (T entry : entries) {
-                map.put(getName(entry), entry);
+                String name = getName(entry);
+                map.put(name, entry);
+                list.add(name);
             }
-            return map;
+            return list;
         }
 
         public void merge(List<T> list) {
@@ -78,8 +75,19 @@ public class ClassMerger {
     }
 
     private static void visitSideAnnotation(AnnotationVisitor av, String side) {
-        av.visitEnum("value", SIDE_DESCRIPTOR, side.toUpperCase());
+        av.visitEnum("value", SIDE_DESCRIPTOR, side.toUpperCase(Locale.ROOT));
         av.visitEnd();
+    }
+
+    private static void visitItfAnnotation(AnnotationVisitor av, String side, List<String> itfDescriptors) {
+        AnnotationVisitor avItf = av.visitAnnotation(null, ITF_DESCRIPTOR);
+        avItf.visitEnum("value", SIDE_DESCRIPTOR, side.toUpperCase(Locale.ROOT));
+        AnnotationVisitor array = avItf.visitArray("itf");
+        for (String itf : itfDescriptors) {
+            array.visit(null, Type.getType("L" + itf + ";"));
+        }
+        array.visitEnd();
+        avItf.visitEnd();
     }
 
     public static class SidedClassVisitor extends ClassVisitor {
@@ -102,15 +110,6 @@ public class ClassMerger {
 
     }
 
-    public byte[] addSideInformation(byte[] classSided, String side) {
-        ClassReader reader = new ClassReader(classSided);
-        ClassWriter writer = new ClassWriter(0);
-
-        reader.accept(new SidedClassVisitor(Opcodes.ASM7, writer, side), 0);
-
-        return writer.toByteArray();
-    }
-
     public byte[] merge(byte[] classClient, byte[] classServer) {
         ClassReader readerC = new ClassReader(classClient);
         ClassReader readerS = new ClassReader(classServer);
@@ -127,7 +126,6 @@ public class ClassMerger {
         nodeOut.access = nodeC.access;
         nodeOut.name = nodeC.name;
         nodeOut.signature = nodeC.signature;
-        nodeOut.interfaces = nodeC.interfaces;
         nodeOut.superName = nodeC.superName;
         nodeOut.sourceFile = nodeC.sourceFile;
         nodeOut.sourceDebug = nodeC.sourceDebug;
@@ -135,12 +133,59 @@ public class ClassMerger {
         nodeOut.outerMethod = nodeC.outerMethod;
         nodeOut.outerMethodDesc = nodeC.outerMethodDesc;
         nodeOut.module = nodeC.module;
-
-        nodeOut.invisibleAnnotations = nodeC.invisibleAnnotations;
-        nodeOut.invisibleTypeAnnotations = nodeC.invisibleTypeAnnotations;
-        nodeOut.visibleAnnotations = nodeC.visibleAnnotations;
-        nodeOut.visibleTypeAnnotations = nodeC.visibleTypeAnnotations;
+        nodeOut.nestHostClass = nodeC.nestHostClass;
+        nodeOut.nestMembers = nodeC.nestMembers;
         nodeOut.attrs = nodeC.attrs;
+
+        if (nodeC.invisibleAnnotations != null) {
+            nodeOut.invisibleAnnotations = new ArrayList<>();
+            nodeOut.invisibleAnnotations.addAll(nodeC.invisibleAnnotations);
+        }
+        if (nodeC.invisibleTypeAnnotations != null) {
+            nodeOut.invisibleTypeAnnotations = new ArrayList<>();
+            nodeOut.invisibleTypeAnnotations.addAll(nodeC.invisibleTypeAnnotations);
+        }
+        if (nodeC.visibleAnnotations != null) {
+            nodeOut.visibleAnnotations = new ArrayList<>();
+            nodeOut.visibleAnnotations.addAll(nodeC.visibleAnnotations);
+        }
+        if (nodeC.visibleTypeAnnotations != null) {
+            nodeOut.visibleTypeAnnotations = new ArrayList<>();
+            nodeOut.visibleTypeAnnotations.addAll(nodeC.visibleTypeAnnotations);
+        }
+
+        List<String> itfs = StitchUtil.mergePreserveOrder(nodeC.interfaces, nodeS.interfaces);
+        nodeOut.interfaces = new ArrayList<>();
+
+        List<String> clientItfs = new ArrayList<>();
+        List<String> serverItfs = new ArrayList<>();
+
+        for (String s : itfs) {
+            boolean nc = nodeC.interfaces.contains(s);
+            boolean ns = nodeS.interfaces.contains(s);
+            nodeOut.interfaces.add(s);
+            if (nc && !ns) {
+                clientItfs.add(s);
+            } else if (ns && !nc) {
+                serverItfs.add(s);
+            }
+        }
+
+        if (!clientItfs.isEmpty() || !serverItfs.isEmpty()) {
+            System.out.println(nodeOut.name);
+
+            AnnotationVisitor envInterfaces = nodeOut.visitAnnotation(ITF_LIST_DESCRIPTOR, false);
+            AnnotationVisitor eiArray = envInterfaces.visitArray("value");
+
+            if (!clientItfs.isEmpty()) {
+                visitItfAnnotation(eiArray, "CLIENT", clientItfs);
+            }
+            if (!serverItfs.isEmpty()) {
+                visitItfAnnotation(eiArray, "SERVER", serverItfs);
+            }
+            eiArray.visitEnd();
+            envInterfaces.visitEnd();
+        }
 
         new Merger<InnerClassNode>(nodeC.innerClasses, nodeS.innerClasses) {
             @Override
@@ -161,7 +206,7 @@ public class ClassMerger {
 
             @Override
             public void applySide(FieldNode entry, String side) {
-                AnnotationVisitor av = entry.visitAnnotation(SIDED_DESCRIPTOR, true);
+                AnnotationVisitor av = entry.visitAnnotation(SIDED_DESCRIPTOR, false);
                 visitSideAnnotation(av, side);
             }
         }.merge(nodeOut.fields);
@@ -174,7 +219,7 @@ public class ClassMerger {
 
             @Override
             public void applySide(MethodNode entry, String side) {
-                AnnotationVisitor av = entry.visitAnnotation(SIDED_DESCRIPTOR, true);
+                AnnotationVisitor av = entry.visitAnnotation(SIDED_DESCRIPTOR, false);
                 visitSideAnnotation(av, side);
             }
         }.merge(nodeOut.methods);

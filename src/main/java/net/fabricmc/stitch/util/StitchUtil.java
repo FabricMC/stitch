@@ -66,7 +66,7 @@ public final class StitchUtil {
         } catch (URISyntaxException e) {
             throw new IOException(e);
         }
-        
+
         try {
             return new FileSystemDelegate(FileSystems.newFileSystem(jarUri, create ? jfsArgsCreate : jfsArgsEmpty), true);
         } catch (FileSystemAlreadyExistsException e) {

@@ -170,7 +170,7 @@ public class JarReader {
 
         @Override
         public void visitEnd() {
-            boolean isBridge = hasBridgeFlag;
+            /* boolean isBridge = hasBridgeFlag;
 
             if (!isBridge && methodRefs.size() == 1) {
                 System.out.println("Found suspicious bridge-looking method: " + classEntry.getFullyQualifiedName() + ":" + entry);
@@ -185,7 +185,7 @@ public class JarReader {
                     targetClass.relatedMethods.computeIfAbsent(targetKey, (a) -> new HashSet<>()).add(Pair.of(classEntry, entry.getKey()));
                     classEntry.relatedMethods.computeIfAbsent(entry.getKey(), (a) -> new HashSet<>()).add(Pair.of(targetClass, targetKey));
                 }
-            }
+            } */
         }
     }
 

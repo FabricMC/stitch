@@ -16,11 +16,12 @@
 
 package net.fabricmc.stitch.commands;
 
+import net.fabricmc.mappings.EntryTriple;
+import net.fabricmc.mappings.MappingsProvider;
 import net.fabricmc.stitch.representation.*;
 import net.fabricmc.stitch.util.MatcherUtil;
 import net.fabricmc.stitch.util.Pair;
 import net.fabricmc.stitch.util.StitchUtil;
-import net.fabricmc.tinyremapper.TinyUtils;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.objectweb.asm.Opcodes;
 
@@ -29,7 +30,7 @@ import java.util.*;
 
 class GenState {
     private final Map<String, Integer> counters = new HashMap<>();
-    private final Map<Entry, Integer> values = new IdentityHashMap<>();
+    private final Map<AbstractJarEntry, Integer> values = new IdentityHashMap<>();
     private GenMap oldToIntermediary, newToOld;
     private GenMap newToIntermediary;
     private boolean interactive = true;
@@ -39,7 +40,7 @@ class GenState {
         interactive = false;
     }
 
-    public String next(Entry entry, String name) {
+    public String next(AbstractJarEntry entry, String name) {
         return name + "_" + values.computeIfAbsent(entry, (e) -> {
             int v = counters.getOrDefault(name, 1);
             counters.put(name, v + 1);
@@ -55,14 +56,16 @@ class GenState {
         return Collections.unmodifiableMap(counters);
     }
 
-    public void generate(File file, JarEntry jarEntry, JarEntry jarOld) throws IOException {
+    public void generate(File file, JarRootEntry jarEntry, JarRootEntry jarOld) throws IOException {
         if (file.exists()) {
             System.err.println("Target file exists - loading...");
-            newToIntermediary = new GenMap(false);
-            try (FileReader fileReader = new FileReader(file)) {
-                try (BufferedReader reader = new BufferedReader(fileReader)) {
-                    TinyUtils.read(reader, "official", "intermediary", newToIntermediary::addClass, newToIntermediary::addField, newToIntermediary::addMethod);
-                }
+            newToIntermediary = new GenMap();
+            try (FileInputStream inputStream = new FileInputStream(file)) {
+                newToIntermediary.load(
+                        MappingsProvider.readTinyMappings(inputStream),
+                        "official",
+                        "intermediary"
+                );
             }
         }
 
@@ -70,7 +73,7 @@ class GenState {
             try (BufferedWriter writer = new BufferedWriter(fileWriter)) {
                 writer.write("v1\tofficial\tintermediary\n");
 
-                for (ClassEntry c : jarEntry.getClasses()) {
+                for (JarClassEntry c : jarEntry.getClasses()) {
                     addClass(writer, c, jarOld, jarEntry, "net/minecraft/");
                 }
 
@@ -81,33 +84,33 @@ class GenState {
         }
     }
 
-    public static boolean isMappedClass(ClassStorage storage, ClassEntry c) {
+    public static boolean isMappedClass(ClassStorage storage, JarClassEntry c) {
         return !c.isAnonymous();
     }
 
-    public static boolean isMappedField(ClassStorage storage, ClassEntry c, FieldEntry f) {
+    public static boolean isMappedField(ClassStorage storage, JarClassEntry c, JarFieldEntry f) {
         return f.getName().length() <= 2 || (f.getName().length() == 3 && f.getName().charAt(2) == '_');
     }
 
-    public static boolean isMappedMethod(ClassStorage storage, ClassEntry c, MethodEntry m) {
+    public static boolean isMappedMethod(ClassStorage storage, JarClassEntry c, JarMethodEntry m) {
         return (m.getName().length() <= 2 || (m.getName().length() == 3 && m.getName().charAt(2) == '_')) && m.getName().charAt(0) != '<' && m.isSource(storage, c);
     }
 
     @Nullable
-    private String getFieldName(ClassStorage storage, ClassEntry c, FieldEntry f) {
+    private String getFieldName(ClassStorage storage, JarClassEntry c, JarFieldEntry f) {
         if (!isMappedField(storage, c, f)) {
             return null;
         }
 
         if (newToIntermediary != null) {
-            GenMap.DescEntry findEntry = newToIntermediary.getField(c.getFullyQualifiedName(), f.getName(), f.getDescriptor());
+            EntryTriple findEntry = newToIntermediary.getField(c.getFullyQualifiedName(), f.getName(), f.getDescriptor());
             if (findEntry != null) {
                 return findEntry.getName();
             }
         }
 
         if (newToOld != null) {
-            GenMap.DescEntry findEntry = newToOld.getField(c.getFullyQualifiedName(), f.getName(), f.getDescriptor());
+            EntryTriple findEntry = newToOld.getField(c.getFullyQualifiedName(), f.getName(), f.getDescriptor());
             if (findEntry != null) {
                 findEntry = oldToIntermediary.getField(findEntry);
                 if (findEntry != null) {
@@ -119,9 +122,9 @@ class GenState {
         return next(f, "field");
     }
 
-    private final Map<MethodEntry, String> methodNames = new IdentityHashMap<>();
+    private final Map<JarMethodEntry, String> methodNames = new IdentityHashMap<>();
 
-    private String getPropagation(ClassStorage storage, ClassEntry classEntry) {
+    private String getPropagation(ClassStorage storage, JarClassEntry classEntry) {
         if (classEntry == null) {
             return "";
         }
@@ -133,7 +136,7 @@ class GenState {
             strings.add(scs);
         }
 
-        for (ClassEntry ce : classEntry.getInterfaces(storage)) {
+        for (JarClassEntry ce : classEntry.getInterfaces(storage)) {
             scs = getPropagation(storage, ce);
             if (!scs.isEmpty()) {
                 strings.add(scs);
@@ -154,7 +157,7 @@ class GenState {
         return builder.toString();
     }
 
-    private String getNamesListEntry(ClassStorage storage, ClassEntry classEntry) {
+    private String getNamesListEntry(ClassStorage storage, JarClassEntry classEntry) {
         StringBuilder builder = new StringBuilder(getPropagation(storage, classEntry));
         if (classEntry.isInterface()) {
             builder.append("(itf)");
@@ -163,13 +166,13 @@ class GenState {
         return builder.toString();
     }
 
-    private Set<MethodEntry> findNames(ClassStorage storageOld, ClassStorage storageNew, ClassEntry c, MethodEntry m, Map<String, Set<String>> names) {
-        Set<MethodEntry> allEntries = new HashSet<>();
+    private Set<JarMethodEntry> findNames(ClassStorage storageOld, ClassStorage storageNew, JarClassEntry c, JarMethodEntry m, Map<String, Set<String>> names) {
+        Set<JarMethodEntry> allEntries = new HashSet<>();
         findNames(storageOld, storageNew, c, m, names, allEntries);
         return allEntries;
     }
 
-    private void findNames(ClassStorage storageOld, ClassStorage storageNew, ClassEntry c, MethodEntry m, Map<String, Set<String>> names, Set<MethodEntry> usedMethods) {
+    private void findNames(ClassStorage storageOld, ClassStorage storageNew, JarClassEntry c, JarMethodEntry m, Map<String, Set<String>> names, Set<JarMethodEntry> usedMethods) {
         if (!usedMethods.add(m)) {
             return;
         }
@@ -180,10 +183,10 @@ class GenState {
             suffix += "(bridge)";
         }
 
-        List<ClassEntry> ccList = m.getMatchingEntries(storageNew, c);
+        List<JarClassEntry> ccList = m.getMatchingEntries(storageNew, c);
 
-        for (ClassEntry cc : ccList) {
-            GenMap.DescEntry findEntry = null;
+        for (JarClassEntry cc : ccList) {
+            EntryTriple findEntry = null;
             if (newToIntermediary != null) {
                 findEntry = newToIntermediary.getMethod(cc.getFullyQualifiedName(), m.getName(), m.getDescriptor());
                 if (findEntry != null) {
@@ -194,18 +197,18 @@ class GenState {
             if (findEntry == null && newToOld != null) {
                 findEntry = newToOld.getMethod(cc.getFullyQualifiedName(), m.getName(), m.getDescriptor());
                 if (findEntry != null) {
-                    GenMap.DescEntry newToOldEntry = findEntry;
+                    EntryTriple newToOldEntry = findEntry;
                     findEntry = oldToIntermediary.getMethod(newToOldEntry);
                     if (findEntry != null) {
                         names.computeIfAbsent(findEntry.getName(), (s) -> new TreeSet<>()).add(getNamesListEntry(storageNew, cc) + suffix);
                     } else {
                         // more involved...
-                        ClassEntry oldBase = storageOld.getClass(newToOldEntry.getOwner(), false);
+                        JarClassEntry oldBase = storageOld.getClass(newToOldEntry.getOwner(), false);
                         if (oldBase != null) {
-                            MethodEntry oldM = oldBase.getMethod(newToOldEntry.getName() + newToOldEntry.getDesc());
-                            List<ClassEntry> cccList = oldM.getMatchingEntries(storageOld, oldBase);
+                            JarMethodEntry oldM = oldBase.getMethod(newToOldEntry.getName() + newToOldEntry.getDesc());
+                            List<JarClassEntry> cccList = oldM.getMatchingEntries(storageOld, oldBase);
 
-                            for (ClassEntry ccc : cccList) {
+                            for (JarClassEntry ccc : cccList) {
                                 findEntry = oldToIntermediary.getMethod(ccc.getFullyQualifiedName(), oldM.getName(), oldM.getDescriptor());
                                 if (findEntry != null) {
                                     names.computeIfAbsent(findEntry.getName(), (s) -> new TreeSet<>()).add(getNamesListEntry(storageOld, ccc) + suffix);
@@ -217,15 +220,15 @@ class GenState {
             }
         }
 
-        for (ClassEntry mc : ccList) {
-            for (Pair<ClassEntry, String> pair : mc.getRelatedMethods(m)) {
+        for (JarClassEntry mc : ccList) {
+            for (Pair<JarClassEntry, String> pair : mc.getRelatedMethods(m)) {
                 findNames(storageOld, storageNew, pair.getLeft(), pair.getLeft().getMethod(pair.getRight()), names, usedMethods);
             }
         }
     }
 
     @Nullable
-    private String getMethodName(ClassStorage storageOld, ClassStorage storageNew, ClassEntry c, MethodEntry m) {
+    private String getMethodName(ClassStorage storageOld, ClassStorage storageNew, JarClassEntry c, JarMethodEntry m) {
         if (!isMappedMethod(storageNew, c, m)) {
             return null;
         }
@@ -236,8 +239,8 @@ class GenState {
 
         if (newToOld != null || newToIntermediary != null) {
             Map<String, Set<String>> names = new HashMap<>();
-            Set<MethodEntry> allEntries = findNames(storageOld, storageNew, c, m, names);
-            for (MethodEntry mm : allEntries) {
+            Set<JarMethodEntry> allEntries = findNames(storageOld, storageNew, c, m, names);
+            for (JarMethodEntry mm : allEntries) {
                 if (methodNames.containsKey(mm)) {
                     return methodNames.get(mm);
                 }
@@ -268,7 +271,7 @@ class GenState {
                     }
 
                     if (i >= 1 && i <= nameList.size()) {
-                        for (MethodEntry mm : allEntries) {
+                        for (JarMethodEntry mm : allEntries) {
                             methodNames.put(mm, nameList.get(i - 1));
                         }
                         System.out.println("OK!");
@@ -277,7 +280,7 @@ class GenState {
                 }
             } else if (names.size() == 1) {
                 String s = names.keySet().iterator().next();
-                for (MethodEntry mm : allEntries) {
+                for (JarMethodEntry mm : allEntries) {
                     methodNames.put(mm, s);
                 }
                 return s;
@@ -287,7 +290,7 @@ class GenState {
         return next(m, "method");
     }
 
-    private void addClass(BufferedWriter writer, ClassEntry c, ClassStorage storageOld, ClassStorage storage, String translatedPrefix) throws IOException {
+    private void addClass(BufferedWriter writer, JarClassEntry c, ClassStorage storageOld, ClassStorage storage, String translatedPrefix) throws IOException {
         String cname = "";
 
         if (c.getName().contains("/")) {
@@ -332,7 +335,7 @@ class GenState {
 
         writer.write("CLASS\t" + c.getFullyQualifiedName() + "\t" + translatedPrefix + cname + "\n");
 
-        for (FieldEntry f : c.getFields()) {
+        for (JarFieldEntry f : c.getFields()) {
             String fName = getFieldName(storage, c, f);
             if (fName != null) {
                 writer.write("FIELD\t" + c.getFullyQualifiedName()
@@ -342,7 +345,7 @@ class GenState {
             }
         }
 
-        for (MethodEntry m : c.getMethods()) {
+        for (JarMethodEntry m : c.getMethods()) {
             String mName = getMethodName(storageOld, storage, c, m);
             if (mName != null) {
                 writer.write("METHOD\t" + c.getFullyQualifiedName()
@@ -352,14 +355,14 @@ class GenState {
             }
         }
 
-        for (ClassEntry cc : c.getInnerClasses()) {
+        for (JarClassEntry cc : c.getInnerClasses()) {
             addClass(writer, cc, storageOld, storage, translatedPrefix + cname + "$");
         }
     }
 
     public void prepareRewrite(File oldMappings) throws IOException {
-        oldToIntermediary = new GenMap(false);
-        newToOld = new GenMap.Dummy(false);
+        oldToIntermediary = new GenMap();
+        newToOld = new GenMap.Dummy();
 
         // TODO: only read once
         try (FileReader fileReader = new FileReader(oldMappings)) {
@@ -374,16 +377,18 @@ class GenState {
             }
         }
 
-        try (FileReader fileReader = new FileReader(oldMappings)) {
-            try (BufferedReader reader = new BufferedReader(fileReader)) {
-                TinyUtils.read(reader, "official", "intermediary", oldToIntermediary::addClass, oldToIntermediary::addField, oldToIntermediary::addMethod);
-            }
+        try (FileInputStream inputStream = new FileInputStream(oldMappings)) {
+            oldToIntermediary.load(
+                    MappingsProvider.readTinyMappings(inputStream),
+                    "official",
+                    "intermediary"
+            );
         }
     }
 
     public void prepareUpdate(File oldMappings, File matches) throws IOException {
-        oldToIntermediary = new GenMap(false);
-        newToOld = new GenMap(true);
+        oldToIntermediary = new GenMap();
+        newToOld = new GenMap();
 
         // TODO: only read once
         try (FileReader fileReader = new FileReader(oldMappings)) {
@@ -398,15 +403,17 @@ class GenState {
             }
         }
 
-        try (FileReader fileReader = new FileReader(oldMappings)) {
-            try (BufferedReader reader = new BufferedReader(fileReader)) {
-                TinyUtils.read(reader, "official", "intermediary", oldToIntermediary::addClass, oldToIntermediary::addField, oldToIntermediary::addMethod);
-            }
+        try (FileInputStream inputStream = new FileInputStream(oldMappings)) {
+            oldToIntermediary.load(
+                    MappingsProvider.readTinyMappings(inputStream),
+                    "official",
+                    "intermediary"
+            );
         }
 
         try (FileReader fileReader = new FileReader(matches)) {
             try (BufferedReader reader = new BufferedReader(fileReader)) {
-                MatcherUtil.read(reader, newToOld::addClass, newToOld::addField, newToOld::addMethod);
+                MatcherUtil.read(reader, true, newToOld::addClass, newToOld::addField, newToOld::addMethod);
             }
         }
     }

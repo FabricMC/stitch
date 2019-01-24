@@ -19,13 +19,13 @@ package net.fabricmc.stitch.representation;
 import java.io.File;
 import java.util.*;
 
-public class JarEntry extends Entry implements ClassStorage {
+public class JarRootEntry extends AbstractJarEntry implements ClassStorage {
     final Object syncObject = new Object();
     final File file;
-    final Map<String, ClassEntry> classTree;
-    final List<ClassEntry> allClasses;
+    final Map<String, JarClassEntry> classTree;
+    final List<JarClassEntry> allClasses;
 
-    public JarEntry(File file) {
+    public JarRootEntry(File file) {
         super(file.getName());
 
         this.file = file;
@@ -34,7 +34,7 @@ public class JarEntry extends Entry implements ClassStorage {
     }
 
     @Override
-    public ClassEntry getClass(String name, boolean create) {
+    public JarClassEntry getClass(String name, boolean create) {
         if (name == null) {
             return null;
         }
@@ -42,10 +42,10 @@ public class JarEntry extends Entry implements ClassStorage {
         String[] nameSplit = name.split("\\$");
         int i = 0;
 
-        ClassEntry parent;
-        ClassEntry entry = classTree.get(nameSplit[i++]);
+        JarClassEntry parent;
+        JarClassEntry entry = classTree.get(nameSplit[i++]);
         if (entry == null && create) {
-            entry = new ClassEntry(nameSplit[0], nameSplit[0]);
+            entry = new JarClassEntry(nameSplit[0], nameSplit[0]);
             synchronized (syncObject) {
                 allClasses.add(entry);
                 classTree.put(entry.getName(), entry);
@@ -62,7 +62,7 @@ public class JarEntry extends Entry implements ClassStorage {
             entry = entry.getInnerClass(nameSplit[i++]);
 
             if (entry == null && create) {
-                entry = new ClassEntry(nameSplit[i - 1], fullyQualifiedBuilder.toString());
+                entry = new JarClassEntry(nameSplit[i - 1], fullyQualifiedBuilder.toString());
                 synchronized (syncObject) {
                     allClasses.add(entry);
                     parent.innerClasses.put(entry.getName(), entry);
@@ -73,11 +73,11 @@ public class JarEntry extends Entry implements ClassStorage {
         return entry;
     }
 
-    public Collection<ClassEntry> getClasses() {
+    public Collection<JarClassEntry> getClasses() {
         return classTree.values();
     }
 
-    public Collection<ClassEntry> getAllClasses() {
+    public Collection<JarClassEntry> getAllClasses() {
         return Collections.unmodifiableList(allClasses);
     }
 }

@@ -16,17 +16,16 @@
 
 package net.fabricmc.stitch.representation;
 
-import net.fabricmc.stitch.util.Pair;
 import net.fabricmc.stitch.util.StitchUtil;
 import org.objectweb.asm.commons.Remapper;
 
 import java.util.*;
 
-public class MethodEntry extends Entry {
+public class JarMethodEntry extends AbstractJarEntry {
     protected String desc;
     protected String signature;
 
-    protected MethodEntry(int access, String name, String desc, String signature) {
+    protected JarMethodEntry(int access, String name, String desc, String signature) {
         super(name);
         this.setAccess(access);
         this.desc = desc;
@@ -46,37 +45,37 @@ public class MethodEntry extends Entry {
         return super.getKey() + desc;
     }
 
-    public boolean isSource(ClassStorage storage, ClassEntry c) {
+    public boolean isSource(ClassStorage storage, JarClassEntry c) {
         if (Access.isPrivateOrStatic(getAccess())) {
             return true;
         }
 
-        Set<ClassEntry> entries = StitchUtil.newIdentityHashSet();
+        Set<JarClassEntry> entries = StitchUtil.newIdentityHashSet();
         entries.add(c);
         getMatchingSources(entries, storage, c);
         return entries.size() == 1;
     }
 
-    public List<ClassEntry> getMatchingEntries(ClassStorage storage, ClassEntry c) {
+    public List<JarClassEntry> getMatchingEntries(ClassStorage storage, JarClassEntry c) {
         if (Access.isPrivateOrStatic(getAccess())) {
             return Collections.singletonList(c);
         }
 
-        Set<ClassEntry> entries = StitchUtil.newIdentityHashSet();
-        Set<ClassEntry> entriesNew = StitchUtil.newIdentityHashSet();
+        Set<JarClassEntry> entries = StitchUtil.newIdentityHashSet();
+        Set<JarClassEntry> entriesNew = StitchUtil.newIdentityHashSet();
         entries.add(c);
         int lastSize = 0;
 
         while (entries.size() > lastSize) {
             lastSize = entries.size();
 
-            for (ClassEntry cc : entries) {
+            for (JarClassEntry cc : entries) {
                 getMatchingSources(entriesNew, storage, cc);
             }
             entries.addAll(entriesNew);
             entriesNew.clear();
 
-            for (ClassEntry cc : entries) {
+            for (JarClassEntry cc : entries) {
                 getMatchingEntries(entriesNew, storage, cc, 0);
             }
             entries.addAll(entriesNew);
@@ -88,37 +87,37 @@ public class MethodEntry extends Entry {
         return new ArrayList<>(entries);
     }
 
-    void getMatchingSources(Collection<ClassEntry> entries, ClassStorage storage, ClassEntry c) {
-        MethodEntry m = c.getMethod(getKey());
+    void getMatchingSources(Collection<JarClassEntry> entries, ClassStorage storage, JarClassEntry c) {
+        JarMethodEntry m = c.getMethod(getKey());
         if (m != null) {
             if (!Access.isPrivateOrStatic(m.getAccess())) {
                 entries.add(c);
             }
         }
 
-        ClassEntry superClass = c.getSuperClass(storage);
+        JarClassEntry superClass = c.getSuperClass(storage);
         if (superClass != null) {
             getMatchingSources(entries, storage, superClass);
         }
 
-        for (ClassEntry itf : c.getInterfaces(storage)) {
+        for (JarClassEntry itf : c.getInterfaces(storage)) {
             getMatchingSources(entries, storage, itf);
         }
     }
 
-    void getMatchingEntries(Collection<ClassEntry> entries, ClassStorage storage, ClassEntry c, int indent) {
+    void getMatchingEntries(Collection<JarClassEntry> entries, ClassStorage storage, JarClassEntry c, int indent) {
         entries.add(c);
 
-        for (ClassEntry cc : c.getSubclasses(storage)) {
+        for (JarClassEntry cc : c.getSubclasses(storage)) {
             getMatchingEntries(entries, storage, cc, indent + 1);
         }
 
-        for (ClassEntry cc : c.getImplementers(storage)) {
+        for (JarClassEntry cc : c.getImplementers(storage)) {
             getMatchingEntries(entries, storage, cc, indent + 1);
         }
     }
 
-    public void remap(ClassEntry classEntry, String oldOwner, Remapper remapper) {
+    public void remap(JarClassEntry classEntry, String oldOwner, Remapper remapper) {
         String pastDesc = desc;
 
         name = remapper.mapMethodName(oldOwner, name, pastDesc);

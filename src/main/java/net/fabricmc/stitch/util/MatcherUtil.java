@@ -16,18 +16,19 @@
 
 package net.fabricmc.stitch.util;
 
-import net.fabricmc.tinyremapper.TinyUtils;
+import net.fabricmc.mappings.EntryTriple;
 
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.util.function.BiConsumer;
+import java.util.function.UnaryOperator;
 
 public final class MatcherUtil {
     private MatcherUtil() {
 
     }
 
-    public static void read(BufferedReader reader, BiConsumer<String, String> classMappingConsumer, BiConsumer<TinyUtils.Mapping, TinyUtils.Mapping> fieldMappingConsumer, BiConsumer<TinyUtils.Mapping, TinyUtils.Mapping> methodMappingConsumer) throws IOException {
+    public static void read(BufferedReader reader, boolean invert, BiConsumer<String, String> classMappingConsumer, BiConsumer<EntryTriple, EntryTriple> fieldMappingConsumer, BiConsumer<EntryTriple, EntryTriple> methodMappingConsumer) throws IOException {
         String line;
         String ownerFrom = null, ownerTo = null;
 
@@ -38,22 +39,40 @@ public final class MatcherUtil {
                 // class
                 ownerFrom = parts[1].substring(1, parts[1].length() - 1);
                 ownerTo = parts[2].substring(1, parts[2].length() - 1);
-                classMappingConsumer.accept(ownerFrom, ownerTo);
+                if (invert) {
+                    classMappingConsumer.accept(ownerTo, ownerFrom);
+                } else {
+                    classMappingConsumer.accept(ownerFrom, ownerTo);
+                }
             } else if (parts[0].equals("") && ownerFrom != null && parts.length >= 2) {
                 if (parts[1].equals("f") && parts.length == 4) {
                     String[] fieldFrom = parts[2].split(";;");
                     String[] fieldTo = parts[3].split(";;");
-                    fieldMappingConsumer.accept(
-                            new TinyUtils.Mapping(ownerFrom, fieldFrom[0], fieldFrom[1]),
-                            new TinyUtils.Mapping(ownerTo, fieldTo[0], fieldTo[1])
-                    );
+                    if (invert) {
+                        fieldMappingConsumer.accept(
+                                new EntryTriple(ownerTo, fieldTo[0], fieldTo[1]),
+                                new EntryTriple(ownerFrom, fieldFrom[0], fieldFrom[1])
+                        );
+                    } else {
+                        fieldMappingConsumer.accept(
+                                new EntryTriple(ownerFrom, fieldFrom[0], fieldFrom[1]),
+                                new EntryTriple(ownerTo, fieldTo[0], fieldTo[1])
+                        );
+                    }
                 } else if (parts[1].equals("m") && parts.length == 4) {
                     String[] methodFrom = toMethodArray(parts[2]);
                     String[] methodTo = toMethodArray(parts[3]);
-                    methodMappingConsumer.accept(
-                            new TinyUtils.Mapping(ownerFrom, methodFrom[0], methodFrom[1]),
-                            new TinyUtils.Mapping(ownerTo, methodTo[0], methodTo[1])
-                    );
+                    if (invert) {
+                        methodMappingConsumer.accept(
+                                new EntryTriple(ownerTo, methodTo[0], methodTo[1]),
+                                new EntryTriple(ownerFrom, methodFrom[0], methodFrom[1])
+                        );
+                    } else {
+                        methodMappingConsumer.accept(
+                                new EntryTriple(ownerFrom, methodFrom[0], methodFrom[1]),
+                                new EntryTriple(ownerTo, methodTo[0], methodTo[1])
+                        );
+                    }
                 }
             }
         }

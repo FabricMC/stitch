@@ -27,19 +27,19 @@ import java.util.*;
  */
 public class ClassPropagationTree {
     private final ClassStorage jar;
-    private final Set<ClassEntry> relevantClasses;
-    private final Set<ClassEntry> topmostClasses;
+    private final Set<JarClassEntry> relevantClasses;
+    private final Set<JarClassEntry> topmostClasses;
 
-    public ClassPropagationTree(ClassStorage jar, ClassEntry baseClass) {
+    public ClassPropagationTree(ClassStorage jar, JarClassEntry baseClass) {
         this.jar = jar;
         relevantClasses = StitchUtil.newIdentityHashSet();
         topmostClasses = StitchUtil.newIdentityHashSet();
 
-        LinkedList<ClassEntry> queue = new LinkedList<>();
+        LinkedList<JarClassEntry> queue = new LinkedList<>();
         queue.add(baseClass);
 
         while (!queue.isEmpty()) {
-            ClassEntry entry = queue.remove();
+            JarClassEntry entry = queue.remove();
             if (entry == null || relevantClasses.contains(entry)) {
                 continue;
             }
@@ -53,18 +53,18 @@ public class ClassPropagationTree {
             }
 
             queue.addAll(entry.getInterfaces(jar));
-            ClassEntry superClass = entry.getSuperClass(jar);
+            JarClassEntry superClass = entry.getSuperClass(jar);
             if (superClass != null) {
                 queue.add(superClass);
             }
         }
     }
 
-    public Collection<ClassEntry> getClasses() {
+    public Collection<JarClassEntry> getClasses() {
         return Collections.unmodifiableSet(relevantClasses);
     }
 
-    public Collection<ClassEntry> getTopmostClasses() {
+    public Collection<JarClassEntry> getTopmostClasses() {
         return Collections.unmodifiableSet(topmostClasses);
     }
 }

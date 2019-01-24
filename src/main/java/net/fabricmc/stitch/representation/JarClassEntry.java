@@ -22,12 +22,12 @@ import org.objectweb.asm.commons.Remapper;
 import java.util.*;
 import java.util.stream.Collectors;
 
-public class ClassEntry extends Entry {
+public class JarClassEntry extends AbstractJarEntry {
     String fullyQualifiedName;
-    final Map<String, ClassEntry> innerClasses;
-    final Map<String, FieldEntry> fields;
-    final Map<String, MethodEntry> methods;
-    final Map<String, Set<Pair<ClassEntry, String>>> relatedMethods;
+    final Map<String, JarClassEntry> innerClasses;
+    final Map<String, JarFieldEntry> fields;
+    final Map<String, JarMethodEntry> methods;
+    final Map<String, Set<Pair<JarClassEntry, String>>> relatedMethods;
 
     String signature;
     String superclass;
@@ -35,7 +35,7 @@ public class ClassEntry extends Entry {
     List<String> subclasses;
     List<String> implementers;
 
-    protected ClassEntry(String name, String fullyQualifiedName) {
+    protected JarClassEntry(String name, String fullyQualifiedName) {
         super(name);
 
         this.fullyQualifiedName = fullyQualifiedName;
@@ -56,12 +56,12 @@ public class ClassEntry extends Entry {
     }
 
     protected void populateParents(ClassStorage storage) {
-        ClassEntry superEntry = getSuperClass(storage);
+        JarClassEntry superEntry = getSuperClass(storage);
         if (superEntry != null) {
             superEntry.subclasses.add(fullyQualifiedName);
         }
 
-        for (ClassEntry itf : getInterfaces(storage)) {
+        for (JarClassEntry itf : getInterfaces(storage)) {
             if (itf != null) {
                 itf.implementers.add(fullyQualifiedName);
             }
@@ -69,7 +69,7 @@ public class ClassEntry extends Entry {
     }
 
     // unstable
-    public Collection<Pair<ClassEntry, String>> getRelatedMethods(MethodEntry m) {
+    public Collection<Pair<JarClassEntry, String>> getRelatedMethods(JarMethodEntry m) {
         //noinspection unchecked
         return relatedMethods.getOrDefault(m.getKey(), Collections.EMPTY_SET);
     }
@@ -86,7 +86,7 @@ public class ClassEntry extends Entry {
         return superclass;
     }
 
-    public ClassEntry getSuperClass(ClassStorage storage) {
+    public JarClassEntry getSuperClass(ClassStorage storage) {
         return storage.getClass(superclass, false);
     }
 
@@ -94,7 +94,7 @@ public class ClassEntry extends Entry {
         return Collections.unmodifiableList(interfaces);
     }
 
-    public List<ClassEntry> getInterfaces(ClassStorage storage) {
+    public List<JarClassEntry> getInterfaces(ClassStorage storage) {
         return toClassEntryList(storage, interfaces);
     }
 
@@ -102,7 +102,7 @@ public class ClassEntry extends Entry {
         return Collections.unmodifiableList(subclasses);
     }
 
-    public List<ClassEntry> getSubclasses(ClassStorage storage) {
+    public List<JarClassEntry> getSubclasses(ClassStorage storage) {
         return toClassEntryList(storage, subclasses);
     }
 
@@ -110,11 +110,11 @@ public class ClassEntry extends Entry {
         return Collections.unmodifiableList(implementers);
     }
 
-    public List<ClassEntry> getImplementers(ClassStorage storage) {
+    public List<JarClassEntry> getImplementers(ClassStorage storage) {
         return toClassEntryList(storage, implementers);
     }
 
-    private List<ClassEntry> toClassEntryList(ClassStorage storage, List<String> stringList) {
+    private List<JarClassEntry> toClassEntryList(ClassStorage storage, List<String> stringList) {
         if (stringList == null) {
             return Collections.emptyList();
         }
@@ -125,27 +125,27 @@ public class ClassEntry extends Entry {
                 .collect(Collectors.toList());
     }
 
-    public ClassEntry getInnerClass(String name) {
+    public JarClassEntry getInnerClass(String name) {
         return innerClasses.get(name);
     }
 
-    public FieldEntry getField(String name) {
+    public JarFieldEntry getField(String name) {
         return fields.get(name);
     }
 
-    public MethodEntry getMethod(String name) {
+    public JarMethodEntry getMethod(String name) {
         return methods.get(name);
     }
 
-    public Collection<ClassEntry> getInnerClasses() {
+    public Collection<JarClassEntry> getInnerClasses() {
         return innerClasses.values();
     }
 
-    public Collection<FieldEntry> getFields() {
+    public Collection<JarFieldEntry> getFields() {
         return fields.values();
     }
 
-    public Collection<MethodEntry> getMethods() {
+    public Collection<JarMethodEntry> getMethods() {
         return methods.values();
     }
 
@@ -176,36 +176,36 @@ public class ClassEntry extends Entry {
         subclasses = subclasses.stream().map(remapper::map).collect(Collectors.toList());
         implementers = implementers.stream().map(remapper::map).collect(Collectors.toList());
 
-        Map<String, ClassEntry> innerClassOld = new HashMap<>(innerClasses);
-        Map<String, FieldEntry> fieldsOld = new HashMap<>(fields);
-        Map<String, MethodEntry> methodsOld = new HashMap<>(methods);
+        Map<String, JarClassEntry> innerClassOld = new HashMap<>(innerClasses);
+        Map<String, JarFieldEntry> fieldsOld = new HashMap<>(fields);
+        Map<String, JarMethodEntry> methodsOld = new HashMap<>(methods);
         Map<String, String> methodKeyRemaps = new HashMap<>();
 
         innerClasses.clear();
         fields.clear();
         methods.clear();
 
-        for (Map.Entry<String, ClassEntry> entry : innerClassOld.entrySet()) {
+        for (Map.Entry<String, JarClassEntry> entry : innerClassOld.entrySet()) {
             entry.getValue().remap(remapper);
             innerClasses.put(entry.getValue().name, entry.getValue());
         }
 
-        for (Map.Entry<String, FieldEntry> entry : fieldsOld.entrySet()) {
+        for (Map.Entry<String, JarFieldEntry> entry : fieldsOld.entrySet()) {
             entry.getValue().remap(this, oldName, remapper);
             fields.put(entry.getValue().getKey(), entry.getValue());
         }
 
-        for (Map.Entry<String, MethodEntry> entry : methodsOld.entrySet()) {
+        for (Map.Entry<String, JarMethodEntry> entry : methodsOld.entrySet()) {
             entry.getValue().remap(this, oldName, remapper);
             methods.put(entry.getValue().getKey(), entry.getValue());
             methodKeyRemaps.put(entry.getKey(), entry.getValue().getKey());
         }
 
         // TODO: remap relatedMethods strings???
-        Map<String, Set<Pair<ClassEntry, String>>> relatedMethodsOld = new HashMap<>(relatedMethods);
+        Map<String, Set<Pair<JarClassEntry, String>>> relatedMethodsOld = new HashMap<>(relatedMethods);
         relatedMethods.clear();
 
-        for (Map.Entry<String, Set<Pair<ClassEntry, String>>> entry : relatedMethodsOld.entrySet()) {
+        for (Map.Entry<String, Set<Pair<JarClassEntry, String>>> entry : relatedMethodsOld.entrySet()) {
             relatedMethods.put(methodKeyRemaps.getOrDefault(entry.getKey(), entry.getKey()), entry.getValue());
         }
     }

@@ -19,11 +19,8 @@ package net.fabricmc.stitch.commands;
 import net.fabricmc.stitch.Command;
 import net.fabricmc.stitch.representation.*;
 
-import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
-import java.util.Map;
 
 public class CommandUpdateIntermediary extends Command {
     public CommandUpdateIntermediary() {
@@ -43,7 +40,7 @@ public class CommandUpdateIntermediary extends Command {
     @Override
     public void run(String[] args) throws Exception {
         File fileOld = new File(args[0]);
-        JarEntry jarOld = new JarEntry(fileOld);
+        JarRootEntry jarOld = new JarRootEntry(fileOld);
         try {
             JarReader reader = new JarReader(jarOld);
             reader.apply();
@@ -52,7 +49,7 @@ public class CommandUpdateIntermediary extends Command {
         }
 
         File fileNew = new File(args[1]);
-        JarEntry jarNew = new JarEntry(fileNew);
+        JarRootEntry jarNew = new JarRootEntry(fileNew);
         try {
             JarReader reader = new JarReader(jarNew);
             reader.apply();

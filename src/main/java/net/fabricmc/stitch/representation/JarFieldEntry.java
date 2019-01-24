@@ -18,11 +18,11 @@ package net.fabricmc.stitch.representation;
 
 import org.objectweb.asm.commons.Remapper;
 
-public class FieldEntry extends Entry {
+public class JarFieldEntry extends AbstractJarEntry {
     protected String desc;
     protected String signature;
 
-    FieldEntry(int access, String name, String desc, String signature) {
+    JarFieldEntry(int access, String name, String desc, String signature) {
         super(name);
         this.setAccess(access);
         this.desc = desc;
@@ -42,7 +42,7 @@ public class FieldEntry extends Entry {
         return super.getKey() + desc;
     }
 
-    public void remap(ClassEntry classEntry, String oldOwner, Remapper remapper) {
+    public void remap(JarClassEntry classEntry, String oldOwner, Remapper remapper) {
         String pastDesc = desc;
 
         name = remapper.mapFieldName(oldOwner, name, pastDesc);

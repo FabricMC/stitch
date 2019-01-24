@@ -51,10 +51,10 @@ public class CommandMatcherToTiny extends Command {
 				BufferedReader reader = new BufferedReader(isr)
 				) {
 
-			MatcherUtil.read(reader,
+			MatcherUtil.read(reader, false,
 					classNames::put,
-					(src, dst) -> fieldNames.put(src.owner + "\t" + src.desc + "\t" + src.name, dst.name),
-					(src, dst) -> methodNames.put(src.owner + "\t" + src.desc + "\t" + src.name, dst.name)
+					(src, dst) -> fieldNames.put(src.getOwner() + "\t" + src.getDesc() + "\t" + src.getName(), dst.getName()),
+					(src, dst) -> methodNames.put(src.getOwner() + "\t" + src.getDesc() + "\t" + src.getName(), dst.getName())
 			);
 		}
 

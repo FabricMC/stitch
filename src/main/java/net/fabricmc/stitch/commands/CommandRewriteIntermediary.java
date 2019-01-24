@@ -17,7 +17,7 @@
 package net.fabricmc.stitch.commands;
 
 import net.fabricmc.stitch.Command;
-import net.fabricmc.stitch.representation.JarEntry;
+import net.fabricmc.stitch.representation.JarRootEntry;
 import net.fabricmc.stitch.representation.JarReader;
 
 import java.io.File;
@@ -41,7 +41,7 @@ public class CommandRewriteIntermediary extends Command {
     @Override
     public void run(String[] args) throws Exception {
         File fileOld = new File(args[0]);
-        JarEntry jarOld = new JarEntry(fileOld);
+        JarRootEntry jarOld = new JarRootEntry(fileOld);
         try {
             JarReader reader = new JarReader(jarOld);
             reader.apply();

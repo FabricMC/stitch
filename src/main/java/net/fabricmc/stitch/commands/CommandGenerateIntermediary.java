@@ -20,7 +20,6 @@ import net.fabricmc.stitch.Command;
 import net.fabricmc.stitch.representation.*;
 
 import java.io.*;
-import java.util.*;
 
 public class CommandGenerateIntermediary extends Command {
     public CommandGenerateIntermediary() {
@@ -40,7 +39,7 @@ public class CommandGenerateIntermediary extends Command {
     @Override
     public void run(String[] args) throws Exception {
         File file = new File(args[0]);
-        JarEntry jarEntry = new JarEntry(file);
+        JarRootEntry jarEntry = new JarRootEntry(file);
         try {
             JarReader reader = new JarReader(jarEntry);
             reader.apply();

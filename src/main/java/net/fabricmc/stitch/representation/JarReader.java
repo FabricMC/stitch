@@ -16,7 +16,6 @@
 
 package net.fabricmc.stitch.representation;
 
-import net.fabricmc.stitch.util.Pair;
 import net.fabricmc.stitch.util.StitchUtil;
 import org.objectweb.asm.*;
 import org.objectweb.asm.commons.Remapper;
@@ -34,7 +33,7 @@ public class JarReader {
             this.reader = reader;
         }
 
-        public static Builder create(JarEntry jar) {
+        public static Builder create(JarRootEntry jar) {
             return new Builder(new JarReader(jar));
         }
 
@@ -53,16 +52,16 @@ public class JarReader {
         }
     }
 
-    private final JarEntry jar;
+    private final JarRootEntry jar;
     private boolean joinMethodEntries = true;
     private Remapper remapper;
 
-    public JarReader(JarEntry jar) {
+    public JarReader(JarRootEntry jar) {
         this.jar = jar;
     }
 
     private class VisitorClass extends ClassVisitor {
-        private ClassEntry entry;
+        private JarClassEntry entry;
 
         public VisitorClass(int api, ClassVisitor classVisitor) {
             super(api, classVisitor);
@@ -80,7 +79,7 @@ public class JarReader {
         @Override
         public FieldVisitor visitField(final int access, final String name, final String descriptor,
                                        final String signature, final Object value) {
-            FieldEntry field = new FieldEntry(access, name, descriptor, signature);
+            JarFieldEntry field = new JarFieldEntry(access, name, descriptor, signature);
             this.entry.fields.put(field.getKey(), field);
 
             return new VisitorField(api, super.visitField(access, name, descriptor, signature, value),
@@ -90,7 +89,7 @@ public class JarReader {
         @Override
         public MethodVisitor visitMethod(final int access, final String name, final String descriptor,
                                          final String signature, final String[] exceptions) {
-            MethodEntry method = new MethodEntry(access, name, descriptor, signature);
+            JarMethodEntry method = new JarMethodEntry(access, name, descriptor, signature);
             this.entry.methods.put(method.getKey(), method);
 
             return new VisitorMethod(api, super.visitMethod(access, name, descriptor, signature, exceptions),
@@ -99,7 +98,7 @@ public class JarReader {
     }
 
     private class VisitorClassStageTwo extends ClassVisitor {
-        private ClassEntry entry;
+        private JarClassEntry entry;
 
         public VisitorClassStageTwo(int api, ClassVisitor classVisitor) {
             super(api, classVisitor);
@@ -115,7 +114,7 @@ public class JarReader {
         @Override
         public MethodVisitor visitMethod(final int access, final String name, final String descriptor,
                                          final String signature, final String[] exceptions) {
-            MethodEntry method = new MethodEntry(access, name, descriptor, signature);
+            JarMethodEntry method = new JarMethodEntry(access, name, descriptor, signature);
             this.entry.methods.put(method.getKey(), method);
 
             if ((access & (Opcodes.ACC_BRIDGE | Opcodes.ACC_SYNTHETIC)) != 0) {
@@ -128,10 +127,10 @@ public class JarReader {
     }
 
     private class VisitorField extends FieldVisitor {
-        private final ClassEntry classEntry;
-        private final FieldEntry entry;
+        private final JarClassEntry classEntry;
+        private final JarFieldEntry entry;
 
-        public VisitorField(int api, FieldVisitor fieldVisitor, ClassEntry classEntry, FieldEntry entry) {
+        public VisitorField(int api, FieldVisitor fieldVisitor, JarClassEntry classEntry, JarFieldEntry entry) {
             super(api, fieldVisitor);
             this.classEntry = classEntry;
             this.entry = entry;
@@ -152,7 +151,7 @@ public class JarReader {
         private final boolean hasBridgeFlag;
         private final List<MethodRef> methodRefs = new ArrayList<>();
 
-        public VisitorBridge(int api, int access, MethodVisitor methodVisitor, ClassEntry classEntry, MethodEntry entry) {
+        public VisitorBridge(int api, int access, MethodVisitor methodVisitor, JarClassEntry classEntry, JarMethodEntry entry) {
             super(api, methodVisitor, classEntry, entry);
             hasBridgeFlag = ((access & Opcodes.ACC_BRIDGE) != 0);
         }
@@ -178,8 +177,8 @@ public class JarReader {
 
             if (isBridge) {
                 for (MethodRef ref : methodRefs) {
-                    ClassEntry targetClass = jar.getClass(ref.owner, true);
-                    MethodEntry targetMethod = new MethodEntry(0, ref.name, ref.descriptor, null);
+                    JarClassEntry targetClass = jar.getClass(ref.owner, true);
+                    JarMethodEntry targetMethod = new JarMethodEntry(0, ref.name, ref.descriptor, null);
                     String targetKey = targetMethod.getKey();
 
                     targetClass.relatedMethods.computeIfAbsent(targetKey, (a) -> new HashSet<>()).add(Pair.of(classEntry, entry.getKey()));
@@ -190,10 +189,10 @@ public class JarReader {
     }
 
     private class VisitorMethod extends MethodVisitor {
-        final ClassEntry classEntry;
-        final MethodEntry entry;
+        final JarClassEntry classEntry;
+        final JarMethodEntry entry;
 
-        public VisitorMethod(int api, MethodVisitor methodVisitor, ClassEntry classEntry, MethodEntry entry) {
+        public VisitorMethod(int api, MethodVisitor methodVisitor, JarClassEntry classEntry, JarMethodEntry entry) {
             super(api, methodVisitor);
             this.classEntry = classEntry;
             this.entry = entry;
@@ -227,14 +226,14 @@ public class JarReader {
         // Stage 3: join identical MethodEntries
         if (joinMethodEntries) {
             System.err.println("Joining MethodEntries...");
-            Set<ClassEntry> traversedClasses = StitchUtil.newIdentityHashSet();
+            Set<JarClassEntry> traversedClasses = StitchUtil.newIdentityHashSet();
 
             int joinedMethods = 1;
             int uniqueMethods = 0;
 
-            Collection<MethodEntry> checkedMethods = StitchUtil.newIdentityHashSet();
+            Collection<JarMethodEntry> checkedMethods = StitchUtil.newIdentityHashSet();
 
-            for (ClassEntry entry : jar.getAllClasses()) {
+            for (JarClassEntry entry : jar.getAllClasses()) {
                 if (traversedClasses.contains(entry)) {
                     continue;
                 }
@@ -245,19 +244,19 @@ public class JarReader {
                     continue;
                 }
 
-                for (ClassEntry c : tree.getClasses()) {
-                    for (MethodEntry m : c.getMethods()) {
+                for (JarClassEntry c : tree.getClasses()) {
+                    for (JarMethodEntry m : c.getMethods()) {
                         if (!checkedMethods.add(m)) {
                             continue;
                         }
 
                         // get all matching entries
-                        List<ClassEntry> mList = m.getMatchingEntries(jar, c);
+                        List<JarClassEntry> mList = m.getMatchingEntries(jar, c);
 
                         if (mList.size() > 1) {
                             for (int i = 0; i < mList.size(); i++) {
-                                ClassEntry key = mList.get(i);
-                                MethodEntry value = key.getMethod(m.getKey());
+                                JarClassEntry key = mList.get(i);
+                                JarMethodEntry value = key.getMethod(m.getKey());
                                 if (value != m) {
                                     key.methods.put(m.getKey(), m);
                                     joinedMethods++;
@@ -295,10 +294,10 @@ public class JarReader {
         if (remapper != null) {
             System.err.println("Remapping...");
 
-            Map<String, ClassEntry> classTree = new HashMap<>(jar.classTree);
+            Map<String, JarClassEntry> classTree = new HashMap<>(jar.classTree);
             jar.classTree.clear();
 
-            for (Map.Entry<String, ClassEntry> entry : classTree.entrySet()) {
+            for (Map.Entry<String, JarClassEntry> entry : classTree.entrySet()) {
                 entry.getValue().remap(remapper);
                 jar.classTree.put(entry.getValue().getKey(), entry.getValue());
             }

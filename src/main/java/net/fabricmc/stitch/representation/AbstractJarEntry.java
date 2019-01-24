@@ -16,13 +16,11 @@
 
 package net.fabricmc.stitch.representation;
 
-import org.objectweb.asm.commons.Remapper;
-
-public abstract class Entry {
+public abstract class AbstractJarEntry {
     protected String name;
     protected int access;
 
-    public Entry(String name) {
+    public AbstractJarEntry(String name) {
         this.name = name;
     }
 
@@ -44,7 +42,7 @@ public abstract class Entry {
 
     @Override
     public boolean equals(Object other) {
-        return other != null && other.getClass() == getClass() && ((Entry) other).getKey().equals(getKey());
+        return other != null && other.getClass() == getClass() && ((AbstractJarEntry) other).getKey().equals(getKey());
     }
 
     @Override

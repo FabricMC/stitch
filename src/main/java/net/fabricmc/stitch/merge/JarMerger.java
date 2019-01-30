@@ -101,7 +101,7 @@ public class JarMerger {
             Files.walkFileTree(input, new SimpleFileVisitor<Path>() {
                 @Override
                 public FileVisitResult visitFile(Path path, BasicFileAttributes attr) throws IOException {
-                    if (Files.isDirectory(path)) {
+                    if (attr.isDirectory()) {
                         return FileVisitResult.CONTINUE;
                     }
 
@@ -122,12 +122,8 @@ public class JarMerger {
                         return FileVisitResult.CONTINUE;
                     }
 
-                    try (FileChannel ch = FileChannel.open(path, StandardOpenOption.READ)) {
-                        byte[] output = new byte[(int) ch.size()];
-                        ByteBuffer outputBuffer = ByteBuffer.wrap(output);
-                        ch.read(outputBuffer);
-                        map.put(path.toString().substring(1), new Entry(path, attr, output));
-                    }
+                    byte[] output = Files.readAllBytes(path);
+                    map.put(path.toString().substring(1), new Entry(path, attr, output));
                     return FileVisitResult.CONTINUE;
                 }
             });

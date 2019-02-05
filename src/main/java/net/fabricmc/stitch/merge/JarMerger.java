@@ -45,7 +45,7 @@ import java.util.jar.JarInputStream;
 import java.util.jar.JarOutputStream;
 import java.util.stream.Collectors;
 
-public class JarMerger {
+public class JarMerger implements AutoCloseable {
     public class Entry {
         public final Path path;
         public final BasicFileAttributes metadata;
@@ -90,6 +90,7 @@ public class JarMerger {
         offsetSyntheticsParams = true;
     }
 
+    @Override
     public void close() throws IOException {
         inputClientFs.close();
         inputServerFs.close();

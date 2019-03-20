@@ -106,12 +106,12 @@ class GenState {
     	if(skip){
 		    System.out.println(String.format("Skipping mapping in: %s.%s (%d/%d)", c.getName(), e.getName(), fields, debofFields));
 	    }
-    	return !skip;
+    	return skip;
     }
 
     @Nullable
     private String getFieldName(ClassStorage storage, JarClassEntry c, JarFieldEntry f) {
-        if (!isMappedField(storage, c, f) || isMostlyMappedClass(storage, c, f)) {
+        if (!isMappedField(storage, c, f) || !isMostlyMappedClass(storage, c, f)) {
             return null;
         }
 

@@ -111,7 +111,7 @@ class GenState {
 
     @Nullable
     private String getFieldName(ClassStorage storage, JarClassEntry c, JarFieldEntry f) {
-        if (!isMappedField(storage, c, f) || !isMostlyMappedClass(storage, c, f)) {
+        if (!isMappedField(storage, c, f) || isMostlyMappedClass(storage, c, f)) {
             return null;
         }
 

@@ -99,12 +99,13 @@ public class FieldNameFinder {
                         }
 
                         if (s.contains("/")) {
-                            String sFirst = s.substring(0, s.indexOf('/'));
+                            int separator = s.indexOf('/');
+                            String sFirst = s.substring(0, separator);
                             String sLast;
-                            if (s.contains(".")) {
-                                sLast = s.substring(s.indexOf('/') + 1, s.indexOf('.'));
+                            if (s.contains(".") && s.indexOf('.') > separator) {
+                                sLast = s.substring(separator + 1, s.indexOf('.'));
                             } else {
-                                sLast = s.substring(s.indexOf('/') + 1);
+                                sLast = s.substring(separator + 1);
                             }
                             if (sFirst.endsWith("s")) {
                                 sFirst = sFirst.substring(0, sFirst.length() - 1);
@@ -134,10 +135,9 @@ public class FieldNameFinder {
                                 s = s.toUpperCase();
 
                                 Set<String> usedNames = fieldNamesUsed.computeIfAbsent(((FieldInsnNode) instr2).owner, (a) -> new HashSet<>());
-                                if (!usedNames.add(s)) {
-                                    throw new Exception("Duplicate key: " + s + " (" + oldS + ")!");
+                                if (usedNames.add(s)) {
+                                    fieldNames.put(((FieldInsnNode) instr2).owner + ";;" + ((FieldInsnNode) instr2).name, s);
                                 }
-                                fieldNames.put(((FieldInsnNode) instr2).owner + ";;" + ((FieldInsnNode) instr2).name, s);
                             }
                         }
                     }

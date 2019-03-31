@@ -20,6 +20,7 @@ import net.fabricmc.stitch.Command;
 import net.fabricmc.stitch.representation.*;
 
 import java.io.*;
+import java.util.Locale;
 
 public class CommandGenerateIntermediary extends Command {
     public CommandGenerateIntermediary() {
@@ -28,12 +29,12 @@ public class CommandGenerateIntermediary extends Command {
 
     @Override
     public String getHelpString() {
-        return "<input-jar> <mapping-name>";
+        return "<input-jar> <mapping-name> [-t|--target-namespace <namespace>] [-p|--obfuscation-pattern <regex pattern>]...";
     }
 
     @Override
     public boolean isArgumentCountValid(int count) {
-        return count == 2;
+        return count >= 2;
     }
 
     @Override
@@ -47,8 +48,44 @@ public class CommandGenerateIntermediary extends Command {
             e.printStackTrace();
         }
 
-        System.err.println("Generating new mappings...");
         GenState state = new GenState();
+        boolean clearedPatterns = false;
+
+        for (int i = 2; i < args.length; i++) {
+            if (args[i].startsWith("--")) {
+                switch (args[i].substring(2).toLowerCase(Locale.ROOT)) {
+                    case "target-namespace":
+                        state.setTargetNamespace(args[i + 1]);
+                        i++;
+                        break;
+                    case "obfuscation-pattern":
+                        if (!clearedPatterns)
+                            state.clearObfuscatedPatterns();
+                        clearedPatterns = true;
+
+                        state.addObfuscatedPattern(args[i + 1]);
+                        i++;
+                        break;
+                }
+            } else if (args[i].startsWith("-")) {
+                switch (args[i].substring(1).toLowerCase(Locale.ROOT)) {
+                    case "t":
+                        state.setTargetNamespace(args[i + 1]);
+                        i++;
+                        break;
+                    case "p":
+                        if (!clearedPatterns)
+                            state.clearObfuscatedPatterns();
+                        clearedPatterns = true;
+
+                        state.addObfuscatedPattern(args[i + 1]);
+                        i++;
+                        break;
+                }
+            }
+        }
+
+        System.err.println("Generating new mappings...");
         state.generate(new File(args[1]), jarEntry, null);
         System.err.println("Done!");
     }

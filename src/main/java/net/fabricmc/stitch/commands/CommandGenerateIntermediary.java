@@ -52,36 +52,21 @@ public class CommandGenerateIntermediary extends Command {
         boolean clearedPatterns = false;
 
         for (int i = 2; i < args.length; i++) {
-            if (args[i].startsWith("--")) {
-                switch (args[i].substring(2).toLowerCase(Locale.ROOT)) {
-                    case "target-namespace":
-                        state.setTargetNamespace(args[i + 1]);
-                        i++;
-                        break;
-                    case "obfuscation-pattern":
-                        if (!clearedPatterns)
-                            state.clearObfuscatedPatterns();
-                        clearedPatterns = true;
+            switch (args[i].toLowerCase(Locale.ROOT)) {
+                case "-t":
+                case "--target-namespace":
+                    state.setTargetNamespace(args[i + 1]);
+                    i++;
+                    break;
+                case "-p":
+                case "--obfuscation-pattern":
+                    if (!clearedPatterns)
+                        state.clearObfuscatedPatterns();
+                    clearedPatterns = true;
 
-                        state.addObfuscatedPattern(args[i + 1]);
-                        i++;
-                        break;
-                }
-            } else if (args[i].startsWith("-")) {
-                switch (args[i].substring(1).toLowerCase(Locale.ROOT)) {
-                    case "t":
-                        state.setTargetNamespace(args[i + 1]);
-                        i++;
-                        break;
-                    case "p":
-                        if (!clearedPatterns)
-                            state.clearObfuscatedPatterns();
-                        clearedPatterns = true;
-
-                        state.addObfuscatedPattern(args[i + 1]);
-                        i++;
-                        break;
-                }
+                    state.addObfuscatedPattern(args[i + 1]);
+                    i++;
+                    break;
             }
         }
 

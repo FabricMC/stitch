@@ -16,6 +16,7 @@
 
 package net.fabricmc.stitch.util;
 
+import net.fabricmc.mappings.EntryTriple;
 import net.fabricmc.stitch.commands.CommandProposeFieldNames;
 import net.fabricmc.stitch.merge.JarMerger;
 import org.objectweb.asm.ClassReader;
@@ -55,10 +56,33 @@ public class FieldNameFinder {
         }
     }
 
+    @Deprecated
     public Map<String, String> find(Iterable<byte[]> classes) throws Exception {
+        Map<EntryTriple, String> src = findNames(classes);
+        Map<String, String> result = new HashMap<>();
+        Set<String> duplKeys = new HashSet<>();
+
+        for (Map.Entry<EntryTriple, String> entry : src.entrySet()) {
+            String k = entry.getKey().getOwner() + ";;" + entry.getKey().getName();
+            if (!duplKeys.contains(k)) {
+                if (result.containsKey(k)) {
+                    System.err.println("Warning: Duplicate key (remedy with new API): " + k + " (" + result.get(k) + ")!");
+                    duplKeys.add(k);
+                    result.remove(k);
+                } else {
+                    result.put(k, entry.getValue());
+                }
+            }
+        }
+
+        return result;
+    }
+
+    public Map<EntryTriple, String> findNames(Iterable<byte[]> classes) throws Exception {
         Analyzer<SourceValue> analyzer = new Analyzer<>(new SourceInterpreter());
-        Map<String, String> fieldNames = new HashMap<>();
+        Map<EntryTriple, String> fieldNames = new HashMap<>();
         Map<String, Set<String>> fieldNamesUsed = new HashMap<>();
+        Map<String, Set<String>> fieldNamesDuplicate = new HashMap<>();
 
         for (byte[] data : classes) {
             ClassReader reader = new ClassReader(data);
@@ -73,7 +97,6 @@ public class FieldNameFinder {
                 for (int i = 1; i < instrs.size(); i++) {
                     AbstractInsnNode instr1 = instrs.get(i - 1);
                     AbstractInsnNode instr2 = instrs.get(i);
-                    int stringsFound = 0;
                     String s = null;
 
                     if (instr2.getOpcode() == Opcodes.PUTSTATIC && ((FieldInsnNode) instr2).owner.equals(owner)
@@ -84,9 +107,10 @@ public class FieldNameFinder {
                             SourceValue sv = frames[i - 1].getStack(j);
                             for (AbstractInsnNode ci : sv.insns) {
                                 if (ci instanceof LdcInsnNode && ((LdcInsnNode) ci).cst instanceof String) {
-                                    if (s == null || !s.equals(((LdcInsnNode) ci).cst)) {
+                                    //if (s == null || !s.equals(((LdcInsnNode) ci).cst)) {
+                                    if (s == null) {
                                         s = (String) (((LdcInsnNode) ci).cst);
-                                        stringsFound++;
+                                        // stringsFound++;
                                     }
                                 }
                             }
@@ -99,12 +123,13 @@ public class FieldNameFinder {
                         }
 
                         if (s.contains("/")) {
-                            String sFirst = s.substring(0, s.indexOf('/'));
+                            int separator = s.indexOf('/');
+                            String sFirst = s.substring(0, separator);
                             String sLast;
-                            if (s.contains(".")) {
-                                sLast = s.substring(s.indexOf('/') + 1, s.indexOf('.'));
+                            if (s.contains(".") && s.indexOf('.') > separator) {
+                                sLast = s.substring(separator + 1, s.indexOf('.'));
                             } else {
-                                sLast = s.substring(s.indexOf('/') + 1);
+                                sLast = s.substring(separator + 1);
                             }
                             if (sFirst.endsWith("s")) {
                                 sFirst = sFirst.substring(0, sFirst.length() - 1);
@@ -112,32 +137,39 @@ public class FieldNameFinder {
                             s = sLast + "_" + sFirst;
                         }
 
-                        if (s != null) {
-                            String oldS = s;
-                            boolean hasAlpha = false;
+                        String oldS = s;
+                        boolean hasAlpha = false;
 
-                            for (int j = 0; j < s.length(); j++) {
-                                char c = s.charAt(j);
+                        for (int j = 0; j < s.length(); j++) {
+                            char c = s.charAt(j);
 
-                                if ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z')) {
-                                    hasAlpha = true;
-                                }
+                            if ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z')) {
+                                hasAlpha = true;
+                            }
 
-                                if (!(c >= 'A' && c <= 'Z') && !(c >= 'a' && c <= 'z') && !(c >= '0' && c <= '9') && !(c == '_')) {
-                                    s = s.substring(0, j) + "_" + s.substring(j + 1);
-                                } else if (j > 0 && Character.isUpperCase(s.charAt(j)) && Character.isLowerCase(s.charAt(j - 1))) {
-                                    s = s.substring(0, j) + "_" + s.substring(j, j + 1).toLowerCase() + s.substring(j + 1);
+                            if (!(c >= 'A' && c <= 'Z') && !(c >= 'a' && c <= 'z') && !(c >= '0' && c <= '9') && !(c == '_')) {
+                                s = s.substring(0, j) + "_" + s.substring(j + 1);
+                            } else if (j > 0 && Character.isUpperCase(s.charAt(j)) && Character.isLowerCase(s.charAt(j - 1))) {
+                                s = s.substring(0, j) + "_" + s.substring(j, j + 1).toLowerCase() + s.substring(j + 1);
+                            }
+                        }
+
+                        if (hasAlpha) {
+                            s = s.toUpperCase();
+
+                            Set<String> usedNames = fieldNamesUsed.computeIfAbsent(((FieldInsnNode) instr2).owner, (a) -> new HashSet<>());
+                            Set<String> usedNamesDuplicate = fieldNamesDuplicate.computeIfAbsent(((FieldInsnNode) instr2).owner, (a) -> new HashSet<>());
+
+                            if (!usedNamesDuplicate.contains(s)) {
+                                if (!usedNames.add(s)) {
+                                    System.err.println("Warning: Duplicate key: " + s + " (" + oldS + ")!");
+                                    usedNamesDuplicate.add(s);
+                                    usedNames.remove(s);
                                 }
                             }
 
-                            if (hasAlpha) {
-                                s = s.toUpperCase();
-
-                                Set<String> usedNames = fieldNamesUsed.computeIfAbsent(((FieldInsnNode) instr2).owner, (a) -> new HashSet<>());
-                                if (!usedNames.add(s)) {
-                                    throw new Exception("Duplicate key: " + s + " (" + oldS + ")!");
-                                }
-                                fieldNames.put(((FieldInsnNode) instr2).owner + ";;" + ((FieldInsnNode) instr2).name, s);
+                            if (usedNames.contains(s)) {
+                                fieldNames.put(new EntryTriple(((FieldInsnNode) instr2).owner, ((FieldInsnNode) instr2).name, ((FieldInsnNode) instr2).desc), s);
                             }
                         }
                     }

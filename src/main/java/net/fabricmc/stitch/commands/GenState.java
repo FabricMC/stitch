@@ -27,6 +27,8 @@ import org.objectweb.asm.Opcodes;
 
 import java.io.*;
 import java.util.*;
+import java.util.regex.Pattern;
+import java.util.regex.PatternSyntaxException;
 
 class GenState {
     private final Map<String, Integer> counters = new HashMap<>();
@@ -35,6 +37,13 @@ class GenState {
     private GenMap newToIntermediary;
     private boolean interactive = true;
     private Scanner scanner = new Scanner(System.in);
+
+    private String targetNamespace = "net/minecraft/";
+    private final List<Pattern> obfuscatedPatterns = new ArrayList<Pattern>();
+
+    public GenState() {
+        this.obfuscatedPatterns.add(Pattern.compile("^[^/]*$")); // Default ofbfuscation. Minecraft classes without a package are obfuscated.
+    }
 
     public void disableInteractive() {
         interactive = false;
@@ -46,6 +55,21 @@ class GenState {
             counters.put(name, v + 1);
             return v;
         });
+    }
+
+    public void setTargetNamespace(final String namespace) {
+        if (namespace.lastIndexOf("/") != (namespace.length() - 1))
+            this.targetNamespace = namespace + "/";
+        else
+            this.targetNamespace = namespace;
+    }
+
+    public void clearObfuscatedPatterns() {
+        this.obfuscatedPatterns.clear();
+    }
+
+    public void addObfuscatedPattern(String regex) throws PatternSyntaxException {
+        this.obfuscatedPatterns.add(Pattern.compile(regex));
     }
 
     public void setCounter(String key, int value) {
@@ -74,7 +98,7 @@ class GenState {
                 writer.write("v1\tofficial\tintermediary\n");
 
                 for (JarClassEntry c : jarEntry.getClasses()) {
-                    addClass(writer, c, jarOld, jarEntry, "net/minecraft/");
+                    addClass(writer, c, jarOld, jarEntry, this.targetNamespace);
                 }
 
                 for (Map.Entry<String, Integer> counter : counters.entrySet()) {
@@ -291,9 +315,10 @@ class GenState {
     }
 
     private void addClass(BufferedWriter writer, JarClassEntry c, ClassStorage storageOld, ClassStorage storage, String translatedPrefix) throws IOException {
+        String className = c.getName();
         String cname = "";
 
-        if (c.getName().contains("/")) {
+        if(!this.obfuscatedPatterns.stream().anyMatch(p -> p.matcher(className).matches())) {
             translatedPrefix = c.getFullyQualifiedName();
         } else {
             if (!isMappedClass(storage, c)) {

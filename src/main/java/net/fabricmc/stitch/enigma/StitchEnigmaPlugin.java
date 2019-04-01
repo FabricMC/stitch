@@ -17,6 +17,7 @@
 package net.fabricmc.stitch.enigma;
 
 import cuchaz.enigma.api.EnigmaPlugin;
+import net.fabricmc.mappings.EntryTriple;
 import net.fabricmc.stitch.util.FieldNameFinder;
 import org.objectweb.asm.tree.ClassNode;
 
@@ -26,12 +27,12 @@ import java.util.Map;
 import java.util.function.Function;
 
 public class StitchEnigmaPlugin extends EnigmaPlugin {
-    private Map<String, String> fieldNames;
+    private Map<EntryTriple, String> fieldNames;
 
     @Override
     public void onClassesLoaded(Map<String, byte[]> classData, Function<String, ClassNode> classNodeGetter) {
         try {
-            fieldNames = new FieldNameFinder().find(classData.values());
+            fieldNames = new FieldNameFinder().findNames(classData.values());
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -41,8 +42,7 @@ public class StitchEnigmaPlugin extends EnigmaPlugin {
     @Override
     public String proposeFieldName(String owner, String name, String desc) {
         if (fieldNames != null) {
-            String key = owner + ";;" + name;
-            return fieldNames.getOrDefault(key, null);
+            return fieldNames.getOrDefault(new EntryTriple(owner, name, desc), null);
         } else {
             return null;
         }

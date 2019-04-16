@@ -39,7 +39,7 @@ dependencies {
 	compile 'org.ow2.asm:asm-commons:7.1'
 	compile 'org.ow2.asm:asm-tree:7.1'
 	compile 'org.ow2.asm:asm-util:7.1'
-	compile 'net.fabricmc:tiny-mappings-parser:0.1.0.6'
+	compile 'net.fabricmc:tiny-mappings-parser:0.1.1.8'
 	implementation group: 'org.checkerframework', name: 'checker-qual', version: '2.5.7'
 	implementation('cuchaz:enigma:0.13.1.98') {
 		exclude group: 'org.ow2.asm'

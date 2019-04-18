@@ -36,6 +36,7 @@ class GenState {
     private GenMap oldToIntermediary, newToOld;
     private GenMap newToIntermediary;
     private boolean interactive = true;
+    private boolean writeAll = false;
     private Scanner scanner = new Scanner(System.in);
 
     private String targetNamespace = "net/minecraft/";
@@ -43,6 +44,10 @@ class GenState {
 
     public GenState() {
         this.obfuscatedPatterns.add(Pattern.compile("^[^/]*$")); // Default ofbfuscation. Minecraft classes without a package are obfuscated.
+    }
+
+    public void setWriteAll(boolean writeAll) {
+        this.writeAll = writeAll;
     }
 
     public void disableInteractive() {
@@ -362,6 +367,10 @@ class GenState {
 
         for (JarFieldEntry f : c.getFields()) {
             String fName = getFieldName(storage, c, f);
+            if (fName == null) {
+                fName = f.getName();
+            }
+
             if (fName != null) {
                 writer.write("FIELD\t" + c.getFullyQualifiedName()
                         + "\t" + f.getDescriptor()
@@ -372,6 +381,12 @@ class GenState {
 
         for (JarMethodEntry m : c.getMethods()) {
             String mName = getMethodName(storageOld, storage, c, m);
+            if (mName == null) {
+                if (!m.getName().startsWith("<") && m.isSource(storage, c)) {
+                   mName = m.getName();
+                }
+            }
+
             if (mName != null) {
                 writer.write("METHOD\t" + c.getFullyQualifiedName()
                         + "\t" + m.getDescriptor()

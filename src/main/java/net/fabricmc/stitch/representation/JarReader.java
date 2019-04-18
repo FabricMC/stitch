@@ -275,7 +275,7 @@ public class JarReader {
         System.err.println("Collecting additional information...");
 
         // Stage 4: collect additional info
-        try (FileInputStream fileStream = new FileInputStream(jar.file)) {
+        /* try (FileInputStream fileStream = new FileInputStream(jar.file)) {
             try (JarInputStream jarStream = new JarInputStream(fileStream)) {
                 java.util.jar.JarEntry entry;
 
@@ -289,7 +289,7 @@ public class JarReader {
                     reader.accept(visitor, ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES);
                 }
             }
-        }
+        } */
 
         if (remapper != null) {
             System.err.println("Remapping...");

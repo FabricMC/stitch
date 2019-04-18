@@ -22,6 +22,7 @@ import net.fabricmc.stitch.representation.JarReader;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Locale;
 
 public class CommandRewriteIntermediary extends Command {
     public CommandRewriteIntermediary() {
@@ -30,12 +31,12 @@ public class CommandRewriteIntermediary extends Command {
 
     @Override
     public String getHelpString() {
-        return "<jar> <old-mapping-file> <new-mapping-file>";
+        return "<jar> <old-mapping-file> <new-mapping-file> [--writeAll]";
     }
 
     @Override
     public boolean isArgumentCountValid(int count) {
-        return count == 3;
+        return count >= 3;
     }
 
     @Override
@@ -50,6 +51,15 @@ public class CommandRewriteIntermediary extends Command {
         }
 
         GenState state = new GenState();
+
+        for (int i = 3; i < args.length; i++) {
+            switch (args[i].toLowerCase(Locale.ROOT)) {
+                case "--writeall":
+                    state.setWriteAll(true);
+                    break;
+            }
+        }
+
         System.err.println("Loading mapping file...");
         state.prepareRewrite(new File(args[1]));
 

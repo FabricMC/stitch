@@ -184,8 +184,8 @@ public class FieldNameFinder {
         List<byte[]> byteArrays = new ArrayList<>();
 
         try {
-            try (FileInputStream fis = new FileInputStream(file)) {
-                JarInputStream jis = new JarInputStream(fis);
+            try (FileInputStream fis = new FileInputStream(file);
+                 JarInputStream jis = new JarInputStream(fis)) {
                 byte[] buffer = new byte[32768];
                 JarEntry entry;
 
@@ -202,8 +202,6 @@ public class FieldNameFinder {
 
                     byteArrays.add(stream.toByteArray());
                 }
-
-                jis.close();
             }
 
             return find(byteArrays);

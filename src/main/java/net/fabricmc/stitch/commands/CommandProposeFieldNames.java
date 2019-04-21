@@ -56,60 +56,58 @@ public class CommandProposeFieldNames extends Command {
 
         System.err.println("Found " + fieldNames.size() + " interesting names.");
 
-        try (FileInputStream fileIn = new FileInputStream(new File(args[1]))) {
-            try (FileOutputStream fileOut = new FileOutputStream(new File(args[2]))) {
-                BufferedReader reader = new BufferedReader(new InputStreamReader(fileIn));
-                BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(fileOut));
+        try (FileInputStream fileIn = new FileInputStream(new File(args[1]));
+            FileOutputStream fileOut = new FileOutputStream(new File(args[2]));
+            InputStreamReader fileInReader = new InputStreamReader(fileIn);
+            OutputStreamWriter fileOutWriter = new OutputStreamWriter(fileOut);
+            BufferedReader reader = new BufferedReader(fileInReader);
+            BufferedWriter writer = new BufferedWriter(fileOutWriter)) {
 
-                int headerPos = -1;
+            int headerPos = -1;
 
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    String[] tabSplit = line.split("\t");
+            String line;
+            while ((line = reader.readLine()) != null) {
+                String[] tabSplit = line.split("\t");
+
+                if (headerPos < 0) {
+                    // first line
+                    if (tabSplit.length < 3 || !(tabSplit[1].equals("official"))) {
+                        throw new RuntimeException("Invalid mapping file!");
+                    }
+
+                    for (int i = 2; i < tabSplit.length; i++) {
+                        if (tabSplit[i].equals("named")) {
+                            headerPos = i;
+                            break;
+                        }
+                    }
 
                     if (headerPos < 0) {
-                        // first line
-                        if (tabSplit.length < 3 || !(tabSplit[1].equals("official"))) {
-                            throw new RuntimeException("Invalid mapping file!");
-                        }
+                        throw new RuntimeException("Could not find 'named' mapping position!");
+                    }
+                } else {
+                    // second+ line
+                    if (tabSplit[0].equals("FIELD")) {
+                        String key = tabSplit[1] + ";;" + tabSplit[3];
+                        String value = tabSplit[headerPos + 2];
+                        if (value.startsWith("field_") && fieldNames.containsKey(key)) {
+                            tabSplit[headerPos + 2] = fieldNames.get(key);
 
-                        for (int i = 2; i < tabSplit.length; i++) {
-                            if (tabSplit[i].equals("named")) {
-                                headerPos = i;
-                                break;
+                            StringBuilder builder = new StringBuilder(tabSplit[0]);
+                            for (int i = 1; i < tabSplit.length; i++) {
+                                builder.append('\t');
+                                builder.append(tabSplit[i]);
                             }
-                        }
-
-                        if (headerPos < 0) {
-                            throw new RuntimeException("Could not find 'named' mapping position!");
-                        }
-                    } else {
-                        // second+ line
-                        if (tabSplit[0].equals("FIELD")) {
-                            String key = tabSplit[1] + ";;" + tabSplit[3];
-                            String value = tabSplit[headerPos + 2];
-                            if (value.startsWith("field_") && fieldNames.containsKey(key)) {
-                                tabSplit[headerPos + 2] = fieldNames.get(key);
-
-                                StringBuilder builder = new StringBuilder(tabSplit[0]);
-                                for (int i = 1; i < tabSplit.length; i++) {
-                                    builder.append('\t');
-                                    builder.append(tabSplit[i]);
-                                }
-                                line = builder.toString();
-                            }
+                            line = builder.toString();
                         }
                     }
-
-                    if (!line.endsWith("\n")) {
-                        line = line + "\n";
-                    }
-
-                    writer.write(line);
                 }
 
-                reader.close();
-                writer.close();
+                if (!line.endsWith("\n")) {
+                    line = line + "\n";
+                }
+
+                writer.write(line);
             }
         }
     }

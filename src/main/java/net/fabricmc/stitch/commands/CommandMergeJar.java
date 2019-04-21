@@ -69,9 +69,7 @@ public class CommandMergeJar extends Command {
             throw new FileNotFoundException("Server JAR could not be found!");
         }
 
-        JarMerger merger = null;
-        try {
-            merger = new JarMerger(in1f, in2f, outf);
+        try (JarMerger merger = new JarMerger(in1f, in2f, outf)) {
             if (removeSnowman) {
                 merger.enableSnowmanRemoval();
             }
@@ -87,10 +85,6 @@ public class CommandMergeJar extends Command {
             System.out.println("Merge completed!");
         } catch (IOException e) {
             e.printStackTrace();
-        } finally {
-            if (merger != null) {
-                merger.close();
-            }
         }
     }
 }

@@ -106,77 +106,76 @@ public class CommandMergeTiny extends Command {
 		public final int typeCount;
 
 		public TinyFile(File f) throws IOException {
-			BufferedReader reader = Files.newBufferedReader(f.toPath(), Charset.forName("UTF-8"));
-			String[] header = reader.readLine().trim().split("\t");
-			if (header.length < 3 || !header[0].trim().equals("v1")) {
-				throw new RuntimeException("Invalid header!");
-			}
-
-			typeCount = header.length - 1;
-			indexList = new String[typeCount];
-			for (int i = 0; i < typeCount; i++) {
-				indexList[i] = header[i + 1].trim();
-			}
-
-			String line;
-			while ((line = reader.readLine()) != null) {
-				line = line.trim();
-				if (line.length() == 0 || line.charAt(0) == '#') {
-					continue;
+			try (BufferedReader reader = Files.newBufferedReader(f.toPath(), Charset.forName("UTF-8"))) {
+				String[] header = reader.readLine().trim().split("\t");
+				if (header.length < 3 || !header[0].trim().equals("v1")) {
+					throw new RuntimeException("Invalid header!");
 				}
 
-				String[] parts = line.split("\t");
-				for (int i = 0; i < parts.length; i++) {
-					parts[i] = parts[i].trim();
-				}
-
-				StringBuilder prefix = new StringBuilder();
-				prefix.append(parts[0]);
-				for (int i = 1; i < parts.length - typeCount; i++) {
-					prefix.append('\t');
-					prefix.append(parts[i]);
-				}
-
-				String[] path = parts[1].split("\\$");
-				TinyEntry parent = root;
-				TinyEntryType type = TinyEntryType.byName(parts[0]);
-
-				for (int i = 0; i < (type == TinyEntryType.CLASS ? path.length - 1 : path.length); i++) {
-					TinyEntry nextParent = parent.getChild(indexList[0], path[i]);
-					if (nextParent == null) {
-						nextParent = new TinyEntry(TinyEntryType.CLASS, "CLASS");
-						nextParent.names.put(indexList[0], path[i]);
-						parent.addChild(nextParent, "");
-					}
-					parent = nextParent;
-				}
-
-				TinyEntry entry;
-				if (type == TinyEntryType.CLASS && parent.containsChild(indexList[0], path[path.length - 1])) {
-					entry = parent.getChild(indexList[0], path[path.length - 1]);
-				} else {
-					entry = new TinyEntry(type, prefix.toString());
-				}
-
-				String[] names = new String[typeCount];
+				typeCount = header.length - 1;
+				indexList = new String[typeCount];
 				for (int i = 0; i < typeCount; i++) {
-					names[i] = parts[parts.length - typeCount + i];
-					String[] splitly = names[i].split("\\$");
-					entry.names.put(indexList[i], splitly[splitly.length - 1]);
+					indexList[i] = header[i + 1].trim();
 				}
 
-				switch (type) {
-					case CLASS:
-						parent.addChild(entry, "");
-						break;
-					case FIELD:
-					case METHOD:
-						parent.addChild(entry, parts[2]);
-						break;
+				String line;
+				while ((line = reader.readLine()) != null) {
+					line = line.trim();
+					if (line.length() == 0 || line.charAt(0) == '#') {
+						continue;
+					}
+
+					String[] parts = line.split("\t");
+					for (int i = 0; i < parts.length; i++) {
+						parts[i] = parts[i].trim();
+					}
+
+					StringBuilder prefix = new StringBuilder();
+					prefix.append(parts[0]);
+					for (int i = 1; i < parts.length - typeCount; i++) {
+						prefix.append('\t');
+						prefix.append(parts[i]);
+					}
+
+					String[] path = parts[1].split("\\$");
+					TinyEntry parent = root;
+					TinyEntryType type = TinyEntryType.byName(parts[0]);
+
+					for (int i = 0; i < (type == TinyEntryType.CLASS ? path.length - 1 : path.length); i++) {
+						TinyEntry nextParent = parent.getChild(indexList[0], path[i]);
+						if (nextParent == null) {
+							nextParent = new TinyEntry(TinyEntryType.CLASS, "CLASS");
+							nextParent.names.put(indexList[0], path[i]);
+							parent.addChild(nextParent, "");
+						}
+						parent = nextParent;
+					}
+
+					TinyEntry entry;
+					if (type == TinyEntryType.CLASS && parent.containsChild(indexList[0], path[path.length - 1])) {
+						entry = parent.getChild(indexList[0], path[path.length - 1]);
+					} else {
+						entry = new TinyEntry(type, prefix.toString());
+					}
+
+					String[] names = new String[typeCount];
+					for (int i = 0; i < typeCount; i++) {
+						names[i] = parts[parts.length - typeCount + i];
+						String[] splitly = names[i].split("\\$");
+						entry.names.put(indexList[i], splitly[splitly.length - 1]);
+					}
+
+					switch (type) {
+						case CLASS:
+							parent.addChild(entry, "");
+							break;
+						case FIELD:
+						case METHOD:
+							parent.addChild(entry, parts[2]);
+							break;
+					}
 				}
 			}
-
-			reader.close();
 		}
 /*
 		public String match(String[] entries, String key) {
@@ -357,42 +356,41 @@ public class CommandMergeTiny extends Command {
 		inputB = new TinyFile(inputBf);
 
 		System.out.println("Processing...");
-		BufferedWriter writer = Files.newBufferedWriter(outputf.toPath(), Charset.forName("UTF-8"));
-		if (!inputA.indexList[0].equals(inputB.indexList[0])) {
-			throw new RuntimeException("TODO");
-		}
+		try (BufferedWriter writer = Files.newBufferedWriter(outputf.toPath(), Charset.forName("UTF-8"))) {
+			if (!inputA.indexList[0].equals(inputB.indexList[0])) {
+				throw new RuntimeException("TODO");
+			}
 
-		// Set<String> matchedIndexes = Sets.intersection(inputA.indexMap.keySet(), inputB.indexMap.keySet());
-		Set<String> matchedIndexes = Collections.singleton(inputA.indexList[0]);
-		List<String> totalIndexList = new ArrayList<>(Arrays.asList(inputA.indexList));
-		for (String s : inputB.indexList) {
-			if (!totalIndexList.contains(s)) {
-				totalIndexList.add(s);
+			// Set<String> matchedIndexes = Sets.intersection(inputA.indexMap.keySet(), inputB.indexMap.keySet());
+			Set<String> matchedIndexes = Collections.singleton(inputA.indexList[0]);
+			List<String> totalIndexList = new ArrayList<>(Arrays.asList(inputA.indexList));
+			for (String s : inputB.indexList) {
+				if (!totalIndexList.contains(s)) {
+					totalIndexList.add(s);
+				}
+			}
+			int totalIndexCount = totalIndexList.size();
+
+			// emit header
+			StringBuilder header = new StringBuilder();
+			header.append("v1");
+			for (String s : totalIndexList) {
+				header.append('\t');
+				header.append(s);
+			}
+			writer.write(header.append('\n').toString());
+
+			// collect classes
+			String index = inputA.indexList[0];
+			Set<String> classKeys = new TreeSet<>();
+			classKeys.addAll(inputA.root.getChildRow(index).keySet());
+			classKeys.addAll(inputB.root.getChildRow(index).keySet());
+
+			// emit entries
+			for (String c : classKeys) {
+				write(inputA.root, inputB.root, index, c, writer, totalIndexList, 0);
 			}
 		}
-		int totalIndexCount = totalIndexList.size();
-
-		// emit header
-		StringBuilder header = new StringBuilder();
-		header.append("v1");
-		for (String s : totalIndexList) {
-			header.append('\t');
-			header.append(s);
-		}
-		writer.write(header.append('\n').toString());
-
-		// collect classes
-		String index = inputA.indexList[0];
-		Set<String> classKeys = new TreeSet<>();
-		classKeys.addAll(inputA.root.getChildRow(index).keySet());
-		classKeys.addAll(inputB.root.getChildRow(index).keySet());
-
-		// emit entries
-		for (String c : classKeys) {
-			write(inputA.root, inputB.root, index, c, writer, totalIndexList, 0);
-		}
-
-		writer.close();
 		System.out.println("Done!");
 	}
 

@@ -137,9 +137,9 @@ public class CommandMergeTiny extends Command {
 						prefix.append(parts[i]);
 					}
 
+					TinyEntryType type = TinyEntryType.byName(parts[0]);
 					String[] path = parts[1].split("\\$");
 					TinyEntry parent = root;
-					TinyEntryType type = TinyEntryType.byName(parts[0]);
 
 					for (int i = 0; i < (type == TinyEntryType.CLASS ? path.length - 1 : path.length); i++) {
 						TinyEntry nextParent = parent.getChild(indexList[0], path[i]);
@@ -161,8 +161,13 @@ public class CommandMergeTiny extends Command {
 					String[] names = new String[typeCount];
 					for (int i = 0; i < typeCount; i++) {
 						names[i] = parts[parts.length - typeCount + i];
-						String[] splitly = names[i].split("\\$");
-						entry.names.put(indexList[i], splitly[splitly.length - 1]);
+						if (type == TinyEntryType.CLASS) {
+							// add classes by their final inner class name
+							String[] splitly = names[i].split("\\$");
+							entry.names.put(indexList[i], splitly[splitly.length - 1]);
+						} else {
+							entry.names.put(indexList[i], names[i]);
+						}
 					}
 
 					switch (type) {
@@ -269,6 +274,8 @@ public class CommandMergeTiny extends Command {
 	private String getMatch(TinyEntry a, TinyEntry b, String index, String realIndex) {
 		String matchA = a != null ? a.names.get(index) : null;
 		String matchB = b != null ? b.names.get(index) : null;
+
+		assert a == null || b == null || a.type == b.type;
 
 		matchA = fixMatch(a, b, matchA, realIndex);
 		matchB = fixMatch(b, a, matchB, realIndex);

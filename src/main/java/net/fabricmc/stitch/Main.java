@@ -17,6 +17,8 @@
 package net.fabricmc.stitch;
 
 import net.fabricmc.stitch.commands.*;
+import net.fabricmc.stitch.enigma.CommandFindMappingErrors;
+import net.fabricmc.stitch.enigma.CommandTinyify;
 
 import java.util.Map;
 import java.util.TreeMap;
@@ -38,6 +40,19 @@ public class Main {
         addCommand(new CommandProposeFieldNames());
         addCommand(new CommandRewriteIntermediary());
         addCommand(new CommandUpdateIntermediary());
+
+        boolean enigmaPresent;
+        try {
+            Class.forName("cuchaz.enigma.translation.representation.entry.Entry");
+            enigmaPresent = true;
+        } catch (ClassNotFoundException e) {
+            enigmaPresent = false;
+        }
+
+        if (enigmaPresent) {
+            addCommand(new CommandFindMappingErrors());
+            addCommand(new CommandTinyify());
+        }
     }
 
     public static void main(String[] args) {

@@ -19,7 +19,7 @@ package net.fabricmc.stitch;
 public abstract class Command {
     public final String name;
 
-    public Command(String name) {
+    protected Command(String name) {
         this.name = name;
     }
 

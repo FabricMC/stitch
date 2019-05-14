@@ -16,11 +16,14 @@
 
 package net.fabricmc.stitch.util;
 
+import com.google.common.base.Joiner;
+import com.google.common.base.Splitter;
+import org.objectweb.asm.commons.Remapper;
+
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.net.URLEncoder;
 import java.nio.file.FileSystem;
 import java.nio.file.FileSystemAlreadyExistsException;
 import java.nio.file.FileSystems;
@@ -54,6 +57,19 @@ public final class StitchUtil {
 
     private static final Map<String, String> jfsArgsCreate = new HashMap<>();
     private static final Map<String, String> jfsArgsEmpty = new HashMap<>();
+
+    public static final Remapper NONE_PREFIX_REMOVER = new Remapper() {
+        @Override
+        public String map(String name) {
+            if (name.startsWith("none/")) {
+                return name.substring(5);
+            } else {
+                return name;
+            }
+        }
+    };
+    public static final Joiner TAB_JOINER = Joiner.on('\t');
+    public static final Splitter TAB_SPLITTER = Splitter.on('\t');
 
     static {
         jfsArgsCreate.put("create", "true");

@@ -7,6 +7,7 @@ node {
 
    sh "rm -rf build/libs/"
    sh "chmod +x gradlew"
+   sh "./gradlew clean"
    sh "./gradlew build"
 
    stage "Archive artifacts"

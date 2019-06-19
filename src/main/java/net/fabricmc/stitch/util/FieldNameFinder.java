@@ -78,19 +78,29 @@ public class FieldNameFinder {
         return result;
     }
 
-    public Map<EntryTriple, String> findNames(Iterable<byte[]> classes) throws Exception {
+	public Map<EntryTriple, String> findNames(Iterable<byte[]> classes) throws Exception {
+    	Map<String, List<MethodNode>> methods = new HashMap<>();
+
+		for (byte[] data : classes) {
+			ClassReader reader = new ClassReader(data);
+			String owner = reader.getClassName();
+			VClass vClass = new VClass(Opcodes.ASM7);
+			reader.accept(vClass, ClassReader.SKIP_FRAMES);
+			methods.put(owner, vClass.nodes);
+		}
+
+    	return findNames(methods);
+	}
+
+    public Map<EntryTriple, String> findNames(Map<String, List<MethodNode>> classes) throws Exception {
         Analyzer<SourceValue> analyzer = new Analyzer<>(new SourceInterpreter());
         Map<EntryTriple, String> fieldNames = new HashMap<>();
         Map<String, Set<String>> fieldNamesUsed = new HashMap<>();
         Map<String, Set<String>> fieldNamesDuplicate = new HashMap<>();
 
-        for (byte[] data : classes) {
-            ClassReader reader = new ClassReader(data);
-            String owner = reader.getClassName();
-            VClass vClass = new VClass(Opcodes.ASM7);
-            reader.accept(vClass, ClassReader.SKIP_FRAMES);
-
-            for (MethodNode mn : vClass.nodes) {
+        for (Map.Entry<String, List<MethodNode>> entry : classes.entrySet()) {
+        	String owner = entry.getKey();
+            for (MethodNode mn : entry.getValue()) {
                 Frame<SourceValue>[] frames = analyzer.analyze(owner, mn);
 
                 InsnList instrs = mn.instructions;

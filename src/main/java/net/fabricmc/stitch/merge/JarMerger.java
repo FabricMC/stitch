@@ -17,7 +17,6 @@
 package net.fabricmc.stitch.merge;
 
 import com.google.common.collect.ImmutableMap;
-import com.sun.nio.zipfs.ZipFileAttributes;
 import net.fabricmc.stitch.util.SnowmanClassVisitor;
 import net.fabricmc.stitch.util.StitchUtil;
 import net.fabricmc.stitch.util.SyntheticParameterClassVisitor;

@@ -16,35 +16,82 @@
 
 package net.fabricmc.stitch.enigma;
 
+import cuchaz.enigma.analysis.ClassCache;
+import cuchaz.enigma.analysis.index.JarIndex;
 import cuchaz.enigma.api.EnigmaPlugin;
+import cuchaz.enigma.api.EnigmaPluginContext;
+import cuchaz.enigma.api.service.JarIndexerService;
+import cuchaz.enigma.api.service.NameProposalService;
+import cuchaz.enigma.translation.representation.entry.FieldEntry;
 import net.fabricmc.mappings.EntryTriple;
 import net.fabricmc.stitch.util.FieldNameFinder;
-import org.objectweb.asm.tree.ClassNode;
+import org.objectweb.asm.ClassReader;
+import org.objectweb.asm.ClassVisitor;
+import org.objectweb.asm.MethodVisitor;
+import org.objectweb.asm.Opcodes;
+import org.objectweb.asm.tree.MethodNode;
 
-import javax.annotation.Nullable;
-import java.io.File;
-import java.util.Map;
-import java.util.function.Function;
+import java.util.*;
+import java.util.function.Supplier;
 
-public class StitchEnigmaPlugin extends EnigmaPlugin {
-    private Map<EntryTriple, String> fieldNames;
+public class StitchEnigmaPlugin implements EnigmaPlugin {
 
-    @Override
-    public void onClassesLoaded(Map<String, byte[]> classData, Function<String, ClassNode> classNodeGetter) {
-        try {
-            fieldNames = new FieldNameFinder().findNames(classData.values());
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
+	private Map<EntryTriple, String> fieldNames;
 
-    @Nullable
-    @Override
-    public String proposeFieldName(String owner, String name, String desc) {
-        if (fieldNames != null) {
-            return fieldNames.getOrDefault(new EntryTriple(owner, name, desc), null);
-        } else {
-            return null;
-        }
-    }
+	@Override
+	public void init(EnigmaPluginContext ctx) {
+		ctx.registerService("stitch:jar_indexer", JarIndexerService.TYPE, ctx1 -> new JarIndexerService() {
+			@Override
+			public void acceptJar(ClassCache classCache, JarIndex jarIndex) {
+
+				Map<String, List<MethodNode>> methods = new HashMap<>();
+
+				classCache.visit(new Supplier<ClassVisitor>() {
+					@Override
+					public ClassVisitor get() {
+						return new ClassVisitor(Opcodes.ASM7) {
+
+							String owner;
+
+							@Override
+							public void visit(int version, int access, String name, String signature, String superName, String[] interfaces) {
+								this.owner = name;
+								super.visit(version, access, name, signature, superName, interfaces);
+							}
+
+							@Override
+							public MethodVisitor visitMethod(int access, String name, String descriptor, String signature, String[] exceptions) {
+								if ("<clinit>".equals(name)) {
+									MethodNode node = new MethodNode(api, access, name, descriptor, signature, exceptions);
+
+									methods.computeIfAbsent(owner, s -> new ArrayList<>()).add(node);
+
+									return node;
+								} else {
+									return super.visitMethod(access, name, descriptor, signature, exceptions);
+								}
+							}
+						};
+					}
+				}, ClassReader.SKIP_FRAMES);
+
+				try {
+					fieldNames = new FieldNameFinder().findNames(methods);
+				} catch (Exception e) {
+					throw new RuntimeException(e);
+				}
+			}
+		});
+
+		ctx.registerService("stitch:name_proposal", NameProposalService.TYPE, ctx12 -> (obfEntry, remapper) -> {
+			if(obfEntry instanceof FieldEntry){
+				FieldEntry fieldEntry = (FieldEntry) obfEntry;
+				EntryTriple key = new EntryTriple(fieldEntry.getContainingClass().getFullName(), fieldEntry.getName(), fieldEntry.getDesc().toString());
+				return Optional.ofNullable(fieldNames.get(key));
+			}
+			return Optional.empty();
+		});
+
+	}
+
 }

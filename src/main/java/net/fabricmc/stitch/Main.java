@@ -18,6 +18,7 @@ package net.fabricmc.stitch;
 
 import net.fabricmc.stitch.commands.*;
 
+import java.util.Locale;
 import java.util.Map;
 import java.util.TreeMap;
 
@@ -25,7 +26,7 @@ public class Main {
     private static final Map<String, Command> COMMAND_MAP = new TreeMap<>();
 
     public static void addCommand(Command command) {
-        COMMAND_MAP.put(command.name.toLowerCase(), command);
+        COMMAND_MAP.put(command.name.toLowerCase(Locale.ROOT), command);
     }
 
     static {
@@ -42,8 +43,8 @@ public class Main {
 
     public static void main(String[] args) {
         if (args.length == 0
-                || !COMMAND_MAP.containsKey(args[0].toLowerCase())
-                || !COMMAND_MAP.get(args[0].toLowerCase()).isArgumentCountValid(args.length - 1)) {
+                || !COMMAND_MAP.containsKey(args[0].toLowerCase(Locale.ROOT))
+                || !COMMAND_MAP.get(args[0].toLowerCase(Locale.ROOT)).isArgumentCountValid(args.length - 1)) {
             if (args.length > 0) {
                 System.out.println("Invalid command: " + args[0]);
             }
@@ -60,7 +61,7 @@ public class Main {
             if (args.length > 1) {
                 System.arraycopy(args, 1, argsCommand, 0, argsCommand.length);
             }
-            COMMAND_MAP.get(args[0].toLowerCase()).run(argsCommand);
+            COMMAND_MAP.get(args[0].toLowerCase(Locale.ROOT)).run(argsCommand);
         } catch (Exception e) {
             e.printStackTrace();
             System.exit(1);

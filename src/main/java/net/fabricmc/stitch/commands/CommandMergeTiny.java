@@ -194,6 +194,7 @@ public class CommandMergeTiny extends Command {
 	}
 
 	private List<String> mappingBlankFillOrder = new ArrayList<>();
+	private String sharedIndexName;
 
 	public CommandMergeTiny() {
 		super("mergeTiny");
@@ -217,11 +218,11 @@ public class CommandMergeTiny extends Command {
 		}
 
 		if (a.type == TinyEntryType.CLASS && a.getParent() != null && a.getParent().type == TinyEntryType.CLASS) {
-			// First, map to the shared index name ("official")
-			String officialPath = a.names.get("official");
+			// First, map to the shared index name (sharedIndexName)
+			String officialPath = a.names.get(sharedIndexName);
 			TinyEntry officialEntry = a.getParent();
 			while (officialEntry.type == TinyEntryType.CLASS) {
-				officialPath = officialEntry.names.get("official") + "$" + officialPath;
+				officialPath = officialEntry.names.get(sharedIndexName) + "$" + officialPath;
 				officialEntry = officialEntry.getParent();
 			}
 
@@ -241,8 +242,8 @@ public class CommandMergeTiny extends Command {
 					targetName.append('$');
 				}
 
-				a = a != null ? a.getChild("official", path[i]) : null;
-				b = b != null ? b.getChild("official", path[i]) : null;
+				a = a != null ? a.getChild(sharedIndexName, path[i]) : null;
+				b = b != null ? b.getChild(sharedIndexName, path[i]) : null;
 				boolean appended = false;
 
 				for (String mName : matchingOrder) {
@@ -367,6 +368,8 @@ public class CommandMergeTiny extends Command {
 			if (!inputA.indexList[0].equals(inputB.indexList[0])) {
 				throw new RuntimeException("TODO");
 			}
+
+			sharedIndexName = inputA.indexList[0];
 
 			// Set<String> matchedIndexes = Sets.intersection(inputA.indexMap.keySet(), inputB.indexMap.keySet());
 			Set<String> matchedIndexes = Collections.singleton(inputA.indexList[0]);

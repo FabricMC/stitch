@@ -16,6 +16,10 @@
 
 package net.fabricmc.stitch.commands;
 
+import net.fabricmc.mappings.EntryTriple;
+import net.fabricmc.mappings.FieldEntry;
+import net.fabricmc.mappings.Mappings;
+import net.fabricmc.mappings.MappingsProvider;
 import net.fabricmc.stitch.Command;
 import net.fabricmc.stitch.representation.JarReader;
 import net.fabricmc.stitch.util.FieldNameFinder;
@@ -24,6 +28,7 @@ import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
+import org.objectweb.asm.commons.Remapper;
 import org.objectweb.asm.tree.*;
 import org.objectweb.asm.tree.analysis.Analyzer;
 import org.objectweb.asm.tree.analysis.Frame;
@@ -52,9 +57,17 @@ public class CommandProposeFieldNames extends Command {
 
     @Override
     public void run(String[] args) throws Exception {
-        Map<String, String> fieldNames = new FieldNameFinder().find(new File(args[0]));
+        Map<EntryTriple, String> fieldNamesO = new FieldNameFinder().findNames(new File(args[0]));
 
-        System.err.println("Found " + fieldNames.size() + " interesting names.");
+        System.err.println("Found " + fieldNamesO.size() + " interesting names.");
+
+        // i didn't fuss too much on this... this needs a rewrite once we get a mapping writer library
+        Map<EntryTriple, String> fieldNames = new HashMap<>();
+
+        Mappings mappings;
+        try (FileInputStream fileIn = new FileInputStream(new File(args[1]))) {
+            mappings = MappingsProvider.readTinyMappings(fileIn, false);
+        }
 
         try (FileInputStream fileIn = new FileInputStream(new File(args[1]));
             FileOutputStream fileOut = new FileOutputStream(new File(args[2]));
@@ -71,7 +84,7 @@ public class CommandProposeFieldNames extends Command {
 
                 if (headerPos < 0) {
                     // first line
-                    if (tabSplit.length < 3 || !(tabSplit[1].equals("official"))) {
+                    if (tabSplit.length < 3) {
                         throw new RuntimeException("Invalid mapping file!");
                     }
 
@@ -85,10 +98,24 @@ public class CommandProposeFieldNames extends Command {
                     if (headerPos < 0) {
                         throw new RuntimeException("Could not find 'named' mapping position!");
                     }
+
+                    if (!tabSplit[1].equals("official")) {
+                        for (FieldEntry e : mappings.getFieldEntries()) {
+                            EntryTriple officialFieldMapping = e.get("official");
+                            String name = fieldNamesO.get(officialFieldMapping);
+                            if (name != null) {
+                                fieldNames.put(e.get(tabSplit[1]), name);
+                            }
+                        }
+                    } else {
+                        fieldNames = fieldNamesO;
+                    }
+
+                    mappings = null; // save memory
                 } else {
                     // second+ line
                     if (tabSplit[0].equals("FIELD")) {
-                        String key = tabSplit[1] + ";;" + tabSplit[3];
+                        EntryTriple key = new EntryTriple(tabSplit[1], tabSplit[3], tabSplit[2]);
                         String value = tabSplit[headerPos + 2];
                         if (value.startsWith("field_") && fieldNames.containsKey(key)) {
                             tabSplit[headerPos + 2] = fieldNames.get(key);

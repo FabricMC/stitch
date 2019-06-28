@@ -56,28 +56,6 @@ public class FieldNameFinder {
         }
     }
 
-    @Deprecated
-    public Map<String, String> find(Iterable<byte[]> classes) throws Exception {
-        Map<EntryTriple, String> src = findNames(classes);
-        Map<String, String> result = new HashMap<>();
-        Set<String> duplKeys = new HashSet<>();
-
-        for (Map.Entry<EntryTriple, String> entry : src.entrySet()) {
-            String k = entry.getKey().getOwner() + ";;" + entry.getKey().getName();
-            if (!duplKeys.contains(k)) {
-                if (result.containsKey(k)) {
-                    System.err.println("Warning: Duplicate key (remedy with new API): " + k + " (" + result.get(k) + ")!");
-                    duplKeys.add(k);
-                    result.remove(k);
-                } else {
-                    result.put(k, entry.getValue());
-                }
-            }
-        }
-
-        return result;
-    }
-
 	public Map<EntryTriple, String> findNames(Iterable<byte[]> classes) throws Exception {
     	Map<String, List<MethodNode>> methods = new HashMap<>();
 
@@ -190,7 +168,7 @@ public class FieldNameFinder {
         return fieldNames;
     }
 
-    public Map<String, String> find(File file) {
+    public Map<EntryTriple, String> findNames(File file) {
         List<byte[]> byteArrays = new ArrayList<>();
 
         try {
@@ -214,7 +192,7 @@ public class FieldNameFinder {
                 }
             }
 
-            return find(byteArrays);
+            return findNames(byteArrays);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }

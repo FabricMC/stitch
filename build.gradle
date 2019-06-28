@@ -73,5 +73,28 @@ task allJar(type: Jar) {
 }
 
 artifacts {
-   archives allJar
+	archives allJar
+}
+
+
+publishing {
+	publications {
+		mavenJava(MavenPublication) {
+			from components.java
+			artifact(allJar)
+		}
+	}
+
+	// select the repositories you want to publish to
+	repositories {
+		if (project.hasProperty('mavenPass')) {
+			maven {
+				url = "http://mavenupload.modmuss50.me/"
+				credentials {
+					username = "buildslave"
+					password = project.getProperty('mavenPass')
+				}
+			}
+		}
+	}
 }

@@ -8,9 +8,9 @@ node {
    sh "rm -rf build/libs/"
    sh "chmod +x gradlew"
    sh "./gradlew clean"
-   sh "./gradlew build"
+   sh "./gradlew build --stacktrace"
 
    stage "Archive artifacts"
 
-   sh "./gradlew upload"
+   sh "./gradlew publish --stacktrace"
 }

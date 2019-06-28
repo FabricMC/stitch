@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, 2017, 2018 Adrian Siekierka
+ * Copyright (c) 2016, 2017, 2018, 2019 Adrian Siekierka
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -37,6 +37,7 @@ public class Main {
         addCommand(new CommandMergeJar());
         addCommand(new CommandMergeTiny());
         addCommand(new CommandProposeFieldNames());
+        addCommand(new CommandReorderTiny());
         addCommand(new CommandRewriteIntermediary());
         addCommand(new CommandUpdateIntermediary());
     }

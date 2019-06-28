@@ -33,6 +33,7 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
+import java.util.Comparator;
 import java.util.Locale;
 
 public class CommandReorderTiny extends Command {
@@ -48,6 +49,17 @@ public class CommandReorderTiny extends Command {
     @Override
     public boolean isArgumentCountValid(int count) {
         return count >= 4;
+    }
+
+    private int compareTriples(EntryTriple a, EntryTriple b) {
+        int c = a.getOwner().compareTo(b.getOwner());
+        if (c == 0) {
+            c = a.getDesc().compareTo(b.getDesc());
+            if (c == 0) {
+                c = a.getName().compareTo(b.getName());
+            }
+        }
+        return c;
     }
 
     @Override
@@ -75,31 +87,43 @@ public class CommandReorderTiny extends Command {
                 firstLineBuilder.append('\t').append(name);
             }
             writer.write(firstLineBuilder.append('\n').toString());
-            for (ClassEntry entry : input.getClassEntries()) {
-                StringBuilder s = new StringBuilder("CLASS");
-                for (String name : names) {
-                    s.append('\t').append(entry.get(name));
+            input.getClassEntries().stream().sorted(Comparator.comparing((a) -> a.get(names[0]))).forEach((entry) -> {
+                try {
+                    StringBuilder s = new StringBuilder("CLASS");
+                    for (String name : names) {
+                        s.append('\t').append(entry.get(name));
+                    }
+                    writer.write(s.append('\n').toString());
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
                 }
-                writer.write(s.append('\n').toString());
-            }
-            for (FieldEntry entry : input.getFieldEntries()) {
-                StringBuilder s = new StringBuilder("FIELD");
-                EntryTriple first = entry.get(names[0]);
-                s.append('\t').append(first.getOwner()).append('\t').append(first.getDesc());
-                for (String name : names) {
-                    s.append('\t').append(entry.get(name).getName());
+            });
+            input.getFieldEntries().stream().sorted((a, b) -> compareTriples(a.get(names[0]), b.get(names[0]))).forEach((entry) -> {
+                try {
+                    StringBuilder s = new StringBuilder("FIELD");
+                    EntryTriple first = entry.get(names[0]);
+                    s.append('\t').append(first.getOwner()).append('\t').append(first.getDesc());
+                    for (String name : names) {
+                        s.append('\t').append(entry.get(name).getName());
+                    }
+                    writer.write(s.append('\n').toString());
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
                 }
-                writer.write(s.append('\n').toString());
-            }
-            for (MethodEntry entry : input.getMethodEntries()) {
-                StringBuilder s = new StringBuilder("METHOD");
-                EntryTriple first = entry.get(names[0]);
-                s.append('\t').append(first.getOwner()).append('\t').append(first.getDesc());
-                for (String name : names) {
-                    s.append('\t').append(entry.get(name).getName());
+            });
+            input.getMethodEntries().stream().sorted((a, b) -> compareTriples(a.get(names[0]), b.get(names[0]))).forEach((entry) -> {
+                try {
+                    StringBuilder s = new StringBuilder("METHOD");
+                    EntryTriple first = entry.get(names[0]);
+                    s.append('\t').append(first.getOwner()).append('\t').append(first.getDesc());
+                    for (String name : names) {
+                        s.append('\t').append(entry.get(name).getName());
+                    }
+                    writer.write(s.append('\n').toString());
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
                 }
-                writer.write(s.append('\n').toString());
-            }
+            });
         }
 
         System.err.println("Done!");

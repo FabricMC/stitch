@@ -25,6 +25,7 @@ import cuchaz.enigma.api.service.NameProposalService;
 import cuchaz.enigma.translation.representation.entry.FieldEntry;
 import net.fabricmc.mappings.EntryTriple;
 import net.fabricmc.stitch.util.FieldNameFinder;
+import net.fabricmc.stitch.util.NameFinderVisitor;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.MethodVisitor;
@@ -36,6 +37,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.Supplier;
 
 public class StitchNameProposalService {
@@ -46,39 +48,13 @@ public class StitchNameProposalService {
 			@Override
 			public void acceptJar(ClassCache classCache, JarIndex jarIndex) {
 
+				Map<String, Set<String>> enumFields = new HashMap<>();
 				Map<String, List<MethodNode>> methods = new HashMap<>();
 
-				classCache.visit(new Supplier<ClassVisitor>() {
-					@Override
-					public ClassVisitor get() {
-						return new ClassVisitor(Opcodes.ASM7) {
-
-							String owner;
-
-							@Override
-							public void visit(int version, int access, String name, String signature, String superName, String[] interfaces) {
-								this.owner = name;
-								super.visit(version, access, name, signature, superName, interfaces);
-							}
-
-							@Override
-							public MethodVisitor visitMethod(int access, String name, String descriptor, String signature, String[] exceptions) {
-								if ("<clinit>".equals(name)) {
-									MethodNode node = new MethodNode(api, access, name, descriptor, signature, exceptions);
-
-									methods.computeIfAbsent(owner, s -> new ArrayList<>()).add(node);
-
-									return node;
-								} else {
-									return super.visitMethod(access, name, descriptor, signature, exceptions);
-								}
-							}
-						};
-					}
-				}, ClassReader.SKIP_FRAMES);
+				classCache.visit(() -> new NameFinderVisitor(Opcodes.ASM7, enumFields, methods), ClassReader.SKIP_FRAMES);
 
 				try {
-					fieldNames = new FieldNameFinder().findNames(methods);
+					fieldNames = new FieldNameFinder().findNames(enumFields, methods);
 				} catch (Exception e) {
 					throw new RuntimeException(e);
 				}

@@ -47,7 +47,7 @@ public class SnowmanClassVisitor extends ClassVisitor {
 				final int index) {
 			String newName = name;
 			if (name != null && name.startsWith("\u2603")) {
-				newName = "local_" + localCounter++;
+				newName = "var" + localCounter++;
 			}
 			super.visitLocalVariable(newName, descriptor, signature, start, end, index);
 		}

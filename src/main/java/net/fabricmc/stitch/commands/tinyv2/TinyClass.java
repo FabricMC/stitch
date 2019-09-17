@@ -38,26 +38,5 @@ public class TinyClass implements Comparable<TinyClass> {
     @Override
     public int compareTo(TinyClass o) {
         return classNames.get(0).compareTo(o.classNames.get(0));
-////        if(classNames.get(0).equals("aaa")){
-////            int x = 2;
-////        }
-//
-//        // Inner classes come before (this is not important, it just makes testing easier)
-//        String[] classAndInnerClasses = classNames.get(0).split("\\$");
-//        String[] otherClassAndInnerClasses = o.classNames.get(0).split("\\$");
-//
-//        int result = classAndInnerClasses[0].compareTo(otherClassAndInnerClasses[0]);
-//        if(result == 0){
-//            if(classAndInnerClasses.length != otherClassAndInnerClasses.length) {
-//                return otherClassAndInnerClasses.length - classAndInnerClasses.length;
-//            }else if( classAndInnerClasses.length >= 2){
-//                return classAndInnerClasses[1].compareTo(otherClassAndInnerClasses[1]);
-//            }else{
-//                return 0;
-//            }
-//        }
-//
-//        return result;
-
     }
 }

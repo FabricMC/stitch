@@ -31,8 +31,6 @@ import java.util.Comparator;
 
 import cuchaz.enigma.command.InvertMappingsCommand;
 
-//since intermediate class names and named class names differ,
-// merging official - intermediate and intermediate - named was actually the main difficulty of yarn's intermediate port
 public class CommandReorderTinyV2 extends Command {
     public CommandReorderTinyV2() {
         super("reorderTinyV2");

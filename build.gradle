@@ -4,12 +4,12 @@ apply plugin: 'idea'
 apply plugin: 'maven-publish'
 
 buildscript {
-	repositories {
-		maven {
-			url "https://plugins.gradle.org/m2/"
-		}
-		jcenter()
-	}
+    repositories {
+        maven {
+            url "https://plugins.gradle.org/m2/"
+        }
+        jcenter()
+    }
 }
 
 sourceCompatibility = 1.8
@@ -23,78 +23,86 @@ group = 'net.fabricmc'
 archivesBaseName = project.name.toLowerCase()
 
 repositories {
-	mavenCentral()
-	maven {
-		name = 'modmuss'
-		url = 'http://maven.modmuss50.me/'
-	}
-	maven {
-		name "RX14 Repository"
-		url 'http://mvn.rx14.co.uk/local/'
-	}
+    mavenCentral()
+    maven {
+        name = 'modmuss'
+        url = 'http://maven.modmuss50.me/'
+    }
+    maven {
+        name "RX14 Repository"
+        url 'http://mvn.rx14.co.uk/local/'
+    }
+    mavenLocal()
 }
 
 dependencies {
-	compile 'org.ow2.asm:asm:7.1'
-	compile 'org.ow2.asm:asm-commons:7.1'
-	compile 'org.ow2.asm:asm-tree:7.1'
-	compile 'org.ow2.asm:asm-util:7.1'
-	compile 'net.fabricmc:tiny-mappings-parser:0.1.1.8'
-	implementation group: 'org.checkerframework', name: 'checker-qual', version: '2.5.7'
-	implementation('cuchaz:enigma:0.14.0.120') {
-		exclude group: 'org.ow2.asm'
-	}
+    compile 'org.ow2.asm:asm:7.1'
+    compile 'org.ow2.asm:asm-commons:7.1'
+    compile 'org.ow2.asm:asm-tree:7.1'
+    compile 'org.ow2.asm:asm-util:7.1'
+    compile 'net.fabricmc:tiny-mappings-parser:0.1.1-local'
+    implementation group: 'org.checkerframework', name: 'checker-qual', version: '2.5.7'
+    implementation('cuchaz:enigma:0.14.1-local-2') {
+        exclude group: 'org.ow2.asm'
+    }
+
+    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.3.1'
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.3.1'
 }
 
 apply from: 'https://github.com/FabricMC/fabric-docs/raw/master/gradle/maven.gradle'
 apply from: 'https://github.com/FabricMC/fabric-docs/raw/master/gradle/license.gradle'
 
 jar {
-	manifest {
-		attributes	'Implementation-Title': 'Stitch',
-				'Implementation-Version': version,
-				'Main-Class': "net.fabricmc.stitch.Main"
-	}
+    manifest {
+        attributes 'Implementation-Title': 'Stitch',
+                'Implementation-Version': version,
+                'Main-Class': "net.fabricmc.stitch.Main"
+    }
 }
 
 task allJar(type: Jar) {
     from {
-		configurations.compile.collect {
-			it.isDirectory() ? it : zipTree(it)
-		}
-	}
-	manifest {
-		attributes	'Implementation-Title': 'Stitch',
-					'Implementation-Version': version,
-					'Main-Class': "net.fabricmc.stitch.Main"
-	}
-	classifier = 'all'
-	with jar
+        configurations.compile.collect {
+            it.isDirectory() ? it : zipTree(it)
+        }
+    }
+    manifest {
+        attributes 'Implementation-Title': 'Stitch',
+                'Implementation-Version': version,
+                'Main-Class': "net.fabricmc.stitch.Main"
+    }
+    classifier = 'all'
+    with jar
 }
 
 artifacts {
-	archives allJar
+    archives allJar
 }
 
 
 publishing {
-	publications {
-		mavenJava(MavenPublication) {
-			from components.java
-			artifact(allJar)
-		}
-	}
+    publications {
+        mavenJava(MavenPublication) {
+            from components.java
+            artifact(allJar)
+        }
+    }
 
-	// select the repositories you want to publish to
-	repositories {
-		if (project.hasProperty('mavenPass')) {
-			maven {
-				url = "http://mavenupload.modmuss50.me/"
-				credentials {
-					username = "buildslave"
-					password = project.getProperty('mavenPass')
-				}
-			}
-		}
-	}
+    // select the repositories you want to publish to
+    repositories {
+        if (project.hasProperty('mavenPass')) {
+            maven {
+                url = "http://mavenupload.modmuss50.me/"
+                credentials {
+                    username = "buildslave"
+                    password = project.getProperty('mavenPass')
+                }
+            }
+        }
+    }
+}
+
+test {
+    useJUnitPlatform()
 }

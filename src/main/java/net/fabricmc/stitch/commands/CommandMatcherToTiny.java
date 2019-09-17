@@ -19,67 +19,73 @@ package net.fabricmc.stitch.commands;
 import net.fabricmc.stitch.Command;
 import net.fabricmc.stitch.util.MatcherUtil;
 
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
 import java.util.HashMap;
 import java.util.Map;
 
 public class CommandMatcherToTiny extends Command {
-	public CommandMatcherToTiny() {
-		super("matcherToTiny");
-	}
+    public CommandMatcherToTiny() {
+        super("matcherToTiny");
+    }
 
-	@Override
-	public String getHelpString() {
-		return "<in> <out> <src-name> <dst-name>";
-	}
+    @Override
+    public String getHelpString() {
+        return "<in> <out> <src-name> <dst-name>";
+    }
 
-	@Override
-	public boolean isArgumentCountValid(int count) {
-		return count == 4;
-	}
+    @Override
+    public boolean isArgumentCountValid(int count) {
+        return count == 4;
+    }
 
-	@Override
-	public void run(String[] args) throws Exception {
-		Map<String, String> classNames = new HashMap<>();
-		Map<String, String> fieldNames = new HashMap<>();
-		Map<String, String> methodNames = new HashMap<>();
+    @Override
+    public void run(String[] args) throws Exception {
+        Map<String, String> classNames = new HashMap<>();
+        Map<String, String> fieldNames = new HashMap<>();
+        Map<String, String> methodNames = new HashMap<>();
 
-		System.out.println("Loading...");
-		try (
-				FileInputStream fis = new FileInputStream(new File(args[0]));
-				InputStreamReader isr = new InputStreamReader(fis);
-				BufferedReader reader = new BufferedReader(isr)
-				) {
+        System.out.println("Loading...");
+        try (
+                FileInputStream fis = new FileInputStream(new File(args[0]));
+                InputStreamReader isr = new InputStreamReader(fis);
+                BufferedReader reader = new BufferedReader(isr)
+        ) {
 
-			MatcherUtil.read(reader, false,
-					classNames::put,
-					(src, dst) -> fieldNames.put(src.getOwner() + "\t" + src.getDesc() + "\t" + src.getName(), dst.getName()),
-					(src, dst) -> methodNames.put(src.getOwner() + "\t" + src.getDesc() + "\t" + src.getName(), dst.getName())
-			);
-		}
+            MatcherUtil.read(reader, false,
+                    classNames::put,
+                    (src, dst) -> fieldNames.put(src.getOwner() + "\t" + src.getDesc() + "\t" + src.getName(), dst.getName()),
+                    (src, dst) -> methodNames.put(src.getOwner() + "\t" + src.getDesc() + "\t" + src.getName(), dst.getName())
+            );
+        }
 
-		System.out.println("Saving...");
-		try (
-				FileOutputStream fos = new FileOutputStream(new File(args[1]));
-				OutputStreamWriter osw = new OutputStreamWriter(fos);
-				BufferedWriter writer = new BufferedWriter(osw)
-				) {
+        System.out.println("Saving...");
+        try (
+                FileOutputStream fos = new FileOutputStream(new File(args[1]));
+                OutputStreamWriter osw = new OutputStreamWriter(fos);
+                BufferedWriter writer = new BufferedWriter(osw)
+        ) {
 
-			writer.write("v1\t" + args[2] + "\t" + args[3] + "\n");
+            writer.write("v1\t" + args[2] + "\t" + args[3] + "\n");
 
-			for (String s : classNames.keySet()) {
-				writer.write("CLASS\t" + s + "\t" + classNames.get(s) + "\n");
-			}
+            for (String s : classNames.keySet()) {
+                writer.write("CLASS\t" + s + "\t" + classNames.get(s) + "\n");
+            }
 
-			for (String s : fieldNames.keySet()) {
-				writer.write("FIELD\t" + s + "\t" + fieldNames.get(s) + "\n");
-			}
+            for (String s : fieldNames.keySet()) {
+                writer.write("FIELD\t" + s + "\t" + fieldNames.get(s) + "\n");
+            }
 
-			for (String s : methodNames.keySet()) {
-				writer.write("METHOD\t" + s + "\t" + methodNames.get(s) + "\n");
-			}
-		}
+            for (String s : methodNames.keySet()) {
+                writer.write("METHOD\t" + s + "\t" + methodNames.get(s) + "\n");
+            }
+        }
 
-		System.out.println("Done!");
-	}
+        System.out.println("Done!");
+    }
 }

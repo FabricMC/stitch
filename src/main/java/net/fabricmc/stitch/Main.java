@@ -16,7 +16,18 @@
 
 package net.fabricmc.stitch;
 
-import net.fabricmc.stitch.commands.*;
+import net.fabricmc.stitch.commands.CommandAsmTrace;
+import net.fabricmc.stitch.commands.CommandGenerateIntermediary;
+import net.fabricmc.stitch.commands.CommandGeneratePrefixRemapper;
+import net.fabricmc.stitch.commands.CommandMatcherToTiny;
+import net.fabricmc.stitch.commands.CommandMergeJar;
+import net.fabricmc.stitch.commands.CommandMergeTiny;
+import net.fabricmc.stitch.commands.CommandProposeFieldNames;
+import net.fabricmc.stitch.commands.CommandReorderTiny;
+import net.fabricmc.stitch.commands.CommandRewriteIntermediary;
+import net.fabricmc.stitch.commands.CommandUpdateIntermediary;
+import net.fabricmc.stitch.commands.tinyv2.CommandMergeTinyV2;
+import net.fabricmc.stitch.commands.tinyv2.CommandReorderTinyV2;
 
 import java.util.Locale;
 import java.util.Map;
@@ -40,9 +51,44 @@ public class Main {
         addCommand(new CommandReorderTiny());
         addCommand(new CommandRewriteIntermediary());
         addCommand(new CommandUpdateIntermediary());
+        addCommand(new CommandReorderTinyV2());
+        addCommand(new CommandMergeTinyV2());
     }
 
-    public static void main(String[] args) {
+//Yarn downloads official -> intermediary mappings
+//Yarn inverts that to intermediary -> official mappings
+//Yarn converts enigma mappings to intermediary -> named mappings
+//Yarn merges intermediary -> official with intermediary -> named to produce intermediary-> official -> named
+//Yarn reorders that to official -> intermediary -> named
+
+    public static void main(String[] argsunused) {
+        String[] reorderArgs = {
+                "reorderTinyV2",
+                "C:\\Users\\natan\\Desktop\\stitch\\mappings.tiny",
+                "C:\\Users\\natan\\Desktop\\stitch\\mappings-inverted.tiny",
+                "named", "intermediary"
+        };
+
+
+        String[] argsMergeV1 = {
+                "mergeTiny",
+                "C:\\Users\\natan\\Desktop\\stitch\\int-mappings-inverted.tiny",
+                "C:\\Users\\natan\\Desktop\\stitch\\yarn-mappings.tiny",
+                "C:\\Users\\natan\\Desktop\\stitch\\unordered-merged-mappings.tiny",
+                "intermediary",
+                "official"
+        };
+
+
+        String[] args = {
+                "mergeTinyV2",
+                "C:\\Users\\natan\\Desktop\\stitch\\int-mappings.tinyv2",
+                "C:\\Users\\natan\\Desktop\\stitch\\yarn-mappings.tinyv2",
+                "C:\\Users\\natan\\Desktop\\stitch\\unordered-merged-mappings.tinyv2",
+                "intermediary",
+                "official"
+        };
+
         if (args.length == 0
                 || !COMMAND_MAP.containsKey(args[0].toLowerCase(Locale.ROOT))
                 || !COMMAND_MAP.get(args[0].toLowerCase(Locale.ROOT)).isArgumentCountValid(args.length - 1)) {

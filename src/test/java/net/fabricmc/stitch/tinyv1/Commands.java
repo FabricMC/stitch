@@ -9,8 +9,8 @@ public class Commands {
     @Test
     public void testOrdering() throws Exception {
         String[] args = {
-                "C:\\Users\\natan\\Desktop\\stitch\\local\\unordered-merged-mappings.tiny",
-                "C:\\Users\\natan\\Desktop\\stitch\\local\\merged-mappings.tiny",
+                "local\\unordered-merged-mappings.tiny",
+                "local\\merged-mappings.tiny",
                 "official", "intermediary", "named"
         };
 
@@ -20,9 +20,9 @@ public class Commands {
     @Test
     public void testProposing() throws Exception {
         String[] args = {
-                "C:\\Users\\natan\\Desktop\\stitch\\local\\19w37a-merged.jar",
-                "C:\\Users\\natan\\Desktop\\stitch\\local\\merged-mappings.tiny",
-                "C:\\Users\\natan\\Desktop\\stitch\\local\\merged-mappings-proposed.tiny"
+                "local\\19w37a-merged.jar",
+                "local\\merged-mappings.tiny",
+                "local\\merged-mappings-proposed.tiny"
         };
 
         new CommandProposeFieldNames().run(args);

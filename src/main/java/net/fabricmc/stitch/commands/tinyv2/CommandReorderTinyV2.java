@@ -16,20 +16,22 @@
 
 package net.fabricmc.stitch.commands.tinyv2;
 
-import net.fabricmc.mappings.EntryTriple;
-import net.fabricmc.mappings.Mappings;
-import net.fabricmc.mappings.MappingsProvider;
 import net.fabricmc.stitch.Command;
 
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.OutputStreamWriter;
-import java.util.Comparator;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.function.Consumer;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
-import cuchaz.enigma.command.InvertMappingsCommand;
+import joptsimple.internal.Strings;
 
 public class CommandReorderTinyV2 extends Command {
     public CommandReorderTinyV2() {
@@ -46,26 +48,172 @@ public class CommandReorderTinyV2 extends Command {
         return count >= 4;
     }
 
-    private int compareTriples(EntryTriple a, EntryTriple b) {
-        int c = a.getOwner().compareTo(b.getOwner());
-        if (c == 0) {
-            c = a.getDesc().compareTo(b.getDesc());
-            if (c == 0) {
-                c = a.getName().compareTo(b.getName());
-            }
-        }
-        return c;
-    }
-
     @Override
     public void run(String[] args) throws Exception {
-        String[] enigmaArgs = {
-                "tinyv2",
-                args[0],
-                String.format("tinyv2:%s:%s",args[2],args[3]),
-                args[1]
-        };
-        new InvertMappingsCommand().run(enigmaArgs);
+        Path oldMappingFile = Paths.get(args[0]);
+        Path newMappingFile = Paths.get(args[1]);
+        List<String> newOrder = Arrays.asList(Arrays.copyOfRange(args, 2, args.length));
+
+        TinyFile tinyFile = TinyV2Reader.read(oldMappingFile);
+        validateNamespaces(newOrder, tinyFile);
+
+        Map<String, TinyClass> mappingCopy = tinyFile.getClassEntries().stream()
+                .collect(Collectors.toMap(c -> c.getClassNames().get(0),
+                        c -> new TinyClass(new ArrayList<>(c.getClassNames()), c.getMethods(), c.getFields(), c.getComments())));
+        int newFirstNamespaceOldIndex = tinyFile.getHeader().getNamespaces().indexOf(newOrder.get(0));
+
+        reorder(tinyFile, newOrder);
+        remapDescriptors(tinyFile, mappingCopy, newFirstNamespaceOldIndex);
+
+        TinyV2Writer.write(tinyFile, newMappingFile);
     }
+
+    private void validateNamespaces(List<String> newOrder, TinyFile tinyFile) {
+        HashSet<String> fileNamespacesOrderless = new HashSet<>(tinyFile.getHeader().getNamespaces());
+        HashSet<String> providedNamespacesOrderless = new HashSet<>(newOrder);
+
+        if (!fileNamespacesOrderless.equals(providedNamespacesOrderless)) {
+            throw new IllegalArgumentException("The tiny file has different namespaces than those specified." +
+                    " specified: " + providedNamespacesOrderless.toString() + ", file: " + fileNamespacesOrderless.toString());
+        }
+    }
+
+    private void reorder(TinyFile tinyFile, List<String> newOrder) {
+        Map<Integer, Integer> indexMapping = new HashMap<>();
+        for (int i = 0; i < newOrder.size(); i++) {
+            indexMapping.put(tinyFile.getHeader().getNamespaces().indexOf(newOrder.get(i)), i);
+        }
+
+        visitNames(tinyFile, (names) -> {
+            // This way empty names won't be skipped
+            for (int i = names.size(); i < newOrder.size(); i++) {
+                names.add("");
+            }
+            List<String> namesCopy = new ArrayList<>(names);
+            for (int i = 0; i < namesCopy.size(); i++) {
+                names.set(indexMapping.get(i), namesCopy.get(i));
+            }
+        });
+    }
+
+    private void remapDescriptors(TinyFile tinyFile, Map<String, TinyClass> mappings, int targetNamespace) {
+        for (TinyClass tinyClass : tinyFile.getClassEntries()) {
+            for (TinyMethod method : tinyClass.getMethods()) {
+                remapMethodDescriptor(method, mappings, targetNamespace);
+            }
+            for (TinyField field : tinyClass.getFields()) {
+                remapFieldDescriptor(field, mappings, targetNamespace);
+            }
+        }
+    }
+
+
+    /**
+     * In this case the visitor is not a nice man and reorganizes the house as he sees fit
+     */
+    private void visitNames(TinyFile tinyFile, Consumer<List<String>> namesVisitor) {
+        namesVisitor.accept(tinyFile.getHeader().getNamespaces());
+        for (TinyClass tinyClass : tinyFile.getClassEntries()) {
+            namesVisitor.accept(tinyClass.getClassNames());
+            for (TinyMethod method : tinyClass.getMethods()) {
+                namesVisitor.accept(method.getMethodNames());
+                for (TinyMethodParameter parameter : method.getParameters()) {
+                    namesVisitor.accept(parameter.getParameterNames());
+                }
+                for (TinyLocalVariable localVariable : method.getLocalVariables()) {
+                    namesVisitor.accept(localVariable.getLocalVariableNames());
+                }
+            }
+            for (TinyField field : tinyClass.getFields()) {
+                namesVisitor.accept(field.getFieldNames());
+            }
+        }
+    }
+
+    private void remapFieldDescriptor(TinyField field, Map<String, TinyClass> mappings, int targetNamespace) {
+        String newDescriptor = remapType(field.getFieldDescriptorInFirstNamespace(), mappings, targetNamespace);
+        field.setFieldDescriptorInFirstNamespace(newDescriptor);
+    }
+
+    private void remapMethodDescriptor(TinyMethod method, Map<String, TinyClass> mappings, int targetNamespace) {
+        String descriptor = method.getMethodDescriptorInFirstNamespace();
+        String[] paramsAndReturnType = descriptor.split(Pattern.quote(")"));
+        if (paramsAndReturnType.length != 2) throw new IllegalArgumentException(
+                "method descriptor '" + descriptor + "' is of an unknown format.");
+        List<String> params = parseParameterDescriptors(paramsAndReturnType[0].substring(1));
+        String returnType = paramsAndReturnType[1];
+
+        List<String> paramsMapped = params.stream().map(p -> remapType(p, mappings, targetNamespace)).collect(Collectors.toList());
+        String returnTypeMapped = returnType.equals("V") ? "V" : remapType(returnType, mappings, targetNamespace);
+
+        String newDescriptor = "(" + String.join("", paramsMapped) + ")" + returnTypeMapped;
+        method.setMethodDescriptorInFirstNamespace(newDescriptor);
+
+    }
+
+    private static final Collection<String> primitiveTypeNames = Arrays.asList("B", "C", "D", "F", "I", "J", "S", "Z");
+
+
+    private List<String> parseParameterDescriptors(String concatenatedParameterDescriptors) {
+        List<String> parameterDescriptors = new ArrayList<>();
+        boolean inClassName = false;
+        int inArrayNestingLevel = 0;
+        StringBuilder currentClassName = new StringBuilder();
+
+        for (int i = 0; i < concatenatedParameterDescriptors.length(); i++) {
+            char c = concatenatedParameterDescriptors.charAt(i);
+            if (inClassName) {
+                if (c == ';') {
+                    if (currentClassName.length() == 0) throw new IllegalArgumentException(
+                            "Empty class name in parameter list " + concatenatedParameterDescriptors + " at position " + i);
+                    parameterDescriptors.add(Strings.repeat('[', inArrayNestingLevel) + "L" + currentClassName.toString() + ";");
+                    inArrayNestingLevel = 0;
+                    currentClassName = new StringBuilder();
+                    inClassName = false;
+                } else {
+                    currentClassName.append(c);
+                }
+            } else {
+                if (primitiveTypeNames.contains(Character.toString(c))) {
+                    parameterDescriptors.add(Strings.repeat('[', inArrayNestingLevel) + c);
+                    inArrayNestingLevel = 0;
+                } else if (c == '[') {
+                    inArrayNestingLevel++;
+                } else if (c == 'L') {
+                    inClassName = true;
+                } else {
+                    throw new IllegalArgumentException(
+                            "Unexpected special character " + c + " in parameter descriptor list "
+                                    + concatenatedParameterDescriptors);
+                }
+            }
+
+        }
+
+        return parameterDescriptors;
+
+    }
+
+
+    /**
+     * Remaps type from namespace X, to the namespace of targetNamespaceIndex in mappings, where mappings
+     * is a mapping from names in namespace X to the names in all other namespaces.
+     */
+    private String remapType(String type, Map<String, TinyClass> mappings, int targetNamespaceIndex) {
+        if (type.isEmpty()) throw new IllegalArgumentException("types cannot be empty strings");
+        if (primitiveTypeNames.contains(type)) return type;
+        if (type.charAt(0) == '[')
+            return "[" + remapType(type.substring(1), mappings, targetNamespaceIndex);
+        if (type.charAt(0) == 'L' && type.charAt(type.length() - 1) == ';') {
+            String className = type.substring(1, type.length() - 1);
+            TinyClass mapping = mappings.get(className);
+            if (mapping == null) return className;
+            return "L" + mapping.getClassNames().get(targetNamespaceIndex) + ";";
+        }
+
+        throw new IllegalArgumentException("type descriptor '" + type + "' is of an unknown format.");
+
+    }
+
 
 }

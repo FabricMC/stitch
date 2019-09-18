@@ -1,1 +1,5 @@
 local/
+.gradle/
+out/
+build/
+.idea/

@@ -11,7 +11,7 @@ public class TinyField implements Comparable<TinyField> {
      * For example when we have official -> named mappings the descriptor will be in official, but in named -> official
      * the descriptor will be in named.
      */
-    private final String fieldDescriptorInFirstNamespace;
+    private String fieldDescriptorInFirstNamespace;
     private final List<String> fieldNames;
     private final Collection<String> comments;
 
@@ -36,5 +36,9 @@ public class TinyField implements Comparable<TinyField> {
     @Override
     public int compareTo(TinyField o) {
         return fieldNames.get(0).compareTo(o.fieldNames.get(0));
+    }
+
+    public void setFieldDescriptorInFirstNamespace(String fieldDescriptorInFirstNamespace) {
+        this.fieldDescriptorInFirstNamespace = fieldDescriptorInFirstNamespace;
     }
 }

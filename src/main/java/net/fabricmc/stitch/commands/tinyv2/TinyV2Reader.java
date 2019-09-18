@@ -13,6 +13,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 public class TinyV2Reader {
     private static class Visitor implements TinyVisitor {
@@ -25,7 +26,7 @@ public class TinyV2Reader {
         }
 
         private TinyHeader header;
-        private List<TinyClass> classes = new ArrayList<>();
+        private Set<TinyClass> classes = new HashSet<>();
 
         private TinyClass currentClass;
         private TinyField currentField;
@@ -35,22 +36,26 @@ public class TinyV2Reader {
         private CommentType currentCommentType;
 
 
+        private ArrayList<String> getNames(MappingGetter getter){
+            return new ArrayList<>(Arrays.asList(getter.getAll()));
+        }
+
         @Override
         public void start(TinyMetadata metadata) {
-            header = new TinyHeader(metadata.getNamespaces(), metadata.getMajorVersion(), metadata.getMinorVersion(),
+            header = new TinyHeader(new ArrayList<>(metadata.getNamespaces()), metadata.getMajorVersion(), metadata.getMinorVersion(),
                     metadata.getProperties());
         }
 
         @Override
         public void pushClass(MappingGetter name) {
-            currentClass = new TinyClass(Arrays.asList(name.getAll()), new HashSet<>(), new HashSet<>(), new ArrayList<>());
+            currentClass = new TinyClass(getNames(name), new HashSet<>(), new HashSet<>(), new ArrayList<>());
             classes.add(currentClass);
             currentCommentType = CommentType.CLASS;
         }
 
         @Override
         public void pushField(MappingGetter name, String descriptor) {
-            currentField = new TinyField(descriptor, Arrays.asList(name.getAll()), new ArrayList<>());
+            currentField = new TinyField(descriptor, getNames(name), new ArrayList<>());
             currentClass.getFields().add(currentField);
             currentCommentType = CommentType.FIELD;
         }
@@ -58,7 +63,7 @@ public class TinyV2Reader {
         @Override
         public void pushMethod(MappingGetter name, String descriptor) {
             currentMethod = new TinyMethod(
-                    descriptor, Arrays.asList(name.getAll()), new HashSet<>(), new HashSet<>(), new ArrayList<>()
+                    descriptor, getNames(name), new HashSet<>(), new HashSet<>(), new ArrayList<>()
             );
             currentClass.getMethods().add(currentMethod);
             currentCommentType = CommentType.METHOD;
@@ -67,7 +72,7 @@ public class TinyV2Reader {
         @Override
         public void pushParameter(MappingGetter name, int localVariableIndex) {
             currentParameter = new TinyMethodParameter(
-                    localVariableIndex, Arrays.asList(name.getAll()), new ArrayList<>()
+                    localVariableIndex, getNames(name), new ArrayList<>()
             );
             currentMethod.getParameters().add(currentParameter);
             currentCommentType = CommentType.PARAMETER;
@@ -76,7 +81,7 @@ public class TinyV2Reader {
         @Override
         public void pushLocalVariable(MappingGetter name, int localVariableIndex, int localVariableStartOffset, int localVariableTableIndex) {
             currentLocalVariable = new TinyLocalVariable(
-                    localVariableIndex, localVariableStartOffset, localVariableTableIndex, Arrays.asList(name.getAll()), new ArrayList<>()
+                    localVariableIndex, localVariableStartOffset, localVariableTableIndex, getNames(name), new ArrayList<>()
             );
             currentMethod.getLocalVariables().add(currentLocalVariable);
             currentCommentType = CommentType.LOCAL_VARIABLE;

@@ -2,6 +2,7 @@ package net.fabricmc.stitch.commands.tinyv2;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 
 public class TinyMethodParameter implements Comparable<TinyMethodParameter> {
     private final int lvIndex;

@@ -42477,6 +42477,21 @@ c	net/minecraft/class_3468	zx	net/minecraft/stat/Stats
 	f	Lnet/minecraft/class_2960;	field_19255	ax	 
 	f	Lnet/minecraft/class_2960;	field_19256	ay	 
 	f	Lnet/minecraft/class_2960;	field_19257	az	 
+c	net/minecraft/class_3469	zy	net/minecraft/stat/StatHandler
+	m	(Lnet/minecraft/class_1657;Lnet/minecraft/class_3445;I)V	method_15022	b	increaseStat
+		p	1			player
+		p	2			stat
+		p	3			value
+	m	(Lnet/minecraft/class_1657;Lnet/minecraft/class_3445;I)V	method_15023	a	setStat
+		p	1			player
+		p	2			stat
+		p	3			value
+	m	(Lnet/minecraft/class_3448;Ljava/lang/Object;)I	method_15024	a	getStat
+		p	1			type
+		p	2			stat
+	m	(Lnet/minecraft/class_3445;)I	method_15025	a	getStat
+		p	1			stat
+	f	Lit/unimi/dsi/fastutil/objects/Object2IntMap;	field_15431	a	statMap
 c	net/minecraft/class_347	dbm	net/minecraft/client/gui/widget/LockButtonWidget
 	m	(Z)V	method_1895	a	setLocked
 	m	()Z	method_1896	a	isLocked
@@ -54999,7 +55014,7 @@ c	net/minecraft/class_447	den	net/minecraft/client/gui/screen/StatsScreen
 	m	(Lnet/minecraft/class_447;IIII)V	method_2260	a	 
 	m	()V	method_2267	b	 
 	m	()V	method_2270	a	 
-	m	(Lnet/minecraft/class_447;)Lzy;	method_2271	b	 
+	m	(Lnet/minecraft/class_447;)Lnet/minecraft/class_3469;	method_2271	b	 
 	m	(Lnet/minecraft/class_447;)Lnet/minecraft/class_447$class_4200;	method_2276	g	 
 	m	(IIII)V	method_2282	a	 
 	m	(Lnet/minecraft/class_447;I)I	method_2284	a	 
@@ -55012,7 +55027,7 @@ c	net/minecraft/class_447	den	net/minecraft/client/gui/screen/StatsScreen
 	f	Lnet/minecraft/class_447$class_4198;	field_2644	c	generalButton
 	f	Z	field_2645	h	 
 	f	Lnet/minecraft/class_447$class_4202;	field_2646	e	mobsButton
-	f	Lzy;	field_2647	f	statHandler
+	f	Lnet/minecraft/class_3469;	field_2647	f	statHandler
 	f	Lnet/minecraft/class_437;	field_2648	a	parent
 c	net/minecraft/class_447$1	den$1	 
 c	net/minecraft/class_447$class_4198	den$a	net/minecraft/client/gui/screen/StatsScreen$CustomStatsListWidget
@@ -58746,7 +58761,10 @@ c	net/minecraft/class_636	dmb	net/minecraft/client/network/ClientPlayerInteracti
 	m	(II)V	method_2900	a	clickButton
 		p	1			syncId
 		p	2			buttonId
-	m	(Lnet/minecraft/class_638;Lzy;Lnet/minecraft/class_299;)Lnet/minecraft/class_746;	method_2901	a	 
+	m	(Lnet/minecraft/class_638;Lnet/minecraft/class_3469;Lnet/minecraft/class_299;)Lnet/minecraft/class_746;	method_2901	a	createPlayer
+		p	1			world
+		p	2			stateHandler
+		p	3			recipeBook
 	m	(Lnet/minecraft/class_2338;Lnet/minecraft/class_2350;)Z	method_2902	b	 
 	m	(Lnet/minecraft/class_1657;)V	method_2903	a	copyAbilities
 	m	()F	method_2904	c	getReachDistance
@@ -59921,7 +59939,7 @@ c	net/minecraft/class_746	dom	net/minecraft/client/network/ClientPlayerEntity
 	m	()F	method_3140	M	 
 	m	(Lnet/minecraft/class_1860;)V	method_3141	a	onRecipeDisplayed
 	m	(Ljava/lang/String;)V	method_3142	f	sendChatMessage
-	m	()Lzy;	method_3143	B	 
+	m	()Lnet/minecraft/class_3469;	method_3143	B	getStats
 	m	()Z	method_3144	K	isRiding
 	m	(FII)V	method_3145	a	 
 	m	(Ljava/lang/String;)V	method_3146	g	setServerBrand
@@ -59992,7 +60010,7 @@ c	net/minecraft/class_746	dom	net/minecraft/client/network/ClientPlayerEntity
 	f	F	field_3925	cl	lastPitch
 	f	D	field_3926	ch	lastX
 	f	Z	field_3927	cx	lastAutoJump
-	f	Lzy;	field_3928	cd	stats
+	f	Lnet/minecraft/class_3469;	field_3928	cd	stats
 	f	F	field_3929	cb	nextNauseaStrength
 	f	Lnet/minecraft/class_299;	field_3930	ce	recipeBook
 	f	F	field_3931	bZ	lastRenderYaw
@@ -63746,8 +63764,3 @@ c	net/minecraft/server/MinecraftServer$3	net/minecraft/server/MinecraftServer$3
 	f	Ljava/util/List;	field_20280	a	 
 	f	Lnet/minecraft/class_1928;	field_20281	b	 
 	f	Lnet/minecraft/server/MinecraftServer;	field_20282	c	 
-c	zy	zy	 
-	m	(Lnet/minecraft/class_1657;Lnet/minecraft/class_3445;I)V	method_15022	b	 
-	m	(Lnet/minecraft/class_1657;Lnet/minecraft/class_3445;I)V	method_15023	a	 
-	m	(Lnet/minecraft/class_3448;Ljava/lang/Object;)I	method_15024	a	 
-	m	(Lnet/minecraft/class_3445;)I	method_15025	a	 

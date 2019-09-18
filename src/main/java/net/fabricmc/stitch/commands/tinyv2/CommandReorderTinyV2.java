@@ -207,8 +207,8 @@ public class CommandReorderTinyV2 extends Command {
         if (type.charAt(0) == 'L' && type.charAt(type.length() - 1) == ';') {
             String className = type.substring(1, type.length() - 1);
             TinyClass mapping = mappings.get(className);
-            if (mapping == null) return className;
-            return "L" + mapping.getClassNames().get(targetNamespaceIndex) + ";";
+            String remappedName = mapping != null ? mapping.getClassNames().get(targetNamespaceIndex) : className;
+            return "L" + remappedName + ";";
         }
 
         throw new IllegalArgumentException("type descriptor '" + type + "' is of an unknown format.");

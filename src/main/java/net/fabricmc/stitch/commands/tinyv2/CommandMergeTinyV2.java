@@ -29,7 +29,6 @@ import java.util.Map;
 
 import javax.annotation.Nullable;
 
-// TODO: Remap descriptors on fields and methods.
 public class CommandMergeTinyV2 extends Command {
     public CommandMergeTinyV2() {
         super("mergeTinyV2");

@@ -43,7 +43,7 @@ public class CommandMergeTinyV2 extends Command {
 
     @Override
     public boolean isArgumentCountValid(int count) {
-        return count >= 4;
+        return count == 3;
     }
 
     @Override

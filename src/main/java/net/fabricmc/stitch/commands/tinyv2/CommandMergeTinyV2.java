@@ -89,7 +89,8 @@ public class CommandMergeTinyV2 extends Command {
 
     private void mergeClasses(TinyClass classA, @Nullable TinyClass classB) {
 
-        mergeNames(classA.getClassNames(), classB != null ? classB.getClassNames() : Arrays.asList(" ", " "));
+        //TODO: it should be acceptable to leave the space empty if it's null but right now we just insert the first namespace.
+        mergeNames(classA.getClassNames(), classB != null ? classB.getClassNames() :Arrays.asList("",classA.getClassNames().get(0)));
         if (classB != null) mergeComments(classA.getComments(), classB.getComments());
 
 
@@ -112,7 +113,7 @@ public class CommandMergeTinyV2 extends Command {
 
     private void mergeMethods(TinyMethod methodA, @Nullable TinyMethod methodB) {
         if (methodB == null) {
-            methodA.getMethodNames().add(" ");
+            methodA.getMethodNames().add(methodA.getMethodNames().get(0));
             return;
         }
         mergeNames(methodA.getMethodNames(), methodB.getMethodNames());
@@ -138,7 +139,7 @@ public class CommandMergeTinyV2 extends Command {
 
     private void mergeFields(TinyField fieldA, @Nullable TinyField fieldB) {
         if (fieldB == null) {
-            fieldA.getFieldNames().add(" ");
+            fieldA.getFieldNames().add(fieldA.getFieldNames().get(0));
             return;
         }
         mergeNames(fieldA.getFieldNames(), fieldB.getFieldNames());

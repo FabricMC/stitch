@@ -16,6 +16,8 @@
 
 package net.fabricmc.stitch.commands.tinyv2;
 
+import com.google.common.base.Strings;
+
 import net.fabricmc.stitch.Command;
 
 import java.nio.file.Path;
@@ -31,7 +33,6 @@ import java.util.function.Consumer;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-import joptsimple.internal.Strings;
 
 public class CommandReorderTinyV2 extends Command {
     public CommandReorderTinyV2() {
@@ -166,7 +167,7 @@ public class CommandReorderTinyV2 extends Command {
                 if (c == ';') {
                     if (currentClassName.length() == 0) throw new IllegalArgumentException(
                             "Empty class name in parameter list " + concatenatedParameterDescriptors + " at position " + i);
-                    parameterDescriptors.add(Strings.repeat('[', inArrayNestingLevel) + "L" + currentClassName.toString() + ";");
+                    parameterDescriptors.add(Strings.repeat("[", inArrayNestingLevel) + "L" + currentClassName.toString() + ";");
                     inArrayNestingLevel = 0;
                     currentClassName = new StringBuilder();
                     inClassName = false;
@@ -175,7 +176,7 @@ public class CommandReorderTinyV2 extends Command {
                 }
             } else {
                 if (primitiveTypeNames.contains(Character.toString(c))) {
-                    parameterDescriptors.add(Strings.repeat('[', inArrayNestingLevel) + c);
+                    parameterDescriptors.add(Strings.repeat("[", inArrayNestingLevel) + c);
                     inArrayNestingLevel = 0;
                 } else if (c == '[') {
                     inArrayNestingLevel++;

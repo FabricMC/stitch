@@ -70,16 +70,18 @@ public class CommandMergeTinyV2 extends Command {
                             inputA, headerA.getNamespaces().get(0), inputB, headerB.getNamespaces().get(0))
             );
         }
+        System.out.println("Merging " + inputA + " with " + inputB);
         merge(tinyFileA, tinyFileB);
 
         TinyV2Writer.write(tinyFileA, Paths.get(args[2]));
+        System.out.println("Merged mappings written to " + Paths.get(args[2]));
     }
 
     // Mutates inputA to be the merged result
     private void merge(TinyFile inputA, TinyFile inputB) {
         //TODO: how to merge properties?
 
-        System.out.println("Merging " + inputA + " with " + inputB);
+
         mergeNames(inputA.getHeader().getNamespaces(), inputB.getHeader().getNamespaces());
 
         Map<String, TinyClass> inputBClassesByFirstNamespaceName = inputB.mapClassesByFirstNamespace();

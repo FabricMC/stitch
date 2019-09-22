@@ -36,7 +36,7 @@ public class Stable1_14_4 {
 
     @Test
     public void testFieldNameProposal() throws Exception {
-        Commands.proposeFieldNames("local/19w37a-merged.jar",
+        Commands.proposeFieldNames("local/1.14.4-merged.jar",
                 DIR + "merged.tinyv2", DIR + "merged-proposed.tinyv2");
     }
 

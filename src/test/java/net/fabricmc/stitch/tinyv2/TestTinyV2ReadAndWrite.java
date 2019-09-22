@@ -1,4 +1,4 @@
-package net.fabricmc.stitch.tinyv2tests;
+package net.fabricmc.stitch.tinyv2;
 
 import net.fabricmc.stitch.commands.tinyv2.TinyFile;
 import net.fabricmc.stitch.commands.tinyv2.TinyV2Reader;

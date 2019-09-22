@@ -2,32 +2,34 @@ package net.fabricmc.stitch.tinyv2;
 
 import org.junit.jupiter.api.Test;
 
+import java.io.File;
+
 import cuchaz.enigma.command.ConvertMappingsCommand;
 
 public class Stable1_14_4 {
-    private static final String DIRECTORY = "src/test/resources/stable-1.14.4/";
+    private static final String DIR = new File(Stable1_14_4.class.getClassLoader().getResource("stable-1.14.4").getPath()).getAbsolutePath() + "/";
 
     @Test
     public void testReorder2() throws Exception {
-        Commands.reorder(DIRECTORY + "intermediary-mappings.tinyv2",
-                DIRECTORY + "intermediary-mappings-inverted.tinyv2",
+        Commands.reorder(DIR + "intermediary-mappings.tinyv2",
+                DIR + "intermediary-mappings-inverted.tinyv2",
                 "intermediary", "official"
         );
     }
 
     @Test
     public void testMerge() throws Exception {
-        Commands.merge(DIRECTORY + "intermediary-mappings-inverted.tinyv2",
-                DIRECTORY + "yarn-mappings.tinyv2",
-                DIRECTORY + "merged-unordered.tinyv2"
+        Commands.merge(DIR + "intermediary-mappings-inverted.tinyv2",
+                DIR + "yarn-mappings.tinyv2",
+                DIR + "merged-unordered.tinyv2"
         );
     }
 
 
     @Test
     public void testReorder3() throws Exception {
-        Commands.reorder(DIRECTORY + "merged-unordered.tinyv2",
-                DIRECTORY + "merged.tinyv2",
+        Commands.reorder(DIR + "merged-unordered.tinyv2",
+                DIR + "merged.tinyv2",
                 "official", "intermediary", "named"
         );
     }
@@ -35,7 +37,7 @@ public class Stable1_14_4 {
     @Test
     public void testFieldNameProposal() throws Exception {
         Commands.proposeFieldNames("local/19w37a-merged.jar",
-                DIRECTORY + "merged.tinyv2", DIRECTORY + "merged-proposed.tinyv2");
+                DIR + "merged.tinyv2", DIR + "merged-proposed.tinyv2");
     }
 
     // Requirements:
@@ -51,6 +53,6 @@ public class Stable1_14_4 {
 
     @Test
     public void testConversion() throws Exception{
-        new ConvertMappingsCommand().run("tiny",DIRECTORY + "unmerged-yarn.tinyv1","tinyv2:intermediary:named",DIRECTORY + "unmerged-yarn.tinyv2");
+        new ConvertMappingsCommand().run("tiny", DIR + "unmerged-yarn.tinyv1","tinyv2:intermediary:named", DIR + "unmerged-yarn.tinyv2");
     }
 }

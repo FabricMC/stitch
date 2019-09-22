@@ -109,7 +109,7 @@ public class CommandMergeTinyV2 extends Command {
         String[] path = sharedName.split(escape("$"));
         int parts = path.length;
         for (int i = parts - 2; i >= 0; i--) {
-            String currentPath = String.join("$", Arrays.copyOfRange(path, i, parts - 1));
+            String currentPath = String.join("$", Arrays.copyOfRange(path, 0, i+1));
             TinyClass match = inputBClassBySharedNamespace.get(currentPath);
 
             if (match != null && !match.getClassNames().get(1).isEmpty()) {

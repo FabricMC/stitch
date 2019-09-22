@@ -5552,7 +5552,7 @@ c	com/mojang/realmsclient/dto/RealmsServer
 		p	0		jsonArray
 	m	(Ljava/lang/String;)Lcom/mojang/realmsclient/dto/RealmsServer$class_4320;	getState	getState
 		p	0		state
-c	com/mojang/realmsclient/dto/RealmsServer$class_4319	$McoServerComparator
+c	com/mojang/realmsclient/dto/RealmsServer$class_4319	com/mojang/realmsclient/dto/RealmsServer$McoServerComparator
 	m	(Lcom/mojang/realmsclient/dto/RealmsServer;Lcom/mojang/realmsclient/dto/RealmsServer;)I	method_20830	compare
 		p	2		server2
 		p	1		server1
@@ -5563,7 +5563,7 @@ c	com/mojang/realmsclient/dto/RealmsServer$1
 	m	(Lcom/mojang/realmsclient/dto/PlayerInfo;Lcom/mojang/realmsclient/dto/PlayerInfo;)I	method_20829	compare
 		p	1		o1
 		p	2		o2
-c	com/mojang/realmsclient/dto/RealmsServer$class_4321	$WorldType
+c	com/mojang/realmsclient/dto/RealmsServer$class_4321	com/mojang/realmsclient/dto/RealmsServer$WorldType
 	f	Lcom/mojang/realmsclient/dto/RealmsServer$class_4321;	field_19437	NORMAL
 	f	Lcom/mojang/realmsclient/dto/RealmsServer$class_4321;	field_19438	MINIGAME
 	f	Lcom/mojang/realmsclient/dto/RealmsServer$class_4321;	field_19440	EXPERIENCE
@@ -5571,7 +5571,7 @@ c	com/mojang/realmsclient/dto/RealmsServer$class_4321	$WorldType
 		p	0		name
 	f	Lcom/mojang/realmsclient/dto/RealmsServer$class_4321;	field_19439	ADVENTUREMAP
 	f	Lcom/mojang/realmsclient/dto/RealmsServer$class_4321;	field_19441	INSPIRATION
-c	com/mojang/realmsclient/dto/RealmsServer$class_4320	$State
+c	com/mojang/realmsclient/dto/RealmsServer$class_4320	com/mojang/realmsclient/dto/RealmsServer$State
 	f	Lcom/mojang/realmsclient/dto/RealmsServer$class_4320;	field_19434	OPEN
 	m	(Ljava/lang/String;)Lcom/mojang/realmsclient/dto/RealmsServer$class_4320;	valueOf	valueOf
 		p	0		name
@@ -29465,7 +29465,7 @@ c	com/mojang/blaze3d/platform/GLX
 	m	(II)V	glBindRenderbuffer	glBindRenderbuffer
 		p	0		target
 		p	1		renderbuffer
-c	com/mojang/blaze3d/platform/GLX$class_1010	$FBOMode
+c	com/mojang/blaze3d/platform/GLX$class_1010	com/mojang/blaze3d/platform/GLX$FBOMode
 c	net/minecraft/class_2803	net/minecraft/server/network/packet/ClientSettingsC2SPacket
 	m	(Ljava/lang/String;ILnet/minecraft/class_1659;ZILnet/minecraft/class_1306;)V	<init>	<init>
 		p	5		modelBitMask
@@ -32387,7 +32387,7 @@ c	net/minecraft/class_634	net/minecraft/client/network/ClientPlayNetworkHandler
 c	com/mojang/realmsclient/dto/WorldTemplate	
 	m	(Lcom/google/gson/JsonObject;)Lcom/mojang/realmsclient/dto/WorldTemplate;	parse	parse
 		p	0		node
-c	com/mojang/realmsclient/dto/WorldTemplate$class_4323	$WorldTemplateType
+c	com/mojang/realmsclient/dto/WorldTemplate$class_4323	com/mojang/realmsclient/dto/WorldTemplate$WorldTemplateType
 	f	Lcom/mojang/realmsclient/dto/WorldTemplate$class_4323;	field_19451	INSPIRATION
 	m	(Ljava/lang/String;)Lcom/mojang/realmsclient/dto/WorldTemplate$class_4323;	valueOf	valueOf
 		p	0		name
@@ -35895,7 +35895,7 @@ c	com/mojang/realmsclient/dto/Subscription
 		p	0		subscriptionType
 	m	(Ljava/lang/String;)Lcom/mojang/realmsclient/dto/Subscription;	parse	parse
 		p	0		json
-c	com/mojang/realmsclient/dto/Subscription$class_4322	$SubscriptionType
+c	com/mojang/realmsclient/dto/Subscription$class_4322	com/mojang/realmsclient/dto/Subscription$SubscriptionType
 	m	(Ljava/lang/String;)Lcom/mojang/realmsclient/dto/Subscription$class_4322;	valueOf	valueOf
 		p	0		name
 	f	Lcom/mojang/realmsclient/dto/Subscription$class_4322;	field_19444	RECURRING
@@ -50578,89 +50578,89 @@ c	com/mojang/blaze3d/platform/GlStateManager
 		p	0		texture
 	m	(I)V	blendEquation	blendEquation
 		p	0		mode
-c	com/mojang/blaze3d/platform/GlStateManager$class_1034	$StencilSubState
+c	com/mojang/blaze3d/platform/GlStateManager$class_1034	com/mojang/blaze3d/platform/GlStateManager$StencilSubState
 	f	I	field_5148	func
-c	com/mojang/blaze3d/platform/GlStateManager$class_1035	$StencilState
+c	com/mojang/blaze3d/platform/GlStateManager$class_1035	com/mojang/blaze3d/platform/GlStateManager$StencilState
 	f	Lcom/mojang/blaze3d/platform/GlStateManager$class_1034;	field_5149	subState
-c	com/mojang/blaze3d/platform/GlStateManager$class_1036	$TexCoord
-c	com/mojang/blaze3d/platform/GlStateManager$class_1037	$TexGenCoordState
+c	com/mojang/blaze3d/platform/GlStateManager$class_1036	com/mojang/blaze3d/platform/GlStateManager$TexCoord
+c	com/mojang/blaze3d/platform/GlStateManager$class_1037	com/mojang/blaze3d/platform/GlStateManager$TexGenCoordState
 	f	I	field_5160	mode
 	f	Lcom/mojang/blaze3d/platform/GlStateManager$class_1018;	field_5159	capState
 	f	I	field_5161	coord
-c	com/mojang/blaze3d/platform/GlStateManager$class_1038	$TexGenState
+c	com/mojang/blaze3d/platform/GlStateManager$class_1038	com/mojang/blaze3d/platform/GlStateManager$TexGenState
 	f	Lcom/mojang/blaze3d/platform/GlStateManager$class_1037;	field_5162	s
 	f	Lcom/mojang/blaze3d/platform/GlStateManager$class_1037;	field_5163	t
 	f	Lcom/mojang/blaze3d/platform/GlStateManager$class_1037;	field_5165	q
 	f	Lcom/mojang/blaze3d/platform/GlStateManager$class_1037;	field_5164	r
-c	com/mojang/blaze3d/platform/GlStateManager$class_1016	$AlphaTestState
+c	com/mojang/blaze3d/platform/GlStateManager$class_1016	com/mojang/blaze3d/platform/GlStateManager$AlphaTestState
 	f	F	field_5043	ref
 	f	Lcom/mojang/blaze3d/platform/GlStateManager$class_1018;	field_5042	capState
 	f	I	field_5044	func
-c	com/mojang/blaze3d/platform/GlStateManager$class_1039	$Texture2DState
+c	com/mojang/blaze3d/platform/GlStateManager$class_1039	com/mojang/blaze3d/platform/GlStateManager$Texture2DState
 	f	I	field_5167	boundTexture
 	f	Lcom/mojang/blaze3d/platform/GlStateManager$class_1018;	field_5166	capState
-c	com/mojang/blaze3d/platform/GlStateManager$class_1017	$BlendFuncState
+c	com/mojang/blaze3d/platform/GlStateManager$class_1017	com/mojang/blaze3d/platform/GlStateManager$BlendFuncState
 	f	I	field_5049	sfactor
 	f	I	field_5048	dfactor
 	f	Lcom/mojang/blaze3d/platform/GlStateManager$class_1018;	field_5045	capState
 	f	I	field_5046	dstAlpha
 	f	I	field_5047	srcAlpha
-c	com/mojang/blaze3d/platform/GlStateManager$class_1018	$CapabilityTracker
+c	com/mojang/blaze3d/platform/GlStateManager$class_1018	com/mojang/blaze3d/platform/GlStateManager$CapabilityTracker
 	m	()V	method_4471	enable
 	f	Z	field_5051	state
 	f	I	field_5050	cap
 	m	()V	method_4469	disable
 	m	(Z)V	method_4470	setState
-c	com/mojang/blaze3d/platform/GlStateManager$class_1030	$LogicOp
+c	com/mojang/blaze3d/platform/GlStateManager$class_1030	com/mojang/blaze3d/platform/GlStateManager$LogicOp
 	f	I	field_5108	glValue
-c	com/mojang/blaze3d/platform/GlStateManager$class_1031	$PolygonOffsetState
+c	com/mojang/blaze3d/platform/GlStateManager$class_1031	com/mojang/blaze3d/platform/GlStateManager$PolygonOffsetState
 	f	F	field_5122	units
 	f	F	field_5124	factor
 	f	Lcom/mojang/blaze3d/platform/GlStateManager$class_1018;	field_5121	capLine
 	f	Lcom/mojang/blaze3d/platform/GlStateManager$class_1018;	field_5123	capFill
-c	com/mojang/blaze3d/platform/GlStateManager$class_1032	$RenderMode
+c	com/mojang/blaze3d/platform/GlStateManager$class_1032	com/mojang/blaze3d/platform/GlStateManager$RenderMode
 	m	()V	method_4472	begin
 	m	()V	method_4473	end
-c	com/mojang/blaze3d/platform/GlStateManager$class_1022	$ColorMask
+c	com/mojang/blaze3d/platform/GlStateManager$class_1022	com/mojang/blaze3d/platform/GlStateManager$ColorMask
 	f	Z	field_5063	red
 	f	Z	field_5062	green
 	f	Z	field_5061	blue
 	f	Z	field_5060	alpha
-c	com/mojang/blaze3d/platform/GlStateManager$class_1023	$ColorMaterialState
+c	com/mojang/blaze3d/platform/GlStateManager$class_1023	com/mojang/blaze3d/platform/GlStateManager$ColorMaterialState
 	f	I	field_5066	face
 	f	I	field_5065	mode
 	f	Lcom/mojang/blaze3d/platform/GlStateManager$class_1018;	field_5064	capState
-c	com/mojang/blaze3d/platform/GlStateManager$class_1024	$FaceSides
+c	com/mojang/blaze3d/platform/GlStateManager$class_1024	com/mojang/blaze3d/platform/GlStateManager$FaceSides
 	f	I	field_5069	glValue
-c	com/mojang/blaze3d/platform/GlStateManager$class_1025	$CullFaceState
+c	com/mojang/blaze3d/platform/GlStateManager$class_1025	com/mojang/blaze3d/platform/GlStateManager$CullFaceState
 	f	Lcom/mojang/blaze3d/platform/GlStateManager$class_1018;	field_5072	capState
 	f	I	field_5073	mode
-c	com/mojang/blaze3d/platform/GlStateManager$class_1026	$DepthTestState
+c	com/mojang/blaze3d/platform/GlStateManager$class_1026	com/mojang/blaze3d/platform/GlStateManager$DepthTestState
 	f	Lcom/mojang/blaze3d/platform/GlStateManager$class_1018;	field_5074	capState
 	f	Z	field_5076	mask
 	f	I	field_5075	func
-c	com/mojang/blaze3d/platform/GlStateManager$class_1028	$FogMode
+c	com/mojang/blaze3d/platform/GlStateManager$class_1028	com/mojang/blaze3d/platform/GlStateManager$FogMode
 	f	I	field_5093	glValue
-c	com/mojang/blaze3d/platform/GlStateManager$class_1029	$FogState
+c	com/mojang/blaze3d/platform/GlStateManager$class_1029	com/mojang/blaze3d/platform/GlStateManager$FogState
 	f	F	field_5098	end
 	f	F	field_5101	density
 	f	I	field_5102	mode
 	f	Lcom/mojang/blaze3d/platform/GlStateManager$class_1018;	field_5100	capState
 	f	F	field_5099	start
-c	com/mojang/blaze3d/platform/GlStateManager$class_1040	$Viewport
+c	com/mojang/blaze3d/platform/GlStateManager$class_1040	com/mojang/blaze3d/platform/GlStateManager$Viewport
 	f	I	field_5171	y
 	f	I	field_5172	x
 	f	I	field_5168	height
 	f	I	field_5170	width
-c	com/mojang/blaze3d/platform/GlStateManager$class_1020	$Color4
+c	com/mojang/blaze3d/platform/GlStateManager$class_1020	com/mojang/blaze3d/platform/GlStateManager$Color4
 	f	F	field_5055	blue
 	f	F	field_5054	alpha
 	f	F	field_5057	red
 	f	F	field_5056	green
-c	com/mojang/blaze3d/platform/GlStateManager$class_1021	$LogicOpState
+c	com/mojang/blaze3d/platform/GlStateManager$class_1021	com/mojang/blaze3d/platform/GlStateManager$LogicOpState
 	f	I	field_5059	opcode
 	f	Lcom/mojang/blaze3d/platform/GlStateManager$class_1018;	field_5058	capState
-c	com/mojang/blaze3d/platform/GlStateManager$class_1019	$ClearState
+c	com/mojang/blaze3d/platform/GlStateManager$class_1019	com/mojang/blaze3d/platform/GlStateManager$ClearState
 	f	D	field_5053	clearDepth
 	f	Lcom/mojang/blaze3d/platform/GlStateManager$class_1020;	field_5052	clearColor
 c	net/minecraft/class_353	net/minecraft/client/gui/widget/ButtonListWidget

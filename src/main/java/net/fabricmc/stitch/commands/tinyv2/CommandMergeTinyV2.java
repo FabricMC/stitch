@@ -87,7 +87,7 @@ public class CommandMergeTinyV2 extends Command {
             String sharedName = tinyClass.getClassNames().get(0);
             TinyClass matchingClass = inputBClassesByFirstNamespaceName.get(sharedName);
 
-            if (matchingClass == null || matchingClass.getClassNames().get(1).equals("")) {
+            if (matchingClass == null || matchingClass.getClassNames().get(1).isEmpty()) {
                 String partlyMatchedClassName = matchEnclosingClass(sharedName, inputBClassesByFirstNamespaceName);
                 if (matchingClass == null) {
                     matchingClass = new TinyClass(Arrays.asList(sharedName, partlyMatchedClassName));
@@ -112,7 +112,7 @@ public class CommandMergeTinyV2 extends Command {
             String currentPath = String.join("$", Arrays.copyOfRange(path, i, parts - 1));
             TinyClass match = inputBClassBySharedNamespace.get(currentPath);
 
-            if (match != null) {
+            if (match != null && !match.getClassNames().get(1).isEmpty()) {
                 String matchingInnerClassName = match.getClassNames().get(1)
                         + "$" + String.join("$", Arrays.copyOfRange(path, i + 1, path.length));
                 return matchingInnerClassName;

@@ -455,7 +455,7 @@ c	com/mojang/blaze3d/platform/GlStateManager	com/mojang/blaze3d/platform/GlState
 	f	I	shadeModel	shadeModel	shadeModel
 c	com/mojang/blaze3d/platform/GlStateManager$1	com/mojang/blaze3d/platform/GlStateManager$1	com/mojang/blaze3d/platform/GlStateManager$1
 	f	[I	field_5129	a	field_5129
-c	com/mojang/blaze3d/platform/GlStateManager$DestFactor	com/mojang/blaze3d/platform/GlStateManager$DestFactor	$DestFactor
+c	com/mojang/blaze3d/platform/GlStateManager$DestFactor	com/mojang/blaze3d/platform/GlStateManager$DestFactor	com/mojang/blaze3d/platform/GlStateManager$DestFactor
 	m	(Ljava/lang/String;)Lcom/mojang/blaze3d/platform/GlStateManager$DestFactor;	valueOf	valueOf	valueOf
 	m	()[Lcom/mojang/blaze3d/platform/GlStateManager$DestFactor;	values	values	values
 	f	[Lcom/mojang/blaze3d/platform/GlStateManager$DestFactor;	$VALUES	$VALUES	$VALUES
@@ -790,7 +790,7 @@ c	com/mojang/realmsclient/dto/RealmsServer	com/mojang/realmsclient/dto/RealmsSer
 	f	Ljava/util/Map;	slots	slots	slots
 	f	Lcom/mojang/realmsclient/dto/RealmsServer$class_4320;	state	state	state
 	f	Lcom/mojang/realmsclient/dto/RealmsServer$class_4321;	worldType	worldType	worldType
-c	com/mojang/realmsclient/dto/RealmsServer$1	com/mojang/realmsclient/dto/RealmsServer$1	$1
+c	com/mojang/realmsclient/dto/RealmsServer$1	com/mojang/realmsclient/dto/RealmsServer$1	com/mojang/realmsclient/dto/RealmsServer$1
 	m	(Ljava/lang/Object;Ljava/lang/Object;)I	compare	compare	compare
 	m	(Lcom/mojang/realmsclient/dto/PlayerInfo;Lcom/mojang/realmsclient/dto/PlayerInfo;)I	method_20829	a	compare
 		p	1			o1
@@ -19210,7 +19210,7 @@ c	net/minecraft/class_2281$1	bnk$1	net/minecraft/block/ChestBlock$1
 c	net/minecraft/class_2281$2	bnk$2	net/minecraft/block/ChestBlock$2
 	m	(Lnet/minecraft/class_2595;)Lnet/minecraft/class_3908;	method_17462	a	method_17462
 	m	(Lnet/minecraft/class_2595;Lnet/minecraft/class_2595;)Lnet/minecraft/class_3908;	method_17463	a	method_17463
-c	net/minecraft/class_2281$2$1	bnk$2$1	$2$1
+c	net/minecraft/class_2281$2$1	bnk$2$1	net/minecraft/class_2281$2$1
 	f	Lnet/minecraft/class_2595;	field_17358	a	field_17358
 	f	Lnet/minecraft/class_2595;	field_17359	b	field_17359
 	f	Lnet/minecraft/class_1263;	field_17360	c	field_17360
@@ -20470,11 +20470,11 @@ c	net/minecraft/class_2357$16	fx$16	net/minecraft/block/dispenser/DispenserBehav
 c	net/minecraft/class_2357$17	fx$17	net/minecraft/block/dispenser/DispenserBehavior$17
 	m	(Lnet/minecraft/class_1799;Lnet/minecraft/class_1683;)V	method_17201	a	method_17201
 c	net/minecraft/class_2357$18	fx$18	net/minecraft/block/dispenser/DispenserBehavior$18
-c	net/minecraft/class_2357$18$1	fx$18$1	$18$1
+c	net/minecraft/class_2357$18$1	fx$18$1	net/minecraft/class_2357$18$1
 	m	(Lnet/minecraft/class_1799;Lnet/minecraft/class_1686;)V	method_17203	a	method_17203
 	f	Lnet/minecraft/class_2357$18;	field_13369	b	field_13369
 c	net/minecraft/class_2357$19	fx$19	net/minecraft/block/dispenser/DispenserBehavior$19
-c	net/minecraft/class_2357$19$1	fx$19$1	$19$1
+c	net/minecraft/class_2357$19$1	fx$19$1	net/minecraft/class_2357$19$1
 	m	(Lnet/minecraft/class_1799;Lnet/minecraft/class_1686;)V	method_17202	a	method_17202
 	f	Lnet/minecraft/class_2357$19;	field_13366	b	field_13366
 c	net/minecraft/class_2357$2	fx$2	net/minecraft/block/dispenser/DispenserBehavior$2
@@ -56562,11 +56562,11 @@ c	net/minecraft/client/main/Main	net/minecraft/client/main/Main	net/minecraft/cl
 		p	0			s
 	m	(Ljava/lang/Integer;)Ljava/util/OptionalInt;	method_21612	a	method_21612
 	f	Lorg/apache/logging/log4j/Logger;	field_12138	a	LOGGER
-c	net/minecraft/client/main/Main$1	net/minecraft/client/main/Main$1	$1
+c	net/minecraft/client/main/Main$1	net/minecraft/client/main/Main$1	net/minecraft/client/main/Main$1
 	m	()Ljava/net/PasswordAuthentication;	getPasswordAuthentication	getPasswordAuthentication	getPasswordAuthentication
 	f	Ljava/lang/String;	field_12139	a	field_12139
 	f	Ljava/lang/String;	field_12140	b	field_12140
-c	net/minecraft/client/main/Main$2	net/minecraft/client/main/Main$2	$2
+c	net/minecraft/client/main/Main$2	net/minecraft/client/main/Main$2	net/minecraft/client/main/Main$2
 	m	()V	run	run	run
 c	net/minecraft/data/Main	net/minecraft/data/Main	net/minecraft/data/Main
 	m	([Ljava/lang/String;)V	main	main	main

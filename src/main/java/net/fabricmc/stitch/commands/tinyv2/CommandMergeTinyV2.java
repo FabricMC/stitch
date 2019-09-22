@@ -86,17 +86,13 @@ public class CommandMergeTinyV2 extends Command {
         for (TinyClass tinyClass : inputA.getClassEntries()) {
             String sharedName = tinyClass.getClassNames().get(0);
             TinyClass matchingClass = inputBClassesByFirstNamespaceName.get(sharedName);
-            //TODO: remove
-            if (sharedName.equals("net/minecraft/class_481$class_482")) {
-                int x = 2;
-            }
+
             if (matchingClass == null || matchingClass.getClassNames().get(1).equals("")) {
                 String partlyMatchedClassName = matchEnclosingClass(sharedName, inputBClassesByFirstNamespaceName);
                 if (matchingClass == null) {
                     matchingClass = new TinyClass(Arrays.asList(sharedName, partlyMatchedClassName));
                 } else matchingClass.getClassNames().set(1, partlyMatchedClassName);
             }
-
 
             mergeClasses(tinyClass, matchingClass);
         }

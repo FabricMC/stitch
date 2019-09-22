@@ -1,5 +1,6 @@
 package net.fabricmc.stitch.commands.tinyv2;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -17,6 +18,13 @@ public class TinyClass implements Comparable<TinyClass> {
         this.methods = methods;
         this.fields = fields;
         this.comments = comments;
+    }
+
+    public TinyClass(List<String> classNames) {
+        this.classNames = classNames;
+        this.methods = new ArrayList<>();
+        this.fields = new ArrayList<>();
+        this.comments = new ArrayList<>();
     }
 
     /**

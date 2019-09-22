@@ -23,10 +23,11 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Pattern;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public class CommandMergeTinyV2 extends Command {
@@ -83,19 +84,57 @@ public class CommandMergeTinyV2 extends Command {
 
         Map<String, TinyClass> inputBClassesByFirstNamespaceName = inputB.mapClassesByFirstNamespace();
         for (TinyClass tinyClass : inputA.getClassEntries()) {
-            mergeClasses(tinyClass, inputBClassesByFirstNamespaceName.get(tinyClass.getClassNames().get(0)));
+            String sharedName = tinyClass.getClassNames().get(0);
+            TinyClass matchingClass = inputBClassesByFirstNamespaceName.get(sharedName);
+            if (matchingClass == null) {
+                matchingClass = matchEnclosingClass(sharedName, inputBClassesByFirstNamespaceName);
+            }
+
+            if(sharedName.equals("net/minecraft/class_251$class_252")){
+                int x = 2;
+            }
+
+            mergeClasses(tinyClass, matchingClass);
         }
     }
 
-    private void mergeClasses(TinyClass classA, @Nullable TinyClass classB) {
+
+    /**
+     * Takes something like net/minecraft/class_123$class_124 that doesn't have a mapping, tries to find net/minecraft/class_123
+     * , say the mapping of net/minecraft/class_123 is path/to/someclass and then returns a class of the form
+     * path/to/someclass$class124
+     */
+    @Nonnull
+    private TinyClass matchEnclosingClass(String sharedName, Map<String, TinyClass> inputBClassBySharedNamespace) {
+        String[] path = sharedName.split(escape("$"));
+        int parts = path.length;
+        for (int i = parts - 1; i >= 0; i--) {
+            String currentPath = String.join("$", Arrays.copyOfRange(path, i, parts - 1));
+            TinyClass match = inputBClassBySharedNamespace.get(currentPath);
+
+            if (match != null) {
+                String matchingInnerClassName = match.getClassNames().get(1)
+                        +"$" + String.join("$", Arrays.copyOfRange(path, i + 1, path.length));
+                return new TinyClass(Arrays.asList(sharedName, matchingInnerClassName));
+
+            }
+        }
+
+        return new TinyClass(Arrays.asList(sharedName, sharedName));
+    }
+
+    private static String escape(String str) {
+        return Pattern.quote(str);
+    }
+
+    private void mergeClasses(TinyClass classA, @Nonnull TinyClass classB) {
 
         //TODO: it should be acceptable to leave the space empty if it's null but right now we just insert the first namespace.
-        mergeNames(classA.getClassNames(), classB != null ? classB.getClassNames() :Arrays.asList("",classA.getClassNames().get(0)));
-        if (classB != null) mergeComments(classA.getComments(), classB.getComments());
+        mergeNames(classA.getClassNames(), classB.getClassNames());
+        mergeComments(classA.getComments(), classB.getComments());
 
 
-        Map<String, TinyMethod> classBMethodsByFirstNamespaceName = classB != null ?
-                classB.mapMethodsByFirstNamespaceAndDescriptor() : new HashMap<>();
+        Map<String, TinyMethod> classBMethodsByFirstNamespaceName = classB.mapMethodsByFirstNamespaceAndDescriptor();
 
         for (TinyMethod method : classA.getMethods()) {
             mergeMethods(method, classBMethodsByFirstNamespaceName.get(
@@ -103,8 +142,7 @@ public class CommandMergeTinyV2 extends Command {
             ));
         }
 
-        Map<String, TinyField> classBFieldsByFirstNamespaceName = classB != null ?
-                classB.mapFieldsByFirstNamespace() : new HashMap<>();
+        Map<String, TinyField> classBFieldsByFirstNamespaceName = classB.mapFieldsByFirstNamespace();
         for (TinyField field : classA.getFields()) {
             mergeFields(field, classBFieldsByFirstNamespaceName.get(field.getFieldNames().get(0)));
         }

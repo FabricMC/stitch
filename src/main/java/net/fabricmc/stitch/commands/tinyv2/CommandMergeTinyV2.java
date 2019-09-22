@@ -187,8 +187,7 @@ public class CommandMergeTinyV2 extends Command {
 
 
     private void mergeNames(List<String> namesA, List<String> namesB) {
-        String toAdd = namesB.size() >= 2 ? namesB.get(1) : namesB.get(0);
-        namesA.add(toAdd);
+        namesA.add(namesB.get(1));
     }
 
     private void mergeComments(Collection<String> commentsA, Collection<String> commentsB) {

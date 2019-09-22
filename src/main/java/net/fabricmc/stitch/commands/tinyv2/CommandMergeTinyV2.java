@@ -86,13 +86,17 @@ public class CommandMergeTinyV2 extends Command {
         for (TinyClass tinyClass : inputA.getClassEntries()) {
             String sharedName = tinyClass.getClassNames().get(0);
             TinyClass matchingClass = inputBClassesByFirstNamespaceName.get(sharedName);
-            if (matchingClass == null) {
-                matchingClass = matchEnclosingClass(sharedName, inputBClassesByFirstNamespaceName);
-            }
-
-            if(sharedName.equals("net/minecraft/class_251$class_252")){
+            //TODO: remove
+            if (sharedName.equals("net/minecraft/class_481$class_482")) {
                 int x = 2;
             }
+            if (matchingClass == null || matchingClass.getClassNames().get(1).equals("")) {
+                String partlyMatchedClassName = matchEnclosingClass(sharedName, inputBClassesByFirstNamespaceName);
+                if (matchingClass == null) {
+                    matchingClass = new TinyClass(Arrays.asList(sharedName, partlyMatchedClassName));
+                } else matchingClass.getClassNames().set(1, partlyMatchedClassName);
+            }
+
 
             mergeClasses(tinyClass, matchingClass);
         }
@@ -105,22 +109,22 @@ public class CommandMergeTinyV2 extends Command {
      * path/to/someclass$class124
      */
     @Nonnull
-    private TinyClass matchEnclosingClass(String sharedName, Map<String, TinyClass> inputBClassBySharedNamespace) {
+    private String matchEnclosingClass(String sharedName, Map<String, TinyClass> inputBClassBySharedNamespace) {
         String[] path = sharedName.split(escape("$"));
         int parts = path.length;
-        for (int i = parts - 1; i >= 0; i--) {
+        for (int i = parts - 2; i >= 0; i--) {
             String currentPath = String.join("$", Arrays.copyOfRange(path, i, parts - 1));
             TinyClass match = inputBClassBySharedNamespace.get(currentPath);
 
             if (match != null) {
                 String matchingInnerClassName = match.getClassNames().get(1)
-                        +"$" + String.join("$", Arrays.copyOfRange(path, i + 1, path.length));
-                return new TinyClass(Arrays.asList(sharedName, matchingInnerClassName));
+                        + "$" + String.join("$", Arrays.copyOfRange(path, i + 1, path.length));
+                return matchingInnerClassName;
 
             }
         }
 
-        return new TinyClass(Arrays.asList(sharedName, sharedName));
+        return sharedName;
     }
 
     private static String escape(String str) {
@@ -186,8 +190,9 @@ public class CommandMergeTinyV2 extends Command {
     }
 
 
-    private <T> void mergeNames(List<T> namesA, List<T> namesB) {
-        namesA.add(namesB.get(1));
+    private void mergeNames(List<String> namesA, List<String> namesB) {
+        String toAdd = namesB.size() >= 2 ? namesB.get(1) : namesB.get(0);
+        namesA.add(toAdd);
     }
 
     private void mergeComments(Collection<String> commentsA, Collection<String> commentsB) {

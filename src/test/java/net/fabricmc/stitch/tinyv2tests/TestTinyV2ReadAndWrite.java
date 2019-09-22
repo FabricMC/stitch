@@ -13,6 +13,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 
 public class TestTinyV2ReadAndWrite {
+    private static final String DIR = "src/test/resources/sorted/";
     private void tryToReadAndWrite(String path) throws IOException {
         Path intMappings = Paths.get(path);
         TinyFile tinyFile = TinyV2Reader.read(intMappings);
@@ -30,8 +31,9 @@ public class TestTinyV2ReadAndWrite {
 
     @Test
     public void ReadingAndWritingAV2FileLeavesItUnchanged() throws IOException {
-        tryToReadAndWrite("src/test/resources/intermediate-mappings-stitch.tinyv2");
-        tryToReadAndWrite("src/test/resources/yarn-mappings-stitch.tinyv2");
-        tryToReadAndWrite("src/test/resources/yarn-mappings-inverted-stitch.tinyv2");
+        tryToReadAndWrite(DIR +"intermediary-mappings.tinyv2");
+        tryToReadAndWrite(DIR +"yarn-mappings.tinyv2");
+        tryToReadAndWrite(DIR +"merged-proposed.tinyv2");
+        tryToReadAndWrite(DIR + "test-skip");
     }
 }

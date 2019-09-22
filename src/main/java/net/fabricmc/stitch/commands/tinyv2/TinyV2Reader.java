@@ -10,7 +10,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -26,6 +26,8 @@ public class TinyV2Reader {
         }
 
         private TinyHeader header;
+        private int namespaceAmount;
+        //        private String
         private Set<TinyClass> classes = new HashSet<>();
 
         private TinyClass currentClass;
@@ -36,14 +38,21 @@ public class TinyV2Reader {
         private CommentType currentCommentType;
 
 
-        private ArrayList<String> getNames(MappingGetter getter){
-            return new ArrayList<>(Arrays.asList(getter.getAll()));
+        private List<String> getNames(MappingGetter getter) {
+            List<String> names = new ArrayList<>(namespaceAmount);
+            String[] existingNames = getter.getAll();
+            Collections.addAll(names, existingNames);
+            for (int i = existingNames.length; i < namespaceAmount; i++) {
+                names.add("");
+            }
+            return names;
         }
 
         @Override
         public void start(TinyMetadata metadata) {
             header = new TinyHeader(new ArrayList<>(metadata.getNamespaces()), metadata.getMajorVersion(), metadata.getMinorVersion(),
                     metadata.getProperties());
+            namespaceAmount = header.getNamespaces().size();
         }
 
         @Override
@@ -116,7 +125,7 @@ public class TinyV2Reader {
         }
 
         private TinyFile getAST() {
-            return new TinyFile(header,classes);
+            return new TinyFile(header, classes);
         }
     }
 

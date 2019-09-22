@@ -2,6 +2,8 @@ package net.fabricmc.stitch.tinyv2;
 
 import org.junit.jupiter.api.Test;
 
+import cuchaz.enigma.command.ConvertMappingsCommand;
+
 public class Stable1_14_4 {
     private static final String DIRECTORY = "src/test/resources/stable-1.14.4/";
 
@@ -45,5 +47,10 @@ public class Stable1_14_4 {
         testMerge();
         testReorder3();
         testFieldNameProposal();
+    }
+
+    @Test
+    public void testConversion() throws Exception{
+        new ConvertMappingsCommand().run("tiny",DIRECTORY + "unmerged-yarn.tinyv1","tinyv2:intermediary:named",DIRECTORY + "unmerged-yarn.tinyv2");
     }
 }

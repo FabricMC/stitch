@@ -5,7 +5,7 @@ import com.strobel.core.Comparer;
 import java.util.Collection;
 import java.util.List;
 
-public class TinyField implements Comparable<TinyField> {
+public class TinyField implements Comparable<TinyField>,Mapping {
 
     /**
      * For example when we have official -> named mappings the descriptor will be in official, but in named -> official
@@ -40,5 +40,10 @@ public class TinyField implements Comparable<TinyField> {
 
     public void setFieldDescriptorInFirstNamespace(String fieldDescriptorInFirstNamespace) {
         this.fieldDescriptorInFirstNamespace = fieldDescriptorInFirstNamespace;
+    }
+
+    @Override
+    public List<String> getMapping() {
+        return fieldNames;
     }
 }

@@ -4,7 +4,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
-public class TinyMethodParameter implements Comparable<TinyMethodParameter> {
+public class TinyMethodParameter implements Comparable<TinyMethodParameter>,Mapping {
     private final int lvIndex;
     private final List<String> parameterNames;
     private final Collection<String> comments;
@@ -30,5 +30,10 @@ public class TinyMethodParameter implements Comparable<TinyMethodParameter> {
     @Override
     public int compareTo(TinyMethodParameter o) {
         return lvIndex - o.lvIndex;
+    }
+
+    @Override
+    public List<String> getMapping() {
+        return parameterNames;
     }
 }

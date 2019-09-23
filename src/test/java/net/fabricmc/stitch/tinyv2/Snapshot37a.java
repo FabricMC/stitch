@@ -5,7 +5,7 @@ import org.junit.jupiter.api.Test;
 import java.io.File;
 
 public class Snapshot37a {
-    private static final String DIR = new File(Stable1_14_4.class.getClassLoader().getResource("snapshot-37a").getPath()).getAbsolutePath() + "/";
+    private static final String DIR = new File(Stable1_14_4.class.getClassLoader().getResource("/snapshot-37a").getPath()).getAbsolutePath() + "/";
 
     @Test
     public void testMerge() throws Exception {

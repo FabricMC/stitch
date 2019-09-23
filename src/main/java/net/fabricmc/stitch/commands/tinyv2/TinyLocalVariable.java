@@ -3,7 +3,7 @@ package net.fabricmc.stitch.commands.tinyv2;
 import java.util.Collection;
 import java.util.List;
 
-public class TinyLocalVariable implements Comparable<TinyLocalVariable>{
+public class TinyLocalVariable implements Comparable<TinyLocalVariable>,Mapping{
 
     private final int lvIndex;
     private final int lvStartOffset;
@@ -46,5 +46,10 @@ public class TinyLocalVariable implements Comparable<TinyLocalVariable>{
     @Override
     public int compareTo(TinyLocalVariable o) {
         return localVariableNames.get(0).compareTo(o.localVariableNames.get(0));
+    }
+
+    @Override
+    public List<String> getMapping() {
+        return localVariableNames;
     }
 }

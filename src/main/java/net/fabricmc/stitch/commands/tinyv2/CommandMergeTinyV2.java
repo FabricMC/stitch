@@ -17,15 +17,23 @@
 package net.fabricmc.stitch.commands.tinyv2;
 
 import net.fabricmc.stitch.Command;
+import net.fabricmc.stitch.util.Pair;
 
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.function.Function;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -71,35 +79,47 @@ public class CommandMergeTinyV2 extends Command {
             );
         }
         System.out.println("Merging " + inputA + " with " + inputB);
-        merge(tinyFileA, tinyFileB);
+        TinyFile mergedFile = merge(tinyFileA, tinyFileB);
 
-        TinyV2Writer.write(tinyFileA, Paths.get(args[2]));
+        TinyV2Writer.write(mergedFile, Paths.get(args[2]));
         System.out.println("Merged mappings written to " + Paths.get(args[2]));
     }
 
-    // Mutates inputA to be the merged result
-    private void merge(TinyFile inputA, TinyFile inputB) {
+
+    private TinyFile merge(TinyFile inputA, TinyFile inputB) {
         //TODO: how to merge properties?
 
+        TinyHeader mergedHeader = mergeHeaders(inputA.getHeader(), inputB.getHeader());
 
-        mergeNames(inputA.getHeader().getNamespaces(), inputB.getHeader().getNamespaces());
+        List<String> keyUnion = keyUnion(inputA.getClassEntries(), inputB.getClassEntries());
 
-        Map<String, TinyClass> inputBClassesByFirstNamespaceName = inputB.mapClassesByFirstNamespace();
-        for (TinyClass tinyClass : inputA.getClassEntries()) {
-            String sharedName = tinyClass.getClassNames().get(0);
-            TinyClass matchingClass = inputBClassesByFirstNamespaceName.get(sharedName);
+        Map<String, TinyClass> inputAClasses = inputA.mapClassesByFirstNamespace();
+        Map<String, TinyClass> inputBClasses = inputB.mapClassesByFirstNamespace();
+        List<TinyClass> mergedClasses = map(keyUnion, key -> {
+            TinyClass classA = inputAClasses.get(key);
+            TinyClass classB = inputBClasses.get(key);
 
-            if (matchingClass == null || matchingClass.getClassNames().get(1).isEmpty()) {
-                String partlyMatchedClassName = matchEnclosingClass(sharedName, inputBClassesByFirstNamespaceName);
-                if (matchingClass == null) {
-                    matchingClass = new TinyClass(Arrays.asList(sharedName, partlyMatchedClassName));
-                } else matchingClass.getClassNames().set(1, partlyMatchedClassName);
-            }
+            classA = matchEnclosingClassIfNeeded(key, classA, inputAClasses);
+            classB = matchEnclosingClassIfNeeded(key, classB, inputBClasses);
+            return mergeClasses(key, classA, classB);
+        });
 
-            mergeClasses(tinyClass, matchingClass);
-        }
+        return new TinyFile(mergedHeader, mergedClasses);
     }
 
+    private TinyClass matchEnclosingClassIfNeeded(String key, TinyClass tinyClass, Map<String, TinyClass> mappings) {
+        if (tinyClass == null || tinyClass.getClassNames().get(1).isEmpty()) {
+            String partlyMatchedClassName = matchEnclosingClass(key, mappings);
+            if (tinyClass == null) {
+                return new TinyClass(Arrays.asList(key, partlyMatchedClassName));
+            } else {
+                tinyClass.getClassNames().set(1, partlyMatchedClassName);
+                return tinyClass;
+            }
+        } else {
+            return tinyClass;
+        }
+    }
 
     /**
      * Takes something like net/minecraft/class_123$class_124 that doesn't have a mapping, tries to find net/minecraft/class_123
@@ -111,7 +131,7 @@ public class CommandMergeTinyV2 extends Command {
         String[] path = sharedName.split(escape("$"));
         int parts = path.length;
         for (int i = parts - 2; i >= 0; i--) {
-            String currentPath = String.join("$", Arrays.copyOfRange(path, 0, i+1));
+            String currentPath = String.join("$", Arrays.copyOfRange(path, 0, i + 1));
             TinyClass match = inputBClassBySharedNamespace.get(currentPath);
 
             if (match != null && !match.getClassNames().get(1).isEmpty()) {
@@ -125,76 +145,133 @@ public class CommandMergeTinyV2 extends Command {
         return sharedName;
     }
 
+
+    private TinyClass mergeClasses(String sharedClassName, @Nonnull TinyClass classA, @Nonnull TinyClass classB) {
+        List<String> mergedNames = mergeNames(sharedClassName, classA, classB);
+        List<String> mergedComments = mergeComments(classA.getComments(), classB.getComments());
+
+        List<Pair<String,String>> methodKeyUnion = union(mapToFirstNamespaceAndDescriptor(classA), mapToFirstNamespaceAndDescriptor(classB));
+        Map<Pair<String,String>, TinyMethod> methodsA = classA.mapMethodsByFirstNamespaceAndDescriptor();
+        Map<Pair<String,String>, TinyMethod> methodsB = classB.mapMethodsByFirstNamespaceAndDescriptor();
+        List<TinyMethod> mergedMethods = map(methodKeyUnion,
+                (Pair<String,String> k) -> mergeMethods(k.getLeft(), methodsA.get(k), methodsB.get(k)));
+
+        List<String> fieldKeyUnion = keyUnion(classA.getFields(), classB.getFields());
+        Map<String, TinyField> fieldsA = classA.mapFieldsByFirstNamespace();
+        Map<String, TinyField> fieldsB = classB.mapFieldsByFirstNamespace();
+        List<TinyField> mergedFields = map(fieldKeyUnion, k -> mergeFields(k, fieldsA.get(k), fieldsB.get(k)));
+
+        return new TinyClass(mergedNames, mergedMethods, mergedFields, mergedComments);
+    }
+
+    private static final TinyMethod EMPTY_METHOD = new TinyMethod(null, Collections.emptyList(), Collections.emptyList(), Collections.emptyList(), Collections.emptyList());
+
+
+    private TinyMethod mergeMethods(String sharedMethodName, @Nullable TinyMethod methodA, @Nullable TinyMethod methodB) {
+        List<String> mergedNames = mergeNames(sharedMethodName, methodA, methodB);
+        if (methodA == null) methodA = EMPTY_METHOD;
+        if (methodB == null) methodB = EMPTY_METHOD;
+        List<String> mergedComments = mergeComments(methodA.getComments(), methodB.getComments());
+
+        String descriptor = methodA.getMethodDescriptorInFirstNamespace() != null ? methodA.getMethodDescriptorInFirstNamespace()
+                : methodB.getMethodDescriptorInFirstNamespace();
+        if (descriptor == null) throw new RuntimeException("no descriptor for key " + sharedMethodName);
+
+
+        //TODO: this won't work too well when the first namespace is named or there is more than one named namespace (hack)
+        List<TinyMethodParameter> mergedParameters = new ArrayList<>();
+        addParameters(methodA, mergedParameters, 2);
+        addParameters(methodB, mergedParameters, 1);
+
+        List<TinyLocalVariable> mergedLocalVariables = new ArrayList<>();
+        addLocalVariables(methodA,mergedLocalVariables,2);
+        addLocalVariables(methodB,mergedLocalVariables,1);
+
+        return new TinyMethod(descriptor,mergedNames,mergedParameters,mergedLocalVariables,mergedComments);
+    }
+
+    private void addParameters(TinyMethod method, List<TinyMethodParameter> addTo, int emptySpacePos) {
+        for (TinyMethodParameter localVariable : method.getParameters()) {
+            List<String> names = new ArrayList<>(localVariable.getParameterNames());
+            names.add(emptySpacePos, "");
+            addTo.add(new TinyMethodParameter(localVariable.getLvIndex(), names, localVariable.getComments()));
+        }
+    }
+
+    private void addLocalVariables(TinyMethod method, List<TinyLocalVariable> addTo, int emptySpacePos) {
+        for (TinyLocalVariable localVariable : method.getLocalVariables()) {
+            List<String> names = new ArrayList<>(localVariable.getLocalVariableNames());
+            names.add(emptySpacePos, "");
+            addTo.add(new TinyLocalVariable(localVariable.getLvIndex(), localVariable.getLvStartOffset(),
+                    localVariable.getLvTableIndex(), names, localVariable.getComments()));
+        }
+    }
+
+
+    private TinyField mergeFields(String sharedFieldName, @Nullable TinyField fieldA, @Nullable TinyField fieldB) {
+        List<String> mergedNames =  mergeNames(sharedFieldName,fieldA, fieldB);
+        List<String> mergedComments = mergeComments(fieldA != null? fieldA.getComments() : Collections.emptyList(),
+                fieldB != null ?  fieldB.getComments() : Collections.emptyList());
+
+        String descriptor = fieldA != null ? fieldA.getFieldDescriptorInFirstNamespace()
+                : fieldB != null ? fieldB.getFieldDescriptorInFirstNamespace() : null;
+        if (descriptor == null) throw new RuntimeException("no descriptor for key " + sharedFieldName);
+
+        return new TinyField(descriptor,mergedNames,mergedComments);
+    }
+
+    private TinyHeader mergeHeaders(TinyHeader headerA, TinyHeader headerB) {
+        List<String> namespaces = new ArrayList<>(headerA.getNamespaces());
+        namespaces.add(headerB.getNamespaces().get(1));
+        // TODO: how should versions and properties be merged?
+        return new TinyHeader(namespaces, headerA.getMajorVersion(), headerA.getMinorVersion(), headerA.getProperties());
+    }
+
+    private List<String> mergeComments(Collection<String> commentsA, Collection<String> commentsB) {
+        return union(commentsA, commentsB);
+    }
+
+    private <T extends Mapping> List<String> keyUnion(Collection<T> mappingsA, Collection<T> mappingB) {
+        return union(mappingsA.stream().map(m -> m.getMapping().get(0)), mappingB.stream().map(m -> m.getMapping().get(0)));
+    }
+
+    private Stream<Pair<String,String>> mapToFirstNamespaceAndDescriptor(TinyClass tinyClass) {
+        return tinyClass.getMethods().stream().map(m -> Pair.of(m.getMapping().get(0), m.getMethodDescriptorInFirstNamespace()));
+    }
+
+
+    private List<String> mergeNames(String key, @Nullable Mapping mappingA, @Nullable Mapping mappingB) {
+        List<String> merged = new ArrayList<>();
+        merged.add(key);
+        merged.add(mappingExists(mappingA) ? mappingA.getMapping().get(1) : key);
+        merged.add(mappingExists(mappingB) ? mappingB.getMapping().get(1) : key);
+
+        return merged;
+    }
+
+    private boolean mappingExists(@Nullable Mapping mapping) {
+        return mapping != null && !mapping.getMapping().get(1).isEmpty();
+    }
+
+    private <T> List<T> union(Stream<T> list1, Stream<T> list2) {
+        return union(list1.collect(Collectors.toList()), list2.collect(Collectors.toList()));
+    }
+
+    private <T> List<T> union(Collection<T> list1, Collection<T> list2) {
+        Set<T> set = new HashSet<T>();
+
+        set.addAll(list1);
+        set.addAll(list2);
+
+        return new ArrayList<T>(set);
+    }
+
     private static String escape(String str) {
         return Pattern.quote(str);
     }
 
-    private void mergeClasses(TinyClass classA, @Nonnull TinyClass classB) {
-
-        //TODO: it should be acceptable to leave the space empty if it's null but right now we just insert the first namespace.
-        mergeNames(classA.getClassNames(), classB.getClassNames());
-        mergeComments(classA.getComments(), classB.getComments());
-
-
-        Map<String, TinyMethod> classBMethodsByFirstNamespaceName = classB.mapMethodsByFirstNamespaceAndDescriptor();
-
-        for (TinyMethod method : classA.getMethods()) {
-            mergeMethods(method, classBMethodsByFirstNamespaceName.get(
-                    method.getMethodNames().get(0) + method.getMethodDescriptorInFirstNamespace()
-            ));
-        }
-
-        Map<String, TinyField> classBFieldsByFirstNamespaceName = classB.mapFieldsByFirstNamespace();
-        for (TinyField field : classA.getFields()) {
-            mergeFields(field, classBFieldsByFirstNamespaceName.get(field.getFieldNames().get(0)));
-        }
-
+    private <S,E> List<E> map(List<S> from, Function<S, E> mapper) {
+        return from.stream().map(mapper).collect(Collectors.toList());
     }
-
-    private void mergeMethods(TinyMethod methodA, @Nullable TinyMethod methodB) {
-        if (methodB == null) {
-            methodA.getMethodNames().add(methodA.getMethodNames().get(0));
-            return;
-        }
-        mergeNames(methodA.getMethodNames(), methodB.getMethodNames());
-        mergeComments(methodA.getComments(), methodB.getComments());
-        // Descriptors remain as-is
-
-
-        //TODO: this won't work too well when the first namespace is named or there is more than one named namespace (hack)
-
-        int namedIndexParams = methodA.getParameters().isEmpty() ? 0 : 2;
-        methodA.getParameters().addAll(methodB.getParameters());
-        for (TinyMethodParameter parameter : methodA.getParameters()) {
-            parameter.getParameterNames().add(namedIndexParams, "");
-        }
-
-        int namedIndexLv = methodA.getLocalVariables().isEmpty() ? 0 : 2;
-        methodA.getLocalVariables().addAll(methodB.getLocalVariables());
-        for (TinyLocalVariable localVariable : methodA.getLocalVariables()) {
-            localVariable.getLocalVariableNames().add(namedIndexLv, "");
-        }
-
-    }
-
-    private void mergeFields(TinyField fieldA, @Nullable TinyField fieldB) {
-        if (fieldB == null) {
-            fieldA.getFieldNames().add(fieldA.getFieldNames().get(0));
-            return;
-        }
-        mergeNames(fieldA.getFieldNames(), fieldB.getFieldNames());
-        mergeComments(fieldA.getComments(), fieldB.getComments());
-        // Descriptors remain as-is
-    }
-
-
-    private void mergeNames(List<String> namesA, List<String> namesB) {
-        namesA.add(namesB.get(1));
-    }
-
-    private void mergeComments(Collection<String> commentsA, Collection<String> commentsB) {
-        commentsA.addAll(commentsB);
-    }
-
 
 }

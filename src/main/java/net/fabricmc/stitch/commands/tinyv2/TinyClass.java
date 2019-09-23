@@ -1,12 +1,14 @@
 package net.fabricmc.stitch.commands.tinyv2;
 
+import net.fabricmc.stitch.util.Pair;
+
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-public class TinyClass implements Comparable<TinyClass> {
+public class TinyClass implements Comparable<TinyClass>,Mapping {
 
     private final List<String> classNames;
     private final Collection<TinyMethod> methods;
@@ -31,8 +33,8 @@ public class TinyClass implements Comparable<TinyClass> {
      * Descriptors are also taken into account because methods can overload.
      * The key format is firstMethodName + descriptor
      */
-    public Map<String, TinyMethod> mapMethodsByFirstNamespaceAndDescriptor() {
-        return methods.stream().collect(Collectors.toMap(m -> m.getMethodNames().get(0) + m.getMethodDescriptorInFirstNamespace(), m -> m));
+    public Map<Pair<String,String>, TinyMethod> mapMethodsByFirstNamespaceAndDescriptor() {
+        return methods.stream().collect(Collectors.toMap(m -> Pair.of(m.getMethodNames().get(0) , m.getMethodDescriptorInFirstNamespace()), m -> m));
     }
 
     public Map<String, TinyField> mapFieldsByFirstNamespace() {
@@ -59,5 +61,10 @@ public class TinyClass implements Comparable<TinyClass> {
     @Override
     public int compareTo(TinyClass o) {
         return classNames.get(0).compareTo(o.classNames.get(0));
+    }
+
+    @Override
+    public List<String> getMapping() {
+        return classNames;
     }
 }

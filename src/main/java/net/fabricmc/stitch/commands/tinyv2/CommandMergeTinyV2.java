@@ -108,14 +108,9 @@ public class CommandMergeTinyV2 extends Command {
     }
 
     private TinyClass matchEnclosingClassIfNeeded(String key, TinyClass tinyClass, Map<String, TinyClass> mappings) {
-        if (tinyClass == null || tinyClass.getClassNames().get(1).isEmpty()) {
+        if (tinyClass == null) {
             String partlyMatchedClassName = matchEnclosingClass(key, mappings);
-            if (tinyClass == null) {
                 return new TinyClass(Arrays.asList(key, partlyMatchedClassName));
-            } else {
-                tinyClass.getClassNames().set(1, partlyMatchedClassName);
-                return tinyClass;
-            }
         } else {
             return tinyClass;
         }
@@ -135,9 +130,8 @@ public class CommandMergeTinyV2 extends Command {
             TinyClass match = inputBClassBySharedNamespace.get(currentPath);
 
             if (match != null && !match.getClassNames().get(1).isEmpty()) {
-                String matchingInnerClassName = match.getClassNames().get(1)
+                return match.getClassNames().get(1)
                         + "$" + String.join("$", Arrays.copyOfRange(path, i + 1, path.length));
-                return matchingInnerClassName;
 
             }
         }

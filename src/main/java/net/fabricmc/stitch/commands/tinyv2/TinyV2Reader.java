@@ -1,5 +1,6 @@
 package net.fabricmc.stitch.commands.tinyv2;
 
+import com.google.common.collect.Lists;
 import net.fabricmc.mapping.reader.v2.MappingGetter;
 import net.fabricmc.mapping.reader.v2.TinyMetadata;
 import net.fabricmc.mapping.reader.v2.TinyV2Factory;
@@ -36,7 +37,7 @@ public class TinyV2Reader {
 
 
         private List<String> getNames(MappingGetter getter) {
-           return new ArrayList<>(Arrays.asList(getter.getRawNames()));
+           return Lists.newArrayList(getter.getRawNames());
         }
 
         @Override

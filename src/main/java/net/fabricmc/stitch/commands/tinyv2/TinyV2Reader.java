@@ -1,19 +1,16 @@
 package net.fabricmc.stitch.commands.tinyv2;
 
-import net.fabricmc.tinyv2.MappingGetter;
-import net.fabricmc.tinyv2.TinyMetadata;
-import net.fabricmc.tinyv2.TinyV2Factory;
-import net.fabricmc.tinyv2.TinyVisitor;
+import net.fabricmc.mapping.reader.v2.MappingGetter;
+import net.fabricmc.mapping.reader.v2.TinyMetadata;
+import net.fabricmc.mapping.reader.v2.TinyV2Factory;
+import net.fabricmc.mapping.reader.v2.TinyVisitor;
+
 
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 public class TinyV2Reader {
     private static class Visitor implements TinyVisitor {
@@ -39,13 +36,7 @@ public class TinyV2Reader {
 
 
         private List<String> getNames(MappingGetter getter) {
-            List<String> names = new ArrayList<>(namespaceAmount);
-            String[] existingNames = getter.getAll();
-            Collections.addAll(names, existingNames);
-            for (int i = existingNames.length; i < namespaceAmount; i++) {
-                names.add("");
-            }
-            return names;
+           return new ArrayList<>(Arrays.asList(getter.getRawNames()));
         }
 
         @Override

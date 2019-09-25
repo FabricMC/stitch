@@ -19,8 +19,8 @@ public class TestTinyV2ReadAndWrite {
         Path intMappings = Paths.get(path);
         TinyFile tinyFile = TinyV2Reader.read(intMappings);
 
-        Path tempLocation = Paths.get(path + "temp");
-        tempLocation.toFile().deleteOnExit();
+        Path tempLocation = Paths.get(path + ".temp");
+//        tempLocation.toFile().deleteOnExit();
         TinyV2Writer.write(tinyFile, tempLocation);
         String originalIntMappings = new String(Files.readAllBytes(intMappings));
         String writtenIntMappings = new String(Files.readAllBytes(tempLocation));

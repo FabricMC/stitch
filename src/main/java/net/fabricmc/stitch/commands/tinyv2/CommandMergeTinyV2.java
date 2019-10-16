@@ -38,14 +38,50 @@ import java.util.stream.Stream;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
+/**
+ * Merges a tiny file with 2 columns (namespaces) of mappings, with another tiny file that has
+ * the same namespace as the first column and a different namespace as the second column.
+ * The first column of the output will contain the shared namespace,
+ * the second column of the output would be the second namespace of input a,
+ * and the third column of the output would be the second namespace of input b
+ *
+ * Descriptors will remain as-is (using the namespace of the first column)
+ *
+ *
+ * For example:
+ *
+ * Input A:
+ *      intermediary                 named
+ * c    net/minecraft/class_123      net/minecraft/somePackage/someClass
+ *      m   (Lnet/minecraft/class_124;)V  method_1234 someMethod
+ *
+ * Input B:
+ *      intermediary                 official
+ * c    net/minecraft/class_123      a
+ *      m   (Lnet/minecraft/class_124;)V  method_1234 a
+ *
+ * The output will be:
+ *
+ *      intermediary                 named                                  official
+ * c    net/minecraft/class_123      net/minecraft/somePackage/someClass    a
+ *      m   (Lnet/minecraft/class_124;)V  method_1234 someMethod    a
+ *
+ *
+ * After intermediary-named mappings are obtained,
+ * and official-intermediary mappings are obtained and swapped using CommandReorderTinyV2, Loom merges them using this command,
+ * and then reorders it to official-intermediary-named using CommandReorderTinyV2 again.
+ * This is a convenient way of storing all the mappings in Loom.
+ */
 public class CommandMergeTinyV2 extends Command {
     public CommandMergeTinyV2() {
         super("mergeTinyV2");
     }
 
+    /**
+     * <input-a> and <input-b> are the tiny files to be merged. The result will be written to <output>.
+     */
     @Override
     public String getHelpString() {
-        //TODO: mappingsBlankFillOrder?
         return "<input-a> <input-b> <output>";
     }
 

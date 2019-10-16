@@ -25,11 +25,20 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Map;
 
+/**
+ * Java stores the names of enums in the bytecode, and obfuscation doesn't get rid of it. We can use this for easy mappings.
+ * This command adds all of the field mappings that FieldNameFinder finds (it overwrites existing mappings for those names).
+ * This gets called as the last step after merging and reordering in loom.
+ */
 public class CommandProposeV2FieldNames extends Command {
     public CommandProposeV2FieldNames() {
         super("proposeV2FieldNames");
     }
 
+    /**
+     * <input jar> is any Minecraft jar, and <input mappings> are mappings of that jar (the same version).
+     * <input mappings> with the additional field names will be written to <output mappings>.+
+     */
     @Override
     public String getHelpString() {
         return "<input jar> <input mappings> <output mappings>";

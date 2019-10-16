@@ -33,12 +33,34 @@ import java.util.function.Consumer;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-
+/**
+ * - Reorders the columns in the tiny file
+ * - Remaps the descriptors to use the newly first column.
+ *
+ * For example:
+ *
+ * This:
+ *       intermediary                 named                                  official
+ * c     net/minecraft/class_123      net/minecraft/somePackage/someClass    a
+ *     m   (Lnet/minecraft/class_124;)V  method_1234 someMethod    a
+ *
+ * Reordered to official intermediary named:
+ *       official       intermediary                 named
+ * c     a              net/minecraft/class_123      net/minecraft/somePackage/someClass
+ *      m   (La;)V  a   method_1234                 someMethod
+ *
+ * This is used to reorder the the official-intermediary mappings to be intermediary-official, so they can be merged with
+ * intermediary-named in CommandMergeTinyV2, and then reorder the outputted intermediary-official-named to official-intermediary-named.
+ */
 public class CommandReorderTinyV2 extends Command {
     public CommandReorderTinyV2() {
         super("reorderTinyV2");
     }
 
+    /**
+     * Reorders the columns in <old-mapping-file> according to [new name order...] and puts the result in <new-mapping-file>.
+     * new name order is for example "official intermediary named"
+     */
     @Override
     public String getHelpString() {
         return "<old-mapping-file> <new-mapping-file> [new name order...]";
@@ -135,6 +157,9 @@ public class CommandReorderTinyV2 extends Command {
         String newDescriptor = remapType(field.getFieldDescriptorInFirstNamespace(), mappings, targetNamespace);
         field.setFieldDescriptorInFirstNamespace(newDescriptor);
     }
+
+    ////////////////// This part can be replaced with a descriptor parser library
+    // (I already have one, not sure if I should add it)
 
     private void remapMethodDescriptor(TinyMethod method, Map<String, TinyClass> mappings, int targetNamespace) {
         String descriptor = method.getMethodDescriptorInFirstNamespace();

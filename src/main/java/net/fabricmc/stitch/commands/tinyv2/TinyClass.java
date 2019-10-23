@@ -9,6 +9,11 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 public class TinyClass implements Comparable<TinyClass>,Mapping {
+    @Override
+    public String toString() {
+        return "TinyClass(names = [" + String.join(", ",classNames) + "], " + methods.size() + " methods, "
+                 + fields.size() + " fields, " + comments.size() + " comments)";
+    }
 
     private final List<String> classNames;
     private final Collection<TinyMethod> methods;
@@ -28,6 +33,8 @@ public class TinyClass implements Comparable<TinyClass>,Mapping {
         this.fields = new ArrayList<>();
         this.comments = new ArrayList<>();
     }
+
+
 
     /**
      * Descriptors are also taken into account because methods can overload.

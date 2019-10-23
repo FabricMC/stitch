@@ -37,29 +37,29 @@ public class Stable1_14_4 {
 					"net/minecraft/class_2843$class_2845$1", mappings);
 
 			Assertions.assertEquals("net/minecraft/world/chunk/UpgradeData$class_2845$1",
-					class_2843$class_2845$1.getMappedName("named"));
+					class_2843$class_2845$1.getName("named"));
 
 			ClassDef class_481$class_482 = findClassMapping("intermediary", "net/minecraft/class_481$class_482", mappings);
 			Assertions.assertEquals("net/minecraft/client/gui/screen/ingame/CreativeInventoryScreen$class_482",
-					class_481$class_482.getMappedName("named"));
+					class_481$class_482.getName("named"));
 
 			ParameterDef blockInitParam = findMethodParameterMapping("intermediary", "net/minecraft/class_2248",
 					"<init>", "(Lnet/minecraft/class_2248$class_2251;)V", 1, mappings);
 
-			Assertions.assertEquals("settings", blockInitParam.getMappedName("named"));
+			Assertions.assertEquals("settings", blockInitParam.getName("named"));
 
 		}
 
 	}
 
 	private ClassDef findClassMapping(String column, String key, TinyTree mappings) {
-		return find(mappings.getClasses(), c -> c.getMappedName(column).equals(key))
+		return find(mappings.getClasses(), c -> c.getName(column).equals(key))
 				.orElseThrow(() -> new AssertionError("Could not find key " + key + " in namespace " + column));
 	}
 
 	private MethodDef findMethodMapping(String column, String className, String methodName, String descriptor, TinyTree mappings) {
 		return find(findClassMapping(column, className, mappings).getMethods(),
-				m -> m.getMappedName(column).equals(methodName) && m.getSignature(column).equals(descriptor)
+				m -> m.getName(column).equals(methodName) && m.getDescriptor(column).equals(descriptor)
 
 		).orElseThrow(() -> new AssertionError("Could not find key " + className + " " + descriptor + " " + methodName + " in namespace " + column));
 	}

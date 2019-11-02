@@ -93,8 +93,9 @@ public class Stable1_14_4 {
 	}
 
 	// Requirements:
-	// - Official -> Intermediary mappings "intermediary-mappings.tinyv2" from matcher
+	// - Official -> Intermediary mappings "intermediary-mappings.tinyv2" from enigma
 	// - Intermediary -> Named mappings "yarn-mappings.tinyv2" from yarn
+	// - 1.14.4 merged jar from yarn at local/1.14.4-merge.jar
 	@Test
 	public void testFullProcess() throws Exception {
 		testReorder2();

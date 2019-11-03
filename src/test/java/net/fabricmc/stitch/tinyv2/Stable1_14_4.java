@@ -38,15 +38,6 @@ public class Stable1_14_4 {
 		);
 		try (BufferedReader reader = Files.newBufferedReader(Paths.get(target))) {
 			TinyTree mappings = TinyMappingFactory.load(reader);
-			ClassDef class_2843$class_2845$1 = findClassMapping("intermediary",
-							"net/minecraft/class_2843$class_2845$1", mappings);
-
-			Assertions.assertEquals("net/minecraft/world/chunk/UpgradeData$class_2845$1",
-							class_2843$class_2845$1.getName("named"));
-
-			ClassDef class_481$class_482 = findClassMapping("intermediary", "net/minecraft/class_481$class_482", mappings);
-			Assertions.assertEquals("net/minecraft/client/gui/screen/ingame/CreativeInventoryScreen$class_482",
-							class_481$class_482.getName("named"));
 
 			ParameterDef blockInitParam = findMethodParameterMapping("intermediary", "net/minecraft/class_2248",
 							"<init>", "(Lnet/minecraft/class_2248$class_2251;)V", 1, mappings);

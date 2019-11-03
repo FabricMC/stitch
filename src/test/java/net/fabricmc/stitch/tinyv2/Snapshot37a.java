@@ -1,12 +1,15 @@
 package net.fabricmc.stitch.tinyv2;
 
 import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 
 import org.junit.jupiter.api.Test;
 
 public class Snapshot37a {
-	private static final String DIR = new File(Stable1_14_4.class.getClassLoader().getResource("/snapshot-37a").getPath()).getAbsolutePath() + "/";
 
+	private static final String DIR = new File(Snapshot37a.class.getClassLoader().getResource("snapshot-37a").getPath()).getAbsolutePath() + "/";
+//
 	@Test
 	public void testMerge() throws Exception {
 		Commands.merge(DIR + "intermediate-mappings-inverted-stitch.tinyv2",
@@ -25,12 +28,15 @@ public class Snapshot37a {
 
 	@Test
 	public void testReorder3() throws Exception {
-		Commands.reorder(DIR + "merged-unordered.tinyv2",
+		String path = DIR + "merged-unordered.tinyv2";
+		if(!Files.exists(Paths.get(path))) testMerge();
+		Commands.reorder(path,
 						DIR + "merged.tinyv2",
 						"official", "intermediary", "named"
 		);
 	}
 
+	/** You need the 19w37a-merged.jar file under local/ */
 	@Test
 	public void testFieldNameProposal() throws Exception {
 		Commands.proposeFieldNames("local/19w37a-merged.jar",

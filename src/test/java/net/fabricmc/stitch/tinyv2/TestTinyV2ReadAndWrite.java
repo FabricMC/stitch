@@ -27,7 +27,7 @@ public class TestTinyV2ReadAndWrite {
 		String writtenIntMappings = new String(Files.readAllBytes(tempLocation));
 
 		// Ensure the file has not changed
-		Assertions.assertEquals(originalIntMappings, writtenIntMappings);
+		Assertions.assertEquals(originalIntMappings.replace("\r\n","\n"), writtenIntMappings.replace("\r\n","\n"));
 
 	}
 

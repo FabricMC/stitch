@@ -16,14 +16,14 @@
 
 package net.fabricmc.stitch.commands.tinyv2;
 
-import net.fabricmc.mappings.EntryTriple;
-import net.fabricmc.stitch.Command;
-import net.fabricmc.stitch.util.FieldNameFinder;
-
 import java.io.File;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Map;
+
+import net.fabricmc.mappings.EntryTriple;
+import net.fabricmc.stitch.Command;
+import net.fabricmc.stitch.util.FieldNameFinder;
 
 /**
  * Java stores the names of enums in the bytecode, and obfuscation doesn't get rid of it. We can use this for easy mappings.
@@ -31,50 +31,50 @@ import java.util.Map;
  * This gets called as the last step after merging and reordering in loom.
  */
 public class CommandProposeV2FieldNames extends Command {
-    public CommandProposeV2FieldNames() {
-        super("proposeV2FieldNames");
-    }
+	public CommandProposeV2FieldNames() {
+		super("proposeV2FieldNames");
+	}
 
-    /**
-     * <input jar> is any Minecraft jar, and <input mappings> are mappings of that jar (the same version).
-     * <input mappings> with the additional field names will be written to <output mappings>.+
-     */
-    @Override
-    public String getHelpString() {
-        return "<input jar> <input mappings> <output mappings>";
-    }
+	/**
+	 * <input jar> is any Minecraft jar, and <input mappings> are mappings of that jar (the same version).
+	 * <input mappings> with the additional field names will be written to <output mappings>.+
+	 */
+	@Override
+	public String getHelpString() {
+		return "<input jar> <input mappings> <output mappings>";
+	}
 
-    @Override
-    public boolean isArgumentCountValid(int count) {
-        return count == 3;
-    }
+	@Override
+	public boolean isArgumentCountValid(int count) {
+		return count == 3;
+	}
 
-    @Override
-    public void run(String[] args) throws Exception {
-        // entrytriple from the input jar namespace
-        Map<EntryTriple, String> fieldNames = new FieldNameFinder().findNames(new File(args[0]));
-        System.err.println("Found " + fieldNames.size() + " interesting names.");
+	@Override
+	public void run(String[] args) throws Exception {
+		// entrytriple from the input jar namespace
+		Map<EntryTriple, String> fieldNames = new FieldNameFinder().findNames(new File(args[0]));
+		System.err.println("Found " + fieldNames.size() + " interesting names.");
 
-        TinyFile tinyFile = TinyV2Reader.read(Paths.get(args[1]));
-        Path newMappingsLocation = Paths.get(args[2]);
-        int namedIndex = tinyFile.getHeader().getNamespaces().indexOf("named");
-        if (namedIndex == -1) {
-            throw new IllegalArgumentException("The tiny mappings don't have a 'named' namespace.");
-        }
-        int replaceCount = 0;
-        for (TinyClass tinyClass : tinyFile.getClassEntries()) {
-            for (TinyField field : tinyClass.getFields()) {
-                EntryTriple key = new EntryTriple(tinyClass.getClassNames().get(0), field.getFieldNames().get(0),
-                        field.getFieldDescriptorInFirstNamespace());
-                String suggestedName = fieldNames.get(key);
-                if (suggestedName != null) {
-                    replaceCount++;
-                    field.getFieldNames().set(namedIndex, suggestedName);
-                }
-            }
-        }
-        System.err.println("Replaced " + replaceCount + " names in the mappings.");
+		TinyFile tinyFile = TinyV2Reader.read(Paths.get(args[1]));
+		Path newMappingsLocation = Paths.get(args[2]);
+		int namedIndex = tinyFile.getHeader().getNamespaces().indexOf("named");
+		if (namedIndex == -1) {
+			throw new IllegalArgumentException("The tiny mappings don't have a 'named' namespace.");
+		}
+		int replaceCount = 0;
+		for (TinyClass tinyClass : tinyFile.getClassEntries()) {
+			for (TinyField field : tinyClass.getFields()) {
+				EntryTriple key = new EntryTriple(tinyClass.getClassNames().get(0), field.getFieldNames().get(0),
+								field.getFieldDescriptorInFirstNamespace());
+				String suggestedName = fieldNames.get(key);
+				if (suggestedName != null) {
+					replaceCount++;
+					field.getFieldNames().set(namedIndex, suggestedName);
+				}
+			}
+		}
+		System.err.println("Replaced " + replaceCount + " names in the mappings.");
 
-        TinyV2Writer.write(tinyFile, newMappingsLocation);
-    }
+		TinyV2Writer.write(tinyFile, newMappingsLocation);
+	}
 }

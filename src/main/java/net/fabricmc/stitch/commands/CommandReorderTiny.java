@@ -16,16 +16,10 @@
 
 package net.fabricmc.stitch.commands;
 
-import com.google.common.base.Joiner;
-import net.fabricmc.mappings.ClassEntry;
 import net.fabricmc.mappings.EntryTriple;
-import net.fabricmc.mappings.FieldEntry;
 import net.fabricmc.mappings.Mappings;
 import net.fabricmc.mappings.MappingsProvider;
-import net.fabricmc.mappings.MethodEntry;
 import net.fabricmc.stitch.Command;
-import net.fabricmc.stitch.representation.JarReader;
-import net.fabricmc.stitch.representation.JarRootEntry;
 
 import java.io.BufferedWriter;
 import java.io.File;

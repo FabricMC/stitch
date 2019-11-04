@@ -71,8 +71,6 @@ public class CommandProposeV2FieldNames extends Command {
 		tinyFile.getClassEntries().stream().map(this::generatedNamesOfClass).forEach(map -> map.forEach(fieldsMap::put));
 		Map<String, TinyClass> classMap = tinyFile.mapClassesByFirstNamespace();
 
-//		int namedIndex = tinyFile.getHeader().getNamespaces().indexOf("named");
-
 		int replaceCount = 0;
 		for (Map.Entry<EntryTriple, String> entry : generatedFieldNames.entrySet()) {
 			EntryTriple key = entry.getKey();
@@ -80,7 +78,7 @@ public class CommandProposeV2FieldNames extends Command {
 			TinyField field = fieldsMap.get(key);
 			// If field name exists, replace the name with the auto-generated name
 			if (field != null) {
-				field.getFieldNames().set(0, newName);
+				field.getFieldNames().set(1, newName);
 				replaceCount++;
 			} else {
 				TinyClass tinyClass = classMap.get(key.getOwner());

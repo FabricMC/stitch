@@ -48,6 +48,7 @@ public class Stable1_14_4 {
 	}
 
 	@Test
+	@Disabled
 	public void testMerge() throws Exception {
 		String target = DIR + "merged-unordered.tinyv2";
 		Commands.merge(DIR + "intermediary-mappings-inverted.tinyv2",
@@ -93,6 +94,7 @@ public class Stable1_14_4 {
 
 
 	@Test
+	@Disabled
 	public void testReorder3() throws Exception {
 		Commands.reorder(DIR + "merged-unordered.tinyv2",
 						DIR + "merged.tinyv2",

@@ -1,3 +1,19 @@
+/*
+ * Copyright (c) 2016, 2017, 2018, 2019 FabricMC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package net.fabricmc.stitch.tinyv2;
 
 import java.io.BufferedReader;
@@ -9,7 +25,9 @@ import java.util.Optional;
 import java.util.function.Predicate;
 
 import cuchaz.enigma.command.ConvertMappingsCommand;
+import jdk.nashorn.internal.ir.annotations.Ignore;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import net.fabricmc.mapping.tree.ClassDef;
@@ -83,6 +101,7 @@ public class Stable1_14_4 {
 	}
 
 	@Test
+	@Disabled
 	public void testFieldNameProposal() throws Exception {
 		Commands.proposeFieldNames("local/1.14.4-merged.jar",
 						DIR + "merged.tinyv2", DIR + "merged-proposed.tinyv2");
@@ -93,6 +112,7 @@ public class Stable1_14_4 {
 	// - Intermediary -> Named mappings "yarn-mappings.tinyv2" from yarn
 	// - 1.14.4 merged jar from yarn at local/1.14.4-merge.jar
 	@Test
+	@Disabled
 	public void testFullProcess() throws Exception {
 		testReorder2();
 		testMerge();
@@ -101,6 +121,7 @@ public class Stable1_14_4 {
 	}
 
 	@Test
+	@Disabled
 	public void testConversion() throws Exception {
 		new ConvertMappingsCommand().run("tiny", DIR + "unmerged-yarn.tinyv1", "tinyv2:intermediary:named", DIR + "unmerged-yarn.tinyv2");
 	}

@@ -19,7 +19,11 @@ package net.fabricmc.stitch.commands.tinyv2;
 import java.io.File;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.HashMap;
 import java.util.Map;
+import java.util.stream.Collectors;
+
+import com.google.common.collect.Lists;
 
 import net.fabricmc.mappings.EntryTriple;
 import net.fabricmc.stitch.Command;
@@ -38,6 +42,7 @@ public class CommandProposeV2FieldNames extends Command {
 	/**
 	 * <input jar> is any Minecraft jar, and <input mappings> are mappings of that jar (the same version).
 	 * <input mappings> with the additional field names will be written to <output mappings>.+
+	 * Assumes the input mappings are intermediary->yarn mappings!
 	 */
 	@Override
 	public String getHelpString() {
@@ -49,31 +54,48 @@ public class CommandProposeV2FieldNames extends Command {
 		return count == 3;
 	}
 
+	private Map<EntryTriple, TinyField> generatedNamesOfClass(TinyClass tinyClass) {
+		return tinyClass.getFields().stream().collect(Collectors.toMap(
+						(TinyField field) -> new EntryTriple(tinyClass.getClassNames().get(0), field.getFieldNames().get(0), field.getFieldDescriptorInFirstNamespace())
+						, field -> field));
+	}
+
 	@Override
 	public void run(String[] args) throws Exception {
 		// entrytriple from the input jar namespace
-		Map<EntryTriple, String> fieldNames = new FieldNameFinder().findNames(new File(args[0]));
-		System.err.println("Found " + fieldNames.size() + " interesting names.");
+		Map<EntryTriple, String> generatedFieldNames = new FieldNameFinder().findNames(new File(args[0]));
+		System.err.println("Found " + generatedFieldNames.size() + " interesting names.");
 
 		TinyFile tinyFile = TinyV2Reader.read(Paths.get(args[1]));
-		Path newMappingsLocation = Paths.get(args[2]);
-		int namedIndex = tinyFile.getHeader().getNamespaces().indexOf("named");
-		if (namedIndex == -1) {
-			throw new IllegalArgumentException("The tiny mappings don't have a 'named' namespace.");
-		}
+		Map<EntryTriple, TinyField> fieldsMap = new HashMap<>();
+		tinyFile.getClassEntries().stream().map(this::generatedNamesOfClass).forEach(map -> map.forEach(fieldsMap::put));
+		Map<String, TinyClass> classMap = tinyFile.mapClassesByFirstNamespace();
+
 		int replaceCount = 0;
-		for (TinyClass tinyClass : tinyFile.getClassEntries()) {
-			for (TinyField field : tinyClass.getFields()) {
-				EntryTriple key = new EntryTriple(tinyClass.getClassNames().get(0), field.getFieldNames().get(0),
-								field.getFieldDescriptorInFirstNamespace());
-				String suggestedName = fieldNames.get(key);
-				if (suggestedName != null) {
+		for (Map.Entry<EntryTriple, String> entry : generatedFieldNames.entrySet()) {
+			EntryTriple key = entry.getKey();
+			String newName = entry.getValue();
+			TinyField field = fieldsMap.get(key);
+			// If field name exists, replace the name with the auto-generated name
+			if (field != null) {
+				field.getFieldNames().set(1, newName);
+				replaceCount++;
+			} else {
+				TinyClass tinyClass = classMap.get(key.getOwner());
+				// If field name does not exist, but its class does exist, create a new mapping with the supplied generated name.
+				if (tinyClass != null) {
+					tinyClass.getFields().add(new TinyField(key.getDesc(), Lists.newArrayList(key.getName(), newName), Lists.newArrayList()));
 					replaceCount++;
-					field.getFieldNames().set(namedIndex, suggestedName);
 				}
 			}
+
 		}
+
 		System.err.println("Replaced " + replaceCount + " names in the mappings.");
+
+		Path newMappingsLocation = Paths.get(args[2]);
+
+
 
 		TinyV2Writer.write(tinyFile, newMappingsLocation);
 	}

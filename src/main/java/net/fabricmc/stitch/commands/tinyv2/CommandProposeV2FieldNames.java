@@ -92,9 +92,11 @@ public class CommandProposeV2FieldNames extends Command {
 			String newName = entry.getValue();
 			TinyField field = fieldsMap.get(key);
 			// If the field name exists, replace the name with the auto-generated name, as long as <should replace> is true.
-			if (field != null && shouldReplace) {
-				field.getFieldNames().set(1, newName);
-				replaceCount++;
+			if (field != null) {
+				if (shouldReplace) {
+					field.getFieldNames().set(1, newName);
+					replaceCount++;
+				}
 			} else {
 				TinyClass tinyClass = classMap.get(key.getOwner());
 				// If field name does not exist, but its class does exist, create a new mapping with the supplied generated name.

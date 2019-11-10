@@ -60,8 +60,8 @@ public class CommandProposeV2FieldNames extends Command {
 
 	private Map<EntryTriple, TinyField> generatedNamesOfClass(TinyClass tinyClass) {
 		return tinyClass.getFields().stream().collect(Collectors.toMap(
-				(TinyField field) -> new EntryTriple(tinyClass.getClassNames().get(0), field.getFieldNames().get(0), field.getFieldDescriptorInFirstNamespace())
-				, field -> field));
+						(TinyField field) -> new EntryTriple(tinyClass.getClassNames().get(0), field.getFieldNames().get(0), field.getFieldDescriptorInFirstNamespace())
+						, field -> field));
 	}
 
 	@Override
@@ -118,8 +118,8 @@ public class CommandProposeV2FieldNames extends Command {
 	@Nullable
 	private Boolean parseBooleanOrNull(String booleanLiteral) {
 		String lowerCase = booleanLiteral.toLowerCase();
-		if(lowerCase.equals("true")) return Boolean.TRUE;
-		else if(lowerCase.equals("false")) return Boolean.FALSE;
+		if (lowerCase.equals("true")) return Boolean.TRUE;
+		else if (lowerCase.equals("false")) return Boolean.FALSE;
 		else return null;
 	}
 }

@@ -17,6 +17,7 @@
 package net.fabricmc.stitch.commands.tinyv2;
 
 import java.io.File;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.HashMap;
@@ -28,6 +29,8 @@ import com.google.common.collect.Lists;
 import net.fabricmc.mappings.EntryTriple;
 import net.fabricmc.stitch.Command;
 import net.fabricmc.stitch.util.FieldNameFinder;
+
+import javax.annotation.Nullable;
 
 /**
  * Java stores the names of enums in the bytecode, and obfuscation doesn't get rid of it. We can use this for easy mappings.
@@ -43,15 +46,16 @@ public class CommandProposeV2FieldNames extends Command {
 	 * <input jar> is any Minecraft jar, and <input mappings> are mappings of that jar (the same version).
 	 * <input mappings> with the additional field names will be written to <output mappings>.+
 	 * Assumes the input mappings are intermediary->yarn mappings!
+	 * <should replace> is a boolean ("true" or "false") deciding if existing yarn names should be replaced by the generated names.
 	 */
 	@Override
 	public String getHelpString() {
-		return "<input jar> <input mappings> <output mappings>";
+		return "<input jar> <input mappings> <output mappings> <should replace>";
 	}
 
 	@Override
 	public boolean isArgumentCountValid(int count) {
-		return count == 3;
+		return count == 4;
 	}
 
 	private Map<EntryTriple, TinyField> generatedNamesOfClass(TinyClass tinyClass) {
@@ -62,6 +66,17 @@ public class CommandProposeV2FieldNames extends Command {
 
 	@Override
 	public void run(String[] args) throws Exception {
+		File inputJar = new File(args[0]);
+		Path inputMappings = Paths.get(args[1]);
+		Path outputMappings = Paths.get(args[2]);
+		Boolean shouldReplace = parseBooleanOrNull(args[3]);
+
+		// Validation
+		if(!inputJar.exists()) throw new IllegalArgumentException("Cannot find input jar at " + inputJar);
+		if(!Files.exists(inputMappings)) throw new IllegalArgumentException("Cannot find input mappings at " + inputMappings);
+		if(Files.exists(outputMappings)) System.out.println("Warning: existing file will be replaced by output mappings");
+		if(shouldReplace == null) throw new IllegalArgumentException("<should replace> must be 'true' or 'false'");
+
 		// entrytriple from the input jar namespace
 		Map<EntryTriple, String> generatedFieldNames = new FieldNameFinder().findNames(new File(args[0]));
 		System.err.println("Found " + generatedFieldNames.size() + " interesting names.");
@@ -76,10 +91,12 @@ public class CommandProposeV2FieldNames extends Command {
 			EntryTriple key = entry.getKey();
 			String newName = entry.getValue();
 			TinyField field = fieldsMap.get(key);
-			// If field name exists, replace the name with the auto-generated name
+			// If the field name exists, replace the name with the auto-generated name, as long as <should replace> is true.
 			if (field != null) {
-				field.getFieldNames().set(1, newName);
-				replaceCount++;
+				if (shouldReplace) {
+					field.getFieldNames().set(1, newName);
+					replaceCount++;
+				}
 			} else {
 				TinyClass tinyClass = classMap.get(key.getOwner());
 				// If field name does not exist, but its class does exist, create a new mapping with the supplied generated name.
@@ -95,8 +112,14 @@ public class CommandProposeV2FieldNames extends Command {
 
 		Path newMappingsLocation = Paths.get(args[2]);
 
-
-
 		TinyV2Writer.write(tinyFile, newMappingsLocation);
+	}
+
+	@Nullable
+	private Boolean parseBooleanOrNull(String booleanLiteral) {
+		String lowerCase = booleanLiteral.toLowerCase();
+		if (lowerCase.equals("true")) return Boolean.TRUE;
+		else if (lowerCase.equals("false")) return Boolean.FALSE;
+		else return null;
 	}
 }

@@ -67,11 +67,13 @@ public class TinyV2Writer {
 	private BufferedWriter writer;
 
 	private void instanceWrite(TinyFile tinyFile, Path writeTo) throws IOException {
-		writer = Files.newBufferedWriter(writeTo);
-		writeHeader(tinyFile.getHeader());
-		tinyFile.getClassEntries().stream().sorted().forEach(this::writeClass);
-
-		writer.close();
+		try {
+			writer = Files.newBufferedWriter(writeTo);
+			writeHeader(tinyFile.getHeader());
+			tinyFile.getClassEntries().stream().sorted().forEach(this::writeClass);
+		} finally {
+			writer.close();
+		}
 	}
 
 

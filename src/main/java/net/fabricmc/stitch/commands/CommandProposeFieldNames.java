@@ -23,15 +23,8 @@ import net.fabricmc.mappings.MappingsProvider;
 import net.fabricmc.stitch.Command;
 import net.fabricmc.stitch.util.FieldNameFinder;
 
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
-import java.util.HashMap;
-import java.util.Map;
+import java.io.*;
+import java.util.*;
 
 public class CommandProposeFieldNames extends Command {
     public CommandProposeFieldNames() {
@@ -40,23 +33,21 @@ public class CommandProposeFieldNames extends Command {
 
     @Override
     public String getHelpString() {
-		return "<input jar> <input mappings> <output mappings> [<input jar namespace>] [<output namespace>]";
+        return "<input jar> <input mappings> <output mappings>";
     }
 
     @Override
     public boolean isArgumentCountValid(int count) {
-		return count >= 3 && count <= 5;
+        return count == 3;
     }
 
     @Override
     public void run(String[] args) throws Exception {
-        // entrytriple from the input jar namespace
         Map<EntryTriple, String> fieldNamesO = new FieldNameFinder().findNames(new File(args[0]));
 
         System.err.println("Found " + fieldNamesO.size() + " interesting names.");
 
         // i didn't fuss too much on this... this needs a rewrite once we get a mapping writer library
-        // entrytriple from the first column namespace
         Map<EntryTriple, String> fieldNames = new HashMap<>();
 
         Mappings mappings;
@@ -64,18 +55,12 @@ public class CommandProposeFieldNames extends Command {
             mappings = MappingsProvider.readTinyMappings(fileIn, false);
         }
 
-		// the namespace used by the input jar
-		String inputNamespace = args.length > 3 ? args[3] : "official";
-		// the namespace written to; write to input namespace if not specified
-		String outputNamespace = args.length > 4 ? args[4] : args.length == 4 ? inputNamespace : "named";
-
-		int replaceCount = 0;
         try (FileInputStream fileIn = new FileInputStream(new File(args[1]));
-            FileOutputStream fileOut = new FileOutputStream(new File(args[2]));
-            InputStreamReader fileInReader = new InputStreamReader(fileIn);
-            OutputStreamWriter fileOutWriter = new OutputStreamWriter(fileOut);
-            BufferedReader reader = new BufferedReader(fileInReader);
-            BufferedWriter writer = new BufferedWriter(fileOutWriter)) {
+             FileOutputStream fileOut = new FileOutputStream(new File(args[2]));
+             InputStreamReader fileInReader = new InputStreamReader(fileIn);
+             OutputStreamWriter fileOutWriter = new OutputStreamWriter(fileOut);
+             BufferedReader reader = new BufferedReader(fileInReader);
+             BufferedWriter writer = new BufferedWriter(fileOutWriter)) {
 
             int headerPos = -1;
 
@@ -90,20 +75,20 @@ public class CommandProposeFieldNames extends Command {
                     }
 
                     for (int i = 2; i < tabSplit.length; i++) {
-						if (tabSplit[i].equals(outputNamespace)) {
+                        if (tabSplit[i].equals("named")) {
                             headerPos = i;
                             break;
                         }
                     }
 
                     if (headerPos < 0) {
-						throw new RuntimeException("Could not find mapping position for output namespace '" + outputNamespace + "'!");
+                        throw new RuntimeException("Could not find 'named' mapping position!");
                     }
 
-					if (!tabSplit[1].equals(inputNamespace)) {
+                    if (!tabSplit[1].equals("official")) {
                         for (FieldEntry e : mappings.getFieldEntries()) {
-							EntryTriple inputMapping = e.get(inputNamespace);
-							String name = fieldNamesO.get(inputMapping);
+                            EntryTriple officialFieldMapping = e.get("official");
+                            String name = fieldNamesO.get(officialFieldMapping);
                             if (name != null) {
                                 fieldNames.put(e.get(tabSplit[1]), name);
                             }
@@ -117,7 +102,8 @@ public class CommandProposeFieldNames extends Command {
                     // second+ line
                     if (tabSplit[0].equals("FIELD")) {
                         EntryTriple key = new EntryTriple(tabSplit[1], tabSplit[3], tabSplit[2]);
-						if (fieldNames.containsKey(key)) {
+                        String value = tabSplit[headerPos + 2];
+                        if (value.startsWith("field_") && fieldNames.containsKey(key)) {
                             tabSplit[headerPos + 2] = fieldNames.get(key);
 
                             StringBuilder builder = new StringBuilder(tabSplit[0]);
@@ -126,8 +112,6 @@ public class CommandProposeFieldNames extends Command {
                                 builder.append(tabSplit[i]);
                             }
                             line = builder.toString();
-
-                            replaceCount++;
                         }
                     }
                 }
@@ -139,7 +123,5 @@ public class CommandProposeFieldNames extends Command {
                 writer.write(line);
             }
         }
-
-        System.err.println("Replaced " + replaceCount + " names in the mappings.");
     }
 }

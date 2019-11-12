@@ -21,7 +21,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-public class TinyMethod implements Comparable<TinyMethod>, Mapping {
+public class TinyMethod implements Comparable<TinyMethod>, Mapping{
 
 	/**
 	 * For example when we have official -> named mappings the descriptor will be in official, but in named -> official
@@ -41,12 +41,14 @@ public class TinyMethod implements Comparable<TinyMethod>, Mapping {
 		this.comments = comments;
 	}
 
-	public Map<String, TinyMethodParameter> mapParametersByFirstNamespace() {
-		return parameters.stream().collect(Collectors.toMap(p -> p.getParameterNames().get(0), p -> p));
+//	public MappingParent<String,TinyMethodParameter>
+
+	public Map<String, TinyMethodParameter> mapParametersByNamespace(int namespaceIndex) {
+		return parameters.stream().collect(Collectors.toMap(p -> p.getParameterNames().get(namespaceIndex), p -> p));
 	}
 
-	public Map<String, TinyLocalVariable> mapLocalVariablesByFirstNamespace() {
-		return localVariables.stream().collect(Collectors.toMap(lv -> lv.getLocalVariableNames().get(0), lv -> lv));
+	public Map<String, TinyLocalVariable> mapLocalVariablesByNamespace(int namespaceIndex) {
+		return localVariables.stream().collect(Collectors.toMap(lv -> lv.getLocalVariableNames().get(namespaceIndex), lv -> lv));
 	}
 
 	public String getMethodDescriptorInFirstNamespace() {
@@ -82,5 +84,10 @@ public class TinyMethod implements Comparable<TinyMethod>, Mapping {
 	@Override
 	public List<String> getMapping() {
 		return methodNames;
+	}
+
+	@Override
+	public Map<String, TinyLocalVariable> mapChildrenByNamespace(int namespaceIndex) {
+		return null;
 	}
 }

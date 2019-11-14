@@ -32,9 +32,6 @@ public class CommandUpdateNames extends Command {
 	private int newNamedIndex;
 	private boolean replaceNames;
 
-
-	//TODO: accept merged mappings. If we keep using unmerged, just apply after merging. If not, then only accepting merged will work.
-
 	/**
 	 * <old-mappings>: Merged Official to intermediary to named mappings
 	 * <new-mappings>: Newer intermediary to named mappings. Can be of any mc version.

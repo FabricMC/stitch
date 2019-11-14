@@ -14,7 +14,13 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
-
+/**
+ * This command allows to easily use names from newer versions of minecraft, in older versions.
+ * Given official-intermediary-named mappings for version A, and intermediary-named mappings for version B,
+ * all new names and comments that were contributed for version B, will be added to the mappings of version A,
+ * as long as they target valid intermediary names of version A.
+ * If replace-names is enabled, names and comments of the new mappings will replace the names of the old mappings where possible.
+ */
 public class CommandUpdateNames extends Command {
 	public CommandUpdateNames() {
 		super("updateNames");

@@ -39,8 +39,6 @@ public class TinyMethodParameter implements Comparable<TinyMethodParameter>, Map
 				'}';
 	}
 
-
-
 	public int getLvIndex() {
 		return lvIndex;
 	}

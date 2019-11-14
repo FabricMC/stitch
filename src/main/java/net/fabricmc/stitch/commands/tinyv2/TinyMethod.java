@@ -21,7 +21,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-public class TinyMethod implements Comparable<TinyMethod>, Mapping{
+public class TinyMethod implements Comparable<TinyMethod>, Mapping {
 
 	/**
 	 * For example when we have official -> named mappings the descriptor will be in official, but in named -> official
@@ -65,6 +65,7 @@ public class TinyMethod implements Comparable<TinyMethod>, Mapping{
 	public Collection<TinyLocalVariable> getLocalVariables() {
 		return localVariables;
 	}
+
 	@Override
 	public Collection<String> getComments() {
 		return comments;
@@ -73,7 +74,7 @@ public class TinyMethod implements Comparable<TinyMethod>, Mapping{
 	@Override
 	public int compareTo(TinyMethod o) {
 		return (methodNames.get(0) + methodDescriptorInFirstNamespace)
-						.compareTo(o.methodNames.get(0) + o.methodDescriptorInFirstNamespace);
+				.compareTo(o.methodNames.get(0) + o.methodDescriptorInFirstNamespace);
 	}
 
 	public void setMethodDescriptorInFirstNamespace(String methodDescriptorInFirstNamespace) {

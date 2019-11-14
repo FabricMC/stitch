@@ -16,8 +16,10 @@
 
 package net.fabricmc.stitch.commands.tinyv2;
 
+import java.util.Collection;
 import java.util.List;
 
 public interface Mapping {
 	List<String> getMapping();
+	Collection<String> getComments();
 }

@@ -42,7 +42,7 @@ public class TinyField implements Comparable<TinyField>, Mapping {
 	public List<String> getFieldNames() {
 		return fieldNames;
 	}
-
+	@Override
 	public Collection<String> getComments() {
 		return comments;
 	}

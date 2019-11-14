@@ -29,6 +29,7 @@ import com.google.common.collect.Lists;
 import net.fabricmc.mappings.EntryTriple;
 import net.fabricmc.stitch.Command;
 import net.fabricmc.stitch.util.FieldNameFinder;
+import net.fabricmc.stitch.util.ParseUtils;
 
 import javax.annotation.Nullable;
 
@@ -69,7 +70,7 @@ public class CommandProposeV2FieldNames extends Command {
 		File inputJar = new File(args[0]);
 		Path inputMappings = Paths.get(args[1]);
 		Path outputMappings = Paths.get(args[2]);
-		Boolean shouldReplace = parseBooleanOrNull(args[3]);
+		Boolean shouldReplace = ParseUtils.parseBooleanOrNull(args[3]);
 
 		// Validation
 		if(!inputJar.exists()) throw new IllegalArgumentException("Cannot find input jar at " + inputJar);
@@ -115,11 +116,5 @@ public class CommandProposeV2FieldNames extends Command {
 		TinyV2Writer.write(tinyFile, newMappingsLocation);
 	}
 
-	@Nullable
-	private Boolean parseBooleanOrNull(String booleanLiteral) {
-		String lowerCase = booleanLiteral.toLowerCase();
-		if (lowerCase.equals("true")) return Boolean.TRUE;
-		else if (lowerCase.equals("false")) return Boolean.FALSE;
-		else return null;
-	}
+
 }

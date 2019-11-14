@@ -41,14 +41,13 @@ public class TinyMethod implements Comparable<TinyMethod>, Mapping{
 		this.comments = comments;
 	}
 
-//	public MappingParent<String,TinyMethodParameter>
 
-	public Map<String, TinyMethodParameter> mapParametersByNamespace(int namespaceIndex) {
-		return parameters.stream().collect(Collectors.toMap(p -> p.getParameterNames().get(namespaceIndex), p -> p));
+	public Map<Integer, TinyMethodParameter> mapParametersByLvIndex() {
+		return parameters.stream().collect(Collectors.toMap(TinyMethodParameter::getLvIndex, p -> p));
 	}
 
-	public Map<String, TinyLocalVariable> mapLocalVariablesByNamespace(int namespaceIndex) {
-		return localVariables.stream().collect(Collectors.toMap(lv -> lv.getLocalVariableNames().get(namespaceIndex), lv -> lv));
+	public Map<Integer, TinyLocalVariable> mapLocalVariablesByLvIndex() {
+		return localVariables.stream().collect(Collectors.toMap(TinyLocalVariable::getLvIndex, lv -> lv));
 	}
 
 	public String getMethodDescriptorInFirstNamespace() {
@@ -66,7 +65,7 @@ public class TinyMethod implements Comparable<TinyMethod>, Mapping{
 	public Collection<TinyLocalVariable> getLocalVariables() {
 		return localVariables;
 	}
-
+	@Override
 	public Collection<String> getComments() {
 		return comments;
 	}
@@ -86,8 +85,4 @@ public class TinyMethod implements Comparable<TinyMethod>, Mapping{
 		return methodNames;
 	}
 
-	@Override
-	public Map<String, TinyLocalVariable> mapChildrenByNamespace(int namespaceIndex) {
-		return null;
-	}
 }

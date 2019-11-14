@@ -72,7 +72,7 @@ public class TinyV2Writer {
 			writeHeader(tinyFile.getHeader());
 			tinyFile.getClassEntries().stream().sorted().forEach(this::writeClass);
 		} finally {
-			writer.close();
+			if(writer != null) writer.close();
 		}
 	}
 

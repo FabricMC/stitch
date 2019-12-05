@@ -23,6 +23,13 @@ import java.util.stream.Collectors;
 
 public class TinyMethod implements Comparable<TinyMethod>, Mapping {
 
+	@Override
+	public String toString() {
+		return "TinyMethod(names = [" + String.join(", ", methodNames) + "], desc = " + methodDescriptorInFirstNamespace
+				+ ", " + parameters.size() + " params, "
+				+ localVariables.size() + " vars, " + comments.size() + " comments)";
+	}
+
 	/**
 	 * For example when we have official -> named mappings the descriptor will be in official, but in named -> official
 	 * the descriptor will be in named.

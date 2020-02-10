@@ -53,7 +53,7 @@ public class TinyV2Reader {
 		private TinyMethodParameter currentParameter;
 		private TinyLocalVariable currentLocalVariable;
 		private CommentType currentCommentType;
-
+		private boolean inComment = false;
 
 		private List<String> getNames(MappingGetter getter) {
 			return Lists.newArrayList(getter.getRawNames());
@@ -109,6 +109,8 @@ public class TinyV2Reader {
 
 		@Override
 		public void pushComment(String comment) {
+			if (inComment)
+				throw new RuntimeException("commenting on comment");
 			switch (currentCommentType) {
 			case CLASS:
 				currentClass.getComments().add(comment);
@@ -128,11 +130,34 @@ public class TinyV2Reader {
 			default:
 				throw new RuntimeException("unexpected comment without parent");
 			}
+			inComment = true;
 		}
 
 		@Override
 		public void pop(int count) {
+			for (int i = 0; i < count; i++) {
+				if (inComment) {
+					inComment = false;
+					continue;
+				}
 
+				CommentType last = currentCommentType;
+				switch (last) {
+					case CLASS:
+						currentCommentType = null;
+						break;
+					case FIELD:
+					case METHOD:
+						currentCommentType = CommentType.CLASS;
+						break;
+					case PARAMETER:
+					case LOCAL_VARIABLE:
+						currentCommentType = CommentType.METHOD;
+						break;
+					default:
+						throw new IllegalStateException("visit stack is empty!");
+				}
+			}
 		}
 
 		private TinyFile getAST() {

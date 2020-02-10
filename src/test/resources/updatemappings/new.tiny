@@ -1,0 +1,12 @@
+tiny	2	0	intermediary	named
+c	net/minecraft/class_189	net/minecraft/advancement/AdvancementFrame
+	m	(Ljava/lang/String;ILjava/lang/String;ILnet/minecraft/class_124;)V	<init>	<init>
+		p	3		id
+		p	4		texV
+		p	5		betterName
+	m	()Ljava/lang/String;	method_831	getId
+	m	(Ljava/lang/String;)Lnet/minecraft/class_189;	method_833	forName
+		p	0		name
+	f	I	field_1252	texV
+	f	Lnet/minecraft/class_124;	field_1255	titleFormat
+	f	Lnet/minecraft/class_124;	field_1253	fooBar

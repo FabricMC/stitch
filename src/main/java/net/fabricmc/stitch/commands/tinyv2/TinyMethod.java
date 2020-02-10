@@ -48,12 +48,13 @@ public class TinyMethod implements Comparable<TinyMethod>, Mapping {
 		this.comments = comments;
 	}
 
-	public Map<String, TinyMethodParameter> mapParametersByFirstNamespace() {
-		return parameters.stream().collect(Collectors.toMap(p -> p.getParameterNames().get(0), p -> p));
+
+	public Map<Integer, TinyMethodParameter> mapParametersByLvIndex() {
+		return parameters.stream().collect(Collectors.toMap(TinyMethodParameter::getLvIndex, p -> p));
 	}
 
-	public Map<String, TinyLocalVariable> mapLocalVariablesByFirstNamespace() {
-		return localVariables.stream().collect(Collectors.toMap(lv -> lv.getLocalVariableNames().get(0), lv -> lv));
+	public Map<Integer, TinyLocalVariable> mapLocalVariablesByLvIndex() {
+		return localVariables.stream().collect(Collectors.toMap(TinyLocalVariable::getLvIndex, lv -> lv));
 	}
 
 	public String getMethodDescriptorInFirstNamespace() {
@@ -72,6 +73,7 @@ public class TinyMethod implements Comparable<TinyMethod>, Mapping {
 		return localVariables;
 	}
 
+	@Override
 	public Collection<String> getComments() {
 		return comments;
 	}
@@ -79,7 +81,7 @@ public class TinyMethod implements Comparable<TinyMethod>, Mapping {
 	@Override
 	public int compareTo(TinyMethod o) {
 		return (methodNames.get(0) + methodDescriptorInFirstNamespace)
-						.compareTo(o.methodNames.get(0) + o.methodDescriptorInFirstNamespace);
+				.compareTo(o.methodNames.get(0) + o.methodDescriptorInFirstNamespace);
 	}
 
 	public void setMethodDescriptorInFirstNamespace(String methodDescriptorInFirstNamespace) {
@@ -90,4 +92,5 @@ public class TinyMethod implements Comparable<TinyMethod>, Mapping {
 	public List<String> getMapping() {
 		return methodNames;
 	}
+
 }

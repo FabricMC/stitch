@@ -20,6 +20,7 @@ import net.fabricmc.stitch.commands.*;
 import net.fabricmc.stitch.commands.tinyv2.CommandMergeTinyV2;
 import net.fabricmc.stitch.commands.tinyv2.CommandProposeV2FieldNames;
 import net.fabricmc.stitch.commands.tinyv2.CommandReorderTinyV2;
+import net.fabricmc.stitch.commands.tinyv2.CommandUpdateNames;
 
 import java.util.Locale;
 import java.util.Map;
@@ -46,6 +47,7 @@ public class Main {
         addCommand(new CommandReorderTinyV2());
         addCommand(new CommandMergeTinyV2());
         addCommand(new CommandProposeV2FieldNames());
+        addCommand(new CommandUpdateNames());
     }
 
     public static void main(String[] args) {

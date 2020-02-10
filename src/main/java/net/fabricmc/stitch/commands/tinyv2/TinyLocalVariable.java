@@ -54,7 +54,7 @@ public class TinyLocalVariable implements Comparable<TinyLocalVariable>, Mapping
 	public List<String> getLocalVariableNames() {
 		return localVariableNames;
 	}
-
+	@Override
 	public Collection<String> getComments() {
 		return comments;
 	}

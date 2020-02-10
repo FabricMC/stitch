@@ -1,0 +1,12 @@
+tiny	2	0	official	intermediary	named
+c	aa	net/minecraft/class_189	net/minecraft/advancement/AdvancementFrame
+	m	(Ljava/lang/String;ILjava/lang/String;ILc;)V	<init>	<init>	<init>
+		p	3			id
+		p	4			texV
+		p	5			titleFormat
+	m	()Ljava/lang/String;	a	method_831	getId
+	m	(Ljava/lang/String;)Laa;	a	method_833	forName
+		p	0			name
+	m	(Ljava/lang/String;)Laa;	valueOf	valueOf	valueOf
+	f	Lc;	f	field_1255	titleFormat
+	f	[Laa;	g	field_1253	fooBar

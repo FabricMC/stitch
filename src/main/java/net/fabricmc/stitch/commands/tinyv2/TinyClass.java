@@ -59,8 +59,18 @@ public class TinyClass implements Comparable<TinyClass>, Mapping {
 		return methods.stream().collect(Collectors.toMap(m -> Pair.of(m.getMethodNames().get(0), m.getMethodDescriptorInFirstNamespace()), m -> m));
 	}
 
+	/**
+	 * This will only work well on intermediary methods because they are unique
+	 */
+	public Map<String, TinyMethod> mapMethodsByNamespace(int namespaceIndex) {
+		return methods.stream().collect(Collectors.toMap(m -> m.getMethodNames().get(namespaceIndex), m -> m));
+	}
+
 	public Map<String, TinyField> mapFieldsByFirstNamespace() {
-		return fields.stream().collect(Collectors.toMap(f -> f.getFieldNames().get(0), f -> f));
+		return mapFieldsByNamespace(0);
+	}
+	public Map<String, TinyField> mapFieldsByNamespace(int namespaceIndex) {
+		return fields.stream().collect(Collectors.toMap(f -> f.getFieldNames().get(namespaceIndex), f -> f));
 	}
 
 
@@ -76,6 +86,7 @@ public class TinyClass implements Comparable<TinyClass>, Mapping {
 		return fields;
 	}
 
+	@Override
 	public Collection<String> getComments() {
 		return comments;
 	}

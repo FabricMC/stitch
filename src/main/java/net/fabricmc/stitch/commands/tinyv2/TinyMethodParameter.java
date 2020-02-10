@@ -30,6 +30,15 @@ public class TinyMethodParameter implements Comparable<TinyMethodParameter>, Map
 		this.comments = comments;
 	}
 
+	@Override
+	public String toString() {
+		return "TinyMethodParameter{" +
+				"lvIndex=" + lvIndex +
+				", parameterNames=" + parameterNames +
+				", comments=" + comments +
+				'}';
+	}
+
 	public int getLvIndex() {
 		return lvIndex;
 	}
@@ -37,7 +46,7 @@ public class TinyMethodParameter implements Comparable<TinyMethodParameter>, Map
 	public List<String> getParameterNames() {
 		return parameterNames;
 	}
-
+	@Override
 	public Collection<String> getComments() {
 		return comments;
 	}

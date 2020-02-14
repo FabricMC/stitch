@@ -86,20 +86,20 @@ public class TinyV2Writer {
 	private void writeClass(TinyClass tinyClass) {
 		writeLine(Indents.CLASS, tinyClass.getClassNames(), Prefixes.CLASS);
 
+		for (String comment : tinyClass.getComments()) writeComment(Indents.CLASS_COMMENT, comment);
+
 		tinyClass.getMethods().stream().sorted().forEach(this::writeMethod);
 		tinyClass.getFields().stream().sorted().forEach(this::writeField);
-
-		for (String comment : tinyClass.getComments()) writeComment(Indents.CLASS_COMMENT, comment);
 
 	}
 
 	private void writeMethod(TinyMethod method) {
 		writeLine(Indents.METHOD, method.getMethodNames(), Prefixes.METHOD, method.getMethodDescriptorInFirstNamespace());
 
+		for (String comment : method.getComments()) writeComment(Indents.METHOD_COMMENT, comment);
+
 		method.getParameters().stream().sorted().forEach(this::writeMethodParameter);
 		method.getLocalVariables().stream().sorted().forEach(this::writeLocalVariable);
-
-		for (String comment : method.getComments()) writeComment(Indents.METHOD_COMMENT, comment);
 
 	}
 

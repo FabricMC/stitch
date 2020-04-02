@@ -26,6 +26,11 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 import org.objectweb.asm.Opcodes;
 
 import java.io.*;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 import java.util.*;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
@@ -106,9 +111,7 @@ class GenState {
                     addClass(writer, c, jarOld, jarEntry, this.targetNamespace);
                 }
 
-                for (Map.Entry<String, Integer> counter : counters.entrySet()) {
-                    writer.write("# INTERMEDIARY-COUNTER " + counter.getKey() + " " + counter.getValue() + "\n");
-                }
+                writeCounters(writer);
             }
         }
     }
@@ -118,11 +121,19 @@ class GenState {
     }
 
     public static boolean isMappedField(ClassStorage storage, JarClassEntry c, JarFieldEntry f) {
-        return f.getName().length() <= 2 || (f.getName().length() == 3 && f.getName().charAt(2) == '_');
+        return isUnmappedFieldName(f.getName());
+    }
+
+    public static boolean isUnmappedFieldName(String name) {
+        return name.length() <= 2 || (name.length() == 3 && name.charAt(2) == '_');
     }
 
     public static boolean isMappedMethod(ClassStorage storage, JarClassEntry c, JarMethodEntry m) {
-        return (m.getName().length() <= 2 || (m.getName().length() == 3 && m.getName().charAt(2) == '_')) && m.getName().charAt(0) != '<' && m.isSource(storage, c);
+        return isUnmappedMethodName(m.getName()) && m.isSource(storage, c);
+    }
+
+    public static boolean isUnmappedMethodName(String name) {
+       return (name.length() <= 2 || (name.length() == 3 && name.charAt(2) == '_')) && name.charAt(0) != '<';
     }
 
     @Nullable
@@ -134,7 +145,13 @@ class GenState {
         if (newToIntermediary != null) {
             EntryTriple findEntry = newToIntermediary.getField(c.getFullyQualifiedName(), f.getName(), f.getDescriptor());
             if (findEntry != null) {
-                return findEntry.getName();
+                if (findEntry.getName().contains("field_")) {
+                    return findEntry.getName();
+                } else {
+                    String newName = next(f, "field");
+                    System.out.println(findEntry.getName() + " is now " + newName);
+                    return newName;
+                }
             }
         }
 
@@ -143,7 +160,13 @@ class GenState {
             if (findEntry != null) {
                 findEntry = oldToIntermediary.getField(findEntry);
                 if (findEntry != null) {
-                    return findEntry.getName();
+                    if (findEntry.getName().contains("field_")) {
+                        return findEntry.getName();
+                    } else {
+                        String newName = next(f, "field");
+                        System.out.println(findEntry.getName() + " is now " + newName);
+                        return newName;
+                    }
                 }
             }
         }
@@ -312,7 +335,13 @@ class GenState {
                 for (JarMethodEntry mm : allEntries) {
                     methodNames.put(mm, s);
                 }
-                return s;
+                if (s.contains("method_")) {
+                    return s;
+                } else {
+                    String newName = next(m, "method");
+                    System.out.println(s + " is now " + newName);
+                    return newName;
+                }
             }
         }
 
@@ -322,6 +351,7 @@ class GenState {
     private void addClass(BufferedWriter writer, JarClassEntry c, ClassStorage storageOld, ClassStorage storage, String translatedPrefix) throws IOException {
         String className = c.getName();
         String cname = "";
+        String prefixSaved = translatedPrefix;
 
         if(!this.obfuscatedPatterns.stream().anyMatch(p -> p.matcher(className).matches())) {
             translatedPrefix = c.getFullyQualifiedName();
@@ -355,6 +385,13 @@ class GenState {
 
                         }
                     }
+                }
+
+                if (cname != null && !cname.contains("class_")) {
+                    String newName = next(c, "class");
+                    System.out.println(cname + " is now " + newName);
+                    cname = newName;
+                    translatedPrefix = prefixSaved;
                 }
 
                 if (cname == null) {
@@ -405,17 +442,7 @@ class GenState {
         newToOld = new GenMap.Dummy();
 
         // TODO: only read once
-        try (FileReader fileReader = new FileReader(oldMappings)) {
-            try (BufferedReader reader = new BufferedReader(fileReader)) {
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    if (line.startsWith("# INTERMEDIARY-COUNTER")) {
-                        String[] parts = line.split(" ");
-                        counters.put(parts[2], Integer.parseInt(parts[3]));
-                    }
-                }
-            }
-        }
+        readCounters(oldMappings);
 
         try (FileInputStream inputStream = new FileInputStream(oldMappings)) {
             oldToIntermediary.load(
@@ -431,17 +458,7 @@ class GenState {
         newToOld = new GenMap();
 
         // TODO: only read once
-        try (FileReader fileReader = new FileReader(oldMappings)) {
-            try (BufferedReader reader = new BufferedReader(fileReader)) {
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    if (line.startsWith("# INTERMEDIARY-COUNTER")) {
-                        String[] parts = line.split(" ");
-                        counters.put(parts[2], Integer.parseInt(parts[3]));
-                    }
-                }
-            }
-        }
+        readCounters(oldMappings);
 
         try (FileInputStream inputStream = new FileInputStream(oldMappings)) {
             oldToIntermediary.load(
@@ -456,5 +473,47 @@ class GenState {
                 MatcherUtil.read(reader, true, newToOld::addClass, newToOld::addField, newToOld::addMethod);
             }
         }
+    }
+
+    private void readCounters(File counterFile) throws IOException {
+        Path counterPath = getExternalCounterFile();
+
+        if (counterPath != null && Files.exists(counterPath)) {
+            counterFile = counterPath.toFile();
+        }
+
+        try (FileReader fileReader = new FileReader(counterFile)) {
+            try (BufferedReader reader = new BufferedReader(fileReader)) {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    if (line.startsWith("# INTERMEDIARY-COUNTER")) {
+                        String[] parts = line.split(" ");
+                        counters.put(parts[2], Integer.parseInt(parts[3]));
+                    }
+                }
+            }
+        }
+    }
+
+    private void writeCounters(BufferedWriter writer) throws IOException {
+        StringJoiner counterLines = new StringJoiner("\n");
+
+        for (Map.Entry<String, Integer> counter : counters.entrySet()) {
+            counterLines.add("# INTERMEDIARY-COUNTER " + counter.getKey() + " " + counter.getValue());
+        }
+
+        writer.write(counterLines.toString());
+        Path counterPath = getExternalCounterFile();
+
+        if (counterPath != null) {
+            Files.write(counterPath, counterLines.toString().getBytes(StandardCharsets.UTF_8), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
+        }
+    }
+
+    private Path getExternalCounterFile() {
+        if (System.getProperty("stitch.counter") != null) {
+            return Paths.get(System.getProperty("stitch.counter"));
+        }
+        return null;
     }
 }

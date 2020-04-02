@@ -113,13 +113,13 @@ public class ClassMerger {
         ClassReader readerS = new ClassReader(classServer);
         ClassWriter writer = new ClassWriter(0);
 
-        ClassNode nodeC = new ClassNode(Opcodes.ASM7);
+        ClassNode nodeC = new ClassNode(StitchUtil.ASM_VERSION);
         readerC.accept(nodeC, 0);
 
-        ClassNode nodeS = new ClassNode(Opcodes.ASM7);
+        ClassNode nodeS = new ClassNode(StitchUtil.ASM_VERSION);
         readerS.accept(nodeS, 0);
 
-        ClassNode nodeOut = new ClassNode(Opcodes.ASM7);
+        ClassNode nodeOut = new ClassNode(StitchUtil.ASM_VERSION);
         nodeOut.version = nodeC.version;
         nodeOut.access = nodeC.access;
         nodeOut.name = nodeC.name;

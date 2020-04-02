@@ -25,7 +25,6 @@ import java.util.Optional;
 import java.util.function.Predicate;
 
 import cuchaz.enigma.command.ConvertMappingsCommand;
-import jdk.nashorn.internal.ir.annotations.Ignore;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;

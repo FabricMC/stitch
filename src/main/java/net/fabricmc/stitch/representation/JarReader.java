@@ -211,7 +211,7 @@ public class JarReader {
                     }
 
                     ClassReader reader = new ClassReader(jarStream);
-                    ClassVisitor visitor = new VisitorClass(Opcodes.ASM7, null);
+                    ClassVisitor visitor = new VisitorClass(StitchUtil.ASM_VERSION, null);
                     reader.accept(visitor, ClassReader.SKIP_CODE | ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES);
                 }
             }
@@ -285,7 +285,7 @@ public class JarReader {
                     }
 
                     ClassReader reader = new ClassReader(jarStream);
-                    ClassVisitor visitor = new VisitorClassStageTwo(Opcodes.ASM7, null);
+                    ClassVisitor visitor = new VisitorClassStageTwo(StitchUtil.ASM_VERSION, null);
                     reader.accept(visitor, ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES);
                 }
             }

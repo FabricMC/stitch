@@ -52,7 +52,7 @@ public class FieldNameFinder {
 
 		for (byte[] data : classes) {
 			ClassReader reader = new ClassReader(data);
-			NameFinderVisitor vClass = new NameFinderVisitor(Opcodes.ASM7, enumFields, methods);
+			NameFinderVisitor vClass = new NameFinderVisitor(StitchUtil.ASM_VERSION, enumFields, methods);
 			reader.accept(vClass, ClassReader.SKIP_FRAMES);
 		}
 

@@ -26,6 +26,7 @@ import cuchaz.enigma.translation.representation.entry.FieldEntry;
 import net.fabricmc.mappings.EntryTriple;
 import net.fabricmc.stitch.util.FieldNameFinder;
 import net.fabricmc.stitch.util.NameFinderVisitor;
+import net.fabricmc.stitch.util.StitchUtil;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.MethodVisitor;
@@ -51,7 +52,7 @@ public class StitchNameProposalService {
 				Map<String, Set<String>> enumFields = new HashMap<>();
 				Map<String, List<MethodNode>> methods = new HashMap<>();
 
-				classCache.visit(() -> new NameFinderVisitor(Opcodes.ASM7, enumFields, methods), ClassReader.SKIP_FRAMES);
+				classCache.visit(() -> new NameFinderVisitor(StitchUtil.ASM_VERSION, enumFields, methods), ClassReader.SKIP_FRAMES);
 
 				try {
 					fieldNames = new FieldNameFinder().findNames(enumFields, methods);

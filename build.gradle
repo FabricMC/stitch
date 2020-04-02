@@ -15,9 +15,7 @@ buildscript {
 sourceCompatibility = 1.8
 
 def ENV = System.getenv()
-if (ENV.BUILD_NUMBER) {
-	version = version + "." + "${System.getenv().BUILD_NUMBER}"
-}
+version = version + "+" + (ENV.BUILD_NUMBER ? ("build." + ENV.BUILD_NUMBER) : "local")
 
 group = 'net.fabricmc'
 archivesBaseName = project.name.toLowerCase()
@@ -35,13 +33,13 @@ repositories {
 }
 
 dependencies {
-	compile 'org.ow2.asm:asm:7.3.1'
-	compile 'org.ow2.asm:asm-commons:7.3.1'
-	compile 'org.ow2.asm:asm-tree:7.3.1'
-	compile 'org.ow2.asm:asm-util:7.3.1'
-	compile 'net.fabricmc:tiny-mappings-parser:0.2.1.13'
+	compile 'org.ow2.asm:asm:8.0'
+	compile 'org.ow2.asm:asm-commons:8.0'
+	compile 'org.ow2.asm:asm-tree:8.0'
+	compile 'org.ow2.asm:asm-util:8.0'
+	compile 'net.fabricmc:tiny-mappings-parser:0.2.2.14'
 	implementation group: 'org.checkerframework', name: 'checker-qual', version: '2.5.7'
-	implementation('cuchaz:enigma:0.14.3.146') {
+	implementation('cuchaz:enigma:0.15.1+build.154') {
 		exclude group: 'org.ow2.asm'
 	}
 

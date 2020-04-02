@@ -16,6 +16,8 @@
 
 package net.fabricmc.stitch.util;
 
+import org.objectweb.asm.Opcodes;
+
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
@@ -27,6 +29,9 @@ import java.nio.file.FileSystems;
 import java.util.*;
 
 public final class StitchUtil {
+
+    public static int ASM_VERSION = Opcodes.ASM8;
+
     public static class FileSystemDelegate implements AutoCloseable {
         private final FileSystem fileSystem;
         private final boolean owner;

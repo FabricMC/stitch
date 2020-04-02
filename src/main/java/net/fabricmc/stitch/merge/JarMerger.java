@@ -205,15 +205,15 @@ public class JarMerger implements AutoCloseable {
                     ClassVisitor visitor = writer;
 
                     if (side != null) {
-                        visitor = new ClassMerger.SidedClassVisitor(Opcodes.ASM7, visitor, side);
+                        visitor = new ClassMerger.SidedClassVisitor(StitchUtil.ASM_VERSION, visitor, side);
                     }
 
                     if (removeSnowmen) {
-                        visitor = new SnowmanClassVisitor(Opcodes.ASM7, visitor);
+                        visitor = new SnowmanClassVisitor(StitchUtil.ASM_VERSION, visitor);
                     }
 
                     if (offsetSyntheticsParams) {
-                        visitor = new SyntheticParameterClassVisitor(Opcodes.ASM7, visitor);
+                        visitor = new SyntheticParameterClassVisitor(StitchUtil.ASM_VERSION, visitor);
                     }
 
                     if (visitor != writer) {

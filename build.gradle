@@ -32,14 +32,23 @@ repositories {
 	}
 }
 
+configurations {
+	ship
+	enigma
+	implementation.extendsFrom ship
+	compileOnly.extendsFrom enigma
+	testImplementation.extendsFrom enigma
+}
+
 dependencies {
-	compile 'org.ow2.asm:asm:8.0'
-	compile 'org.ow2.asm:asm-commons:8.0'
-	compile 'org.ow2.asm:asm-tree:8.0'
-	compile 'org.ow2.asm:asm-util:8.0'
-	compile 'net.fabricmc:tiny-mappings-parser:0.2.2.14'
-	implementation group: 'org.checkerframework', name: 'checker-qual', version: '2.5.7'
-	implementation('cuchaz:enigma:0.15.1+build.154') {
+	ship 'org.ow2.asm:asm:8.0'
+	ship 'org.ow2.asm:asm-commons:8.0'
+	ship 'org.ow2.asm:asm-tree:8.0'
+	ship 'org.ow2.asm:asm-util:8.0'
+	ship 'net.fabricmc:tiny-mappings-parser:0.2.2.14'
+	implementation 'com.google.guava:guava:28.0-jre'
+	compileOnly group: 'org.checkerframework', name: 'checker-qual', version: '2.5.7'
+	enigma('cuchaz:enigma:0.15.2+build.165') {
 		exclude group: 'org.ow2.asm'
 	}
 
@@ -60,7 +69,7 @@ jar {
 
 task allJar(type: Jar) {
 	from {
-		configurations.compile.collect {
+		configurations.ship.collect {
 			it.isDirectory() ? it : zipTree(it)
 		}
 	}

@@ -21,6 +21,7 @@ import net.fabricmc.stitch.representation.*;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Locale;
 
 public class CommandUpdateIntermediary extends Command {
     public CommandUpdateIntermediary() {
@@ -29,12 +30,12 @@ public class CommandUpdateIntermediary extends Command {
 
     @Override
     public String getHelpString() {
-        return "<old-jar> <new-jar> <old-mapping-file> <new-mapping-file> <match-file>";
+        return "<old-jar> <new-jar> <old-mapping-file> <new-mapping-file> <match-file> [-t|--target-namespace <namespace>] [-p|--obfuscation-pattern <regex pattern>]";
     }
 
     @Override
     public boolean isArgumentCountValid(int count) {
-        return count == 5;
+        return count >= 5;
     }
 
     @Override
@@ -58,6 +59,27 @@ public class CommandUpdateIntermediary extends Command {
         }
 
         GenState state = new GenState();
+        boolean clearedPatterns = false;
+
+        for (int i = 5; i < args.length; i++) {
+            switch (args[i].toLowerCase(Locale.ROOT)) {
+                case "-t":
+                case "--target-namespace":
+                    state.setTargetNamespace(args[i + 1]);
+                    i++;
+                    break;
+                case "-p":
+                case "--obfuscation-pattern":
+                    if (!clearedPatterns)
+                        state.clearObfuscatedPatterns();
+                    clearedPatterns = true;
+
+                    state.addObfuscatedPattern(args[i + 1]);
+                    i++;
+                    break;
+            }
+        }
+
         System.err.println("Loading remapping files...");
         state.prepareUpdate(new File(args[2]), new File(args[4]));
 

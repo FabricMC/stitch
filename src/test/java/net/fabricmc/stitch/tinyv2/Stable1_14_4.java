@@ -24,7 +24,6 @@ import java.util.Collection;
 import java.util.Optional;
 import java.util.function.Predicate;
 
-import cuchaz.enigma.command.ConvertMappingsCommand;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
@@ -119,11 +118,5 @@ public class Stable1_14_4 {
 		testMerge();
 		testReorder3();
 		testFieldNameProposal();
-	}
-
-	@Test
-	@Disabled
-	public void testConversion() throws Exception {
-		new ConvertMappingsCommand().run("tiny", DIR + "unmerged-yarn.tinyv1", "tinyv2:intermediary:named", DIR + "unmerged-yarn.tinyv2");
 	}
 }

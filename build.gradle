@@ -23,12 +23,8 @@ archivesBaseName = project.name.toLowerCase()
 repositories {
 	mavenCentral()
 	maven {
-		name = 'modmuss'
-		url = 'http://maven.modmuss50.me/'
-	}
-	maven {
-		name "RX14 Repository"
-		url 'http://mvn.rx14.co.uk/local/'
+		name = 'Fabric'
+		url = 'https://maven.fabricmc.net/'
 	}
 }
 
@@ -48,15 +44,12 @@ dependencies {
 	ship 'net.fabricmc:tiny-mappings-parser:0.2.2.14'
 	implementation 'com.google.guava:guava:28.0-jre'
 	compileOnly group: 'org.checkerframework', name: 'checker-qual', version: '2.5.7'
-	enigma('cuchaz:enigma:0.15.2+build.165') {
-		exclude group: 'org.ow2.asm'
-	}
+	enigma 'cuchaz:enigma:0.17+build.179'
 
 	testImplementation 'org.junit.jupiter:junit-jupiter-api:5.3.1'
 	testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.3.1'
 }
 
-apply from: 'https://github.com/FabricMC/fabric-docs/raw/master/gradle/maven.gradle'
 apply from: 'https://github.com/FabricMC/fabric-docs/raw/master/gradle/license.gradle'
 
 jar {

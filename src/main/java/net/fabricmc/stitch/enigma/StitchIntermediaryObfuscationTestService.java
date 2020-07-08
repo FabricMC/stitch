@@ -35,7 +35,6 @@ public class StitchIntermediaryObfuscationTestService implements ObfuscationTest
 		this.classPackagePrefix = this.prefix + this.classPrefix;
 	}
 
-	@SuppressWarnings("RedundantIfStatement")
 	@Override
 	public boolean testDeobfuscated(Entry<?> entry) {
 		if (entry instanceof ClassEntry) {

@@ -21,7 +21,6 @@ import org.objectweb.asm.*;
 import org.objectweb.asm.tree.*;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 public class ClassMerger {
     private static final String SIDE_DESCRIPTOR = "Lnet/fabricmc/api/EnvType;";

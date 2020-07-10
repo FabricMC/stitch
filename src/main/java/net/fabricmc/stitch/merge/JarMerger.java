@@ -16,32 +16,22 @@
 
 package net.fabricmc.stitch.merge;
 
-import com.google.common.collect.ImmutableMap;
 import net.fabricmc.stitch.util.SnowmanClassVisitor;
 import net.fabricmc.stitch.util.StitchUtil;
 import net.fabricmc.stitch.util.SyntheticParameterClassVisitor;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.ClassWriter;
-import org.objectweb.asm.Opcodes;
 
 import java.io.*;
-import java.net.URI;
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
-import java.nio.channels.FileChannel;
 import java.nio.charset.Charset;
 import java.nio.file.*;
 import java.nio.file.attribute.BasicFileAttributeView;
 import java.nio.file.attribute.BasicFileAttributes;
-import java.nio.file.attribute.FileTime;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
-import java.util.jar.JarEntry;
-import java.util.jar.JarInputStream;
-import java.util.jar.JarOutputStream;
 import java.util.stream.Collectors;
 
 public class JarMerger implements AutoCloseable {

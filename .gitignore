@@ -3,3 +3,9 @@ local/
 out/
 build/
 .idea/
+
+# eclipse
+.settings/
+bin/
+.classpath
+.project

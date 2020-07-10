@@ -16,30 +16,23 @@
 
 package net.fabricmc.stitch.enigma;
 
-import cuchaz.enigma.analysis.ClassCache;
 import cuchaz.enigma.analysis.index.JarIndex;
 import cuchaz.enigma.api.EnigmaPluginContext;
-import cuchaz.enigma.api.service.EnigmaServiceContext;
 import cuchaz.enigma.api.service.JarIndexerService;
 import cuchaz.enigma.api.service.NameProposalService;
+import cuchaz.enigma.classprovider.ClassProvider;
 import cuchaz.enigma.translation.representation.entry.FieldEntry;
 import net.fabricmc.mappings.EntryTriple;
 import net.fabricmc.stitch.util.FieldNameFinder;
 import net.fabricmc.stitch.util.NameFinderVisitor;
 import net.fabricmc.stitch.util.StitchUtil;
-import org.objectweb.asm.ClassReader;
-import org.objectweb.asm.ClassVisitor;
-import org.objectweb.asm.MethodVisitor;
-import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.tree.MethodNode;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.function.Supplier;
 
 public class StitchNameProposalService {
 	private Map<EntryTriple, String> fieldNames;
@@ -47,12 +40,14 @@ public class StitchNameProposalService {
 	private StitchNameProposalService(EnigmaPluginContext ctx) {
 		ctx.registerService("stitch:jar_indexer", JarIndexerService.TYPE, ctx1 -> new JarIndexerService() {
 			@Override
-			public void acceptJar(ClassCache classCache, JarIndex jarIndex) {
+			public void acceptJar(Set<String> classNames, ClassProvider classProvider, JarIndex jarIndex) {
 
 				Map<String, Set<String>> enumFields = new HashMap<>();
 				Map<String, List<MethodNode>> methods = new HashMap<>();
 
-				classCache.visit(() -> new NameFinderVisitor(StitchUtil.ASM_VERSION, enumFields, methods), ClassReader.SKIP_FRAMES);
+				for (String className : classNames) {
+					classProvider.get(className).accept(new NameFinderVisitor(StitchUtil.ASM_VERSION, enumFields, methods));
+				}
 
 				try {
 					fieldNames = new FieldNameFinder().findNames(enumFields, methods);

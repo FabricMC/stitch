@@ -44,7 +44,7 @@ dependencies {
 	ship 'net.fabricmc:tiny-mappings-parser:0.2.2.14'
 	implementation 'com.google.guava:guava:28.0-jre'
 	compileOnly group: 'org.checkerframework', name: 'checker-qual', version: '2.5.7'
-	enigma 'cuchaz:enigma:0.17+build.179'
+	enigma 'cuchaz:enigma:0.20+build.206'
 
 	testImplementation 'org.junit.jupiter:junit-jupiter-api:5.3.1'
 	testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.3.1'

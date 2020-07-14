@@ -79,6 +79,9 @@ artifacts {
 	archives allJar
 }
 
+java {
+	withSourcesJar()
+}
 
 publishing {
 	publications {

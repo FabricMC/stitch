@@ -16,6 +16,7 @@
 
 package net.fabricmc.stitch.merge;
 
+import net.fabricmc.stitch.util.EnvironmentAnnotations;
 import net.fabricmc.stitch.util.StitchUtil;
 import org.objectweb.asm.*;
 import org.objectweb.asm.tree.*;
@@ -23,10 +24,6 @@ import org.objectweb.asm.tree.*;
 import java.util.*;
 
 public class ClassMerger {
-    private static final String SIDE_DESCRIPTOR = "Lnet/fabricmc/api/EnvType;";
-    private static final String ITF_DESCRIPTOR = "Lnet/fabricmc/api/EnvironmentInterface;";
-    private static final String ITF_LIST_DESCRIPTOR = "Lnet/fabricmc/api/EnvironmentInterfaces;";
-    private static final String SIDED_DESCRIPTOR = "Lnet/fabricmc/api/Environment;";
 
     private abstract class Merger<T> {
         private final Map<String, T> entriesClient, entriesServer;
@@ -63,10 +60,10 @@ public class ClassMerger {
                 if (entryClient != null && entryServer != null) {
                     list.add(entryClient);
                 } else if (entryClient != null) {
-                    applySide(entryClient, "CLIENT");
+                    applySide(entryClient, EnvironmentAnnotations.ENV_CLIENT);
                     list.add(entryClient);
                 } else {
-                    applySide(entryServer, "SERVER");
+                    applySide(entryServer, EnvironmentAnnotations.ENV_SERVER);
                     list.add(entryServer);
                 }
             }
@@ -74,14 +71,14 @@ public class ClassMerger {
     }
 
     private static void visitSideAnnotation(AnnotationVisitor av, String side) {
-        av.visitEnum("value", SIDE_DESCRIPTOR, side.toUpperCase(Locale.ROOT));
+        av.visitEnum("value", EnvironmentAnnotations.SIDE_DESCRIPTOR, side.toUpperCase(Locale.ROOT));
         av.visitEnd();
     }
 
     private static void visitItfAnnotation(AnnotationVisitor av, String side, List<String> itfDescriptors) {
         for (String itf : itfDescriptors) {
-            AnnotationVisitor avItf = av.visitAnnotation(null, ITF_DESCRIPTOR);
-            avItf.visitEnum("value", SIDE_DESCRIPTOR, side.toUpperCase(Locale.ROOT));
+            AnnotationVisitor avItf = av.visitAnnotation(null, EnvironmentAnnotations.ITF_DESCRIPTOR);
+            avItf.visitEnum("value", EnvironmentAnnotations.SIDE_DESCRIPTOR, side.toUpperCase(Locale.ROOT));
             avItf.visit("itf", Type.getType("L" + itf + ";"));
             avItf.visitEnd();
         }
@@ -97,7 +94,7 @@ public class ClassMerger {
 
         @Override
         public void visitEnd() {
-            AnnotationVisitor av = cv.visitAnnotation(SIDED_DESCRIPTOR, true);
+            AnnotationVisitor av = cv.visitAnnotation(EnvironmentAnnotations.SIDED_DESCRIPTOR, true);
             visitSideAnnotation(av, side);
             super.visitEnd();
         }
@@ -169,14 +166,14 @@ public class ClassMerger {
         }
 
         if (!clientItfs.isEmpty() || !serverItfs.isEmpty()) {
-            AnnotationVisitor envInterfaces = nodeOut.visitAnnotation(ITF_LIST_DESCRIPTOR, false);
+            AnnotationVisitor envInterfaces = nodeOut.visitAnnotation(EnvironmentAnnotations.ITF_LIST_DESCRIPTOR, false);
             AnnotationVisitor eiArray = envInterfaces.visitArray("value");
 
             if (!clientItfs.isEmpty()) {
-                visitItfAnnotation(eiArray, "CLIENT", clientItfs);
+                visitItfAnnotation(eiArray, EnvironmentAnnotations.ENV_CLIENT, clientItfs);
             }
             if (!serverItfs.isEmpty()) {
-                visitItfAnnotation(eiArray, "SERVER", serverItfs);
+                visitItfAnnotation(eiArray, EnvironmentAnnotations.ENV_SERVER, serverItfs);
             }
             eiArray.visitEnd();
             envInterfaces.visitEnd();
@@ -201,7 +198,7 @@ public class ClassMerger {
 
             @Override
             public void applySide(FieldNode entry, String side) {
-                AnnotationVisitor av = entry.visitAnnotation(SIDED_DESCRIPTOR, false);
+                AnnotationVisitor av = entry.visitAnnotation(EnvironmentAnnotations.SIDED_DESCRIPTOR, false);
                 visitSideAnnotation(av, side);
             }
         }.merge(nodeOut.fields);
@@ -214,7 +211,7 @@ public class ClassMerger {
 
             @Override
             public void applySide(MethodNode entry, String side) {
-                AnnotationVisitor av = entry.visitAnnotation(SIDED_DESCRIPTOR, false);
+                AnnotationVisitor av = entry.visitAnnotation(EnvironmentAnnotations.SIDED_DESCRIPTOR, false);
                 visitSideAnnotation(av, side);
             }
         }.merge(nodeOut.methods);

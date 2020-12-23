@@ -1,8 +1,3 @@
-apply plugin: 'java'
-apply plugin: 'eclipse'
-apply plugin: 'idea'
-apply plugin: 'maven-publish'
-
 buildscript {
 	repositories {
 		maven {
@@ -12,21 +7,57 @@ buildscript {
 	}
 }
 
-sourceCompatibility = 1.8
+// Apply to stitch itself, and subprojects
 
-def ENV = System.getenv()
-version = version + "+" + (ENV.BUILD_NUMBER ? ("build." + ENV.BUILD_NUMBER) : "local")
+allprojects {
+	apply plugin: 'java'
+	apply plugin: 'eclipse'
+	apply plugin: 'idea'
+	apply plugin: 'maven-publish'
 
-group = 'net.fabricmc'
-archivesBaseName = project.name.toLowerCase()
+	sourceCompatibility = 1.8
 
-repositories {
-	mavenCentral()
-	maven {
-		name = 'Fabric'
-		url = 'https://maven.fabricmc.net/'
+	def ENV = System.getenv()
+	version = version + "+" + (ENV.BUILD_NUMBER ? ("build." + ENV.BUILD_NUMBER) : "local")
+
+	group = 'net.fabricmc'
+	archivesBaseName = project.name.toLowerCase()
+
+	repositories {
+		mavenCentral()
+		maven {
+			name = 'Fabric'
+			url = 'https://maven.fabricmc.net/'
+		}
+	}
+
+	publishing {
+		publications {
+			mavenJava(MavenPublication) {
+				from components.java
+			}
+		}
+
+		// select the repositories you want to publish to
+		repositories {
+			if (project.hasProperty('mavenPass')) {
+				maven {
+					url = "http://mavenupload.modmuss50.me/"
+					credentials {
+						username = "buildslave"
+						password = project.getProperty('mavenPass')
+					}
+				}
+			}
+		}
+	}
+
+	test {
+		useJUnitPlatform()
 	}
 }
+
+// Just stitch
 
 configurations {
 	ship
@@ -79,29 +110,8 @@ artifacts {
 	archives allJar
 }
 
-
-publishing {
-	publications {
-		mavenJava(MavenPublication) {
-			from components.java
-			artifact(allJar)
-		}
-	}
-
-	// select the repositories you want to publish to
-	repositories {
-		if (project.hasProperty('mavenPass')) {
-			maven {
-				url = "http://mavenupload.modmuss50.me/"
-				credentials {
-					username = "buildslave"
-					password = project.getProperty('mavenPass')
-				}
-			}
-		}
-	}
+publishing.publications.mavenJava {
+	artifact(allJar)
 }
 
-test {
-	useJUnitPlatform()
-}
+

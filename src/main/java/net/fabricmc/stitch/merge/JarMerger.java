@@ -16,6 +16,7 @@
 
 package net.fabricmc.stitch.merge;
 
+import net.fabricmc.stitch.util.EnvironmentAnnotations;
 import net.fabricmc.stitch.util.SnowmanClassVisitor;
 import net.fabricmc.stitch.util.StitchUtil;
 import net.fabricmc.stitch.util.SyntheticParameterClassVisitor;
@@ -177,12 +178,12 @@ public class JarMerger implements AutoCloseable {
                     }
                 }
             } else if ((result = entry1) != null) {
-                side = "CLIENT";
+                side = EnvironmentAnnotations.ENV_CLIENT;
             } else if ((result = entry2) != null) {
-                side = "SERVER";
+                side = EnvironmentAnnotations.ENV_SERVER;
             }
 
-            if (isClass && !isMinecraft && "SERVER".equals(side)) {
+            if (isClass && !isMinecraft && EnvironmentAnnotations.ENV_SERVER.equals(side)) {
                 // Server bundles libraries, client doesn't - skip them
                 return null;
             }

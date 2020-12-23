@@ -1,2 +1,5 @@
 rootProject.name = 'stitch'
 
+include("annotations")
+findProject(":annotations").name = "stitch-annotations"
+

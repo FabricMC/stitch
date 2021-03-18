@@ -1,21 +1,14 @@
-apply plugin: 'java'
-apply plugin: 'eclipse'
-apply plugin: 'idea'
-apply plugin: 'maven-publish'
-
-buildscript {
-	repositories {
-		maven {
-			url "https://plugins.gradle.org/m2/"
-		}
-		jcenter()
-	}
+plugins {
+	id "java"
+	id "java-library"
+	id "maven-publish"
+	id "net.minecrell.licenser" version "0.4.1"
 }
 
 sourceCompatibility = 1.8
 
 def ENV = System.getenv()
-version = version + "+" + (ENV.BUILD_NUMBER ? ("build." + ENV.BUILD_NUMBER) : "local")
+version = "0.6.0" + (ENV.GITHUB_ACTIONS ? "" : "+local")
 
 group = 'net.fabricmc'
 archivesBaseName = project.name.toLowerCase()
@@ -37,25 +30,29 @@ configurations {
 }
 
 dependencies {
-	ship 'org.ow2.asm:asm:8.0'
-	ship 'org.ow2.asm:asm-commons:8.0'
-	ship 'org.ow2.asm:asm-tree:8.0'
-	ship 'org.ow2.asm:asm-util:8.0'
-	ship 'net.fabricmc:tiny-mappings-parser:0.2.2.14'
+	ship 'org.ow2.asm:asm:9.1'
+	ship 'org.ow2.asm:asm-commons:9.1'
+	ship 'org.ow2.asm:asm-tree:9.1'
+	ship 'org.ow2.asm:asm-util:9.1'
+	ship 'net.fabricmc:tiny-mappings-parser:0.3.0+build.17'
 	implementation 'com.google.guava:guava:28.0-jre'
-	compileOnly group: 'org.checkerframework', name: 'checker-qual', version: '2.5.7'
-	enigma 'cuchaz:enigma:0.20+build.206'
+	compileOnly 'org.jetbrains:annotations:20.1.0'
 
-	testImplementation 'org.junit.jupiter:junit-jupiter-api:5.3.1'
-	testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.3.1'
+	enigma 'cuchaz:enigma:0.23.2'
+
+	testImplementation 'org.junit.jupiter:junit-jupiter-api:5.7.1'
+	testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.7.1'
 }
 
-apply from: 'https://github.com/FabricMC/fabric-docs/raw/master/gradle/license.gradle'
+license {
+	header project.file("HEADER")
+	include "**/*.java"
+}
 
 jar {
 	manifest {
 		attributes 'Implementation-Title': 'Stitch',
-				'Implementation-Version': version,
+				'Implementation-Version': archiveVersion,
 				'Main-Class': "net.fabricmc.stitch.Main"
 	}
 }
@@ -68,17 +65,24 @@ task allJar(type: Jar) {
 	}
 	manifest {
 		attributes 'Implementation-Title': 'Stitch',
-				'Implementation-Version': version,
+				'Implementation-Version': archiveVersion,
 				'Main-Class': "net.fabricmc.stitch.Main"
 	}
-	classifier = 'all'
+	archiveClassifier = 'all'
 	with jar
 }
 
-artifacts {
-	archives allJar
+java {
+	withSourcesJar()
 }
 
+tasks.withType(JavaCompile).configureEach {
+	it.options.encoding = "UTF-8"
+
+	if (JavaVersion.current().isJava9Compatible()) {
+		it.options.release = 8
+	}
+}
 
 publishing {
 	publications {
@@ -90,12 +94,13 @@ publishing {
 
 	// select the repositories you want to publish to
 	repositories {
-		if (project.hasProperty('mavenPass')) {
-			maven {
-				url = "http://mavenupload.modmuss50.me/"
+		if (ENV.MAVEN_URL) {
+			repositories.maven {
+				name "fabric"
+				url ENV.MAVEN_URL
 				credentials {
-					username = "buildslave"
-					password = project.getProperty('mavenPass')
+					username ENV.MAVEN_USERNAME
+					password ENV.MAVEN_PASSWORD
 				}
 			}
 		}
@@ -105,3 +110,17 @@ publishing {
 test {
 	useJUnitPlatform()
 }
+
+// A task to ensure that the version being released has not already been released.
+task checkVersion {
+	doFirst {
+		def xml = new URL("https://maven.fabricmc.net/net/fabricmc/stitch/maven-metadata.xml").text
+		def metadata = new XmlSlurper().parseText(xml)
+		def versions = metadata.versioning.versions.version*.text();
+		if (versions.contains(version)) {
+			throw new RuntimeException("${version} has already been released!")
+		}
+	}
+}
+
+publish.mustRunAfter checkVersion

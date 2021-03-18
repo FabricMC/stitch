@@ -30,7 +30,7 @@ import java.util.*;
 
 public final class StitchUtil {
 
-    public static int ASM_VERSION = Opcodes.ASM8;
+    public static int ASM_VERSION = Opcodes.ASM9;
 
     public static class FileSystemDelegate implements AutoCloseable {
         private final FileSystem fileSystem;

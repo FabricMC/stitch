@@ -46,6 +46,7 @@ public class Main {
         addCommand(new CommandReorderTinyV2());
         addCommand(new CommandMergeTinyV2());
         addCommand(new CommandProposeV2FieldNames());
+        addCommand(new CommandValidateRecords());
     }
 
     public static void main(String[] args) {

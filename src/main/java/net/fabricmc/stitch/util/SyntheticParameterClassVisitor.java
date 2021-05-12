@@ -52,6 +52,7 @@ public class SyntheticParameterClassVisitor extends ClassVisitor {
     private String className;
     private int synthetic;
     private String syntheticArgs;
+    private boolean backoff = false;
 
     public SyntheticParameterClassVisitor(int api, ClassVisitor cv) {
         super(api, cv);
@@ -67,6 +68,11 @@ public class SyntheticParameterClassVisitor extends ClassVisitor {
         if ((access & Opcodes.ACC_ENUM) != 0) {
             synthetic = 2;
             syntheticArgs = "(Ljava/lang/String;I";
+        }
+
+        if (version >= 55) {
+            // Backoff on java 11 or newer due to nest mates being used.
+            backoff = true;
         }
     }
 
@@ -92,7 +98,7 @@ public class SyntheticParameterClassVisitor extends ClassVisitor {
         final String[] exceptions) {
         MethodVisitor mv = super.visitMethod(access, name, descriptor, signature, exceptions);
 
-        return mv != null && synthetic != 0 && name.equals("<init>") && descriptor.startsWith(syntheticArgs)
+        return mv != null && synthetic != 0 && name.equals("<init>") && descriptor.startsWith(syntheticArgs) && !backoff
                ? new SyntheticMethodVisitor(api, synthetic, mv)
                : mv;
     }

@@ -45,10 +45,14 @@ class GenState {
     private Scanner scanner = new Scanner(System.in);
 
     private String targetNamespace = "net/minecraft/";
-    private final List<Pattern> obfuscatedPatterns = new ArrayList<Pattern>();
+    private final List<Pattern> obfuscatedClassPatterns = new ArrayList<>();
+    private final List<Pattern> obfuscatedFieldPatterns = new ArrayList<>();
+    private final List<Pattern> obfuscatedMethodPatterns = new ArrayList<>();
 
     public GenState() {
-        this.obfuscatedPatterns.add(Pattern.compile("^[^/]*$")); // Default ofbfuscation. Minecraft classes without a package are obfuscated.
+        this.obfuscatedClassPatterns.add(Pattern.compile("^[^/]*$")); // Default ofbfuscation. Minecraft classes without a package are obfuscated.
+        this.obfuscatedFieldPatterns.add(Pattern.compile("^.{0,2}_?$"));
+        this.obfuscatedMethodPatterns.add(Pattern.compile("^[^<].?_?$"));
     }
 
     public void setWriteAll(boolean writeAll) {
@@ -74,12 +78,28 @@ class GenState {
             this.targetNamespace = namespace;
     }
 
-    public void clearObfuscatedPatterns() {
-        this.obfuscatedPatterns.clear();
+    public void clearObfuscatedClassPatterns() {
+        this.obfuscatedClassPatterns.clear();
     }
 
-    public void addObfuscatedPattern(String regex) throws PatternSyntaxException {
-        this.obfuscatedPatterns.add(Pattern.compile(regex));
+    public void addObfuscatedClassPattern(String regex) throws PatternSyntaxException {
+        this.obfuscatedClassPatterns.add(Pattern.compile(regex));
+    }
+
+    public void clearObfuscatedFieldPatterns() {
+        this.obfuscatedFieldPatterns.clear();
+    }
+
+    public void addObfuscatedFieldPattern(String regex) throws PatternSyntaxException {
+        this.obfuscatedFieldPatterns.add(Pattern.compile(regex));
+    }
+
+    public void clearObfuscatedMethodPatterns() {
+        this.obfuscatedMethodPatterns.clear();
+    }
+
+    public void addObfuscatedMethodPattern(String regex) throws PatternSyntaxException {
+        this.obfuscatedMethodPatterns.add(Pattern.compile(regex));
     }
 
     public void setCounter(String key, int value) {
@@ -120,20 +140,20 @@ class GenState {
         return !c.isAnonymous();
     }
 
-    public static boolean isMappedField(ClassStorage storage, JarClassEntry c, JarFieldEntry f) {
+    public boolean isMappedField(ClassStorage storage, JarClassEntry c, JarFieldEntry f) {
         return isUnmappedFieldName(f.getName());
     }
 
-    public static boolean isUnmappedFieldName(String name) {
-        return name.length() <= 2 || (name.length() == 3 && name.charAt(2) == '_');
+    public boolean isUnmappedFieldName(String name) {
+        return this.obfuscatedFieldPatterns.stream().anyMatch(p -> p.matcher(name).matches());
     }
 
-    public static boolean isMappedMethod(ClassStorage storage, JarClassEntry c, JarMethodEntry m) {
+    public boolean isMappedMethod(ClassStorage storage, JarClassEntry c, JarMethodEntry m) {
         return isUnmappedMethodName(m.getName()) && m.isSource(storage, c);
     }
 
-    public static boolean isUnmappedMethodName(String name) {
-       return (name.length() <= 2 || (name.length() == 3 && name.charAt(2) == '_')) && name.charAt(0) != '<';
+    public boolean isUnmappedMethodName(String name) {
+       return this.obfuscatedMethodPatterns.stream().anyMatch(p -> p.matcher(name).matches());
     }
 
     @Nullable
@@ -353,7 +373,7 @@ class GenState {
         String cname = "";
         String prefixSaved = translatedPrefix;
 
-        if(!this.obfuscatedPatterns.stream().anyMatch(p -> p.matcher(className).matches())) {
+        if(!this.obfuscatedClassPatterns.stream().anyMatch(p -> p.matcher(className).matches())) {
             translatedPrefix = c.getFullyQualifiedName();
         } else {
             if (!isMappedClass(storage, c)) {

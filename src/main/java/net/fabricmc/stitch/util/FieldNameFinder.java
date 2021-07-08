@@ -155,6 +155,45 @@ public class FieldNameFinder {
 			}
 		}
 
+		// For Codecs
+		for (Map.Entry<String, List<MethodNode>> entry : classes.entrySet()) {
+			String owner = entry.getKey();
+
+			for (MethodNode node : entry.getValue()) {
+				List<String> names = new ArrayList<>();
+
+				// Codecs should be set in class initialization
+				if ("<clinit>".equals(node.name)) {
+					for (AbstractInsnNode instruction : node.instructions) {
+						// Look for PUTSTATIC instructions
+						if (instruction instanceof FieldInsnNode
+								&& instruction.getOpcode() == Opcodes.PUTSTATIC) {
+							FieldInsnNode fieldInsnNode = (FieldInsnNode) instruction;
+
+							// Find PUTSTATIC which set to this class and use Codec as their descriptor
+							if (owner.equals(fieldInsnNode.owner)
+									&& fieldInsnNode.desc.equals("Lcom/mojang/serialization/Codec;")) {
+								names.add(fieldInsnNode.name);
+							}
+						}
+					}
+				}
+
+				if (names.isEmpty()) {
+					// Nothing was found
+					continue;
+				}
+
+				if (names.size() == 1 && !fieldNamesUsed.computeIfAbsent(owner, (s) -> new HashSet<>()).contains("CODEC")) {
+					// No duplicates were found
+					fieldNames.put(new EntryTriple(owner, names.get(0), "Lcom/mojang/serialization/Codec;"), "CODEC");
+					continue;
+				}
+
+				System.err.println("Warning: Duplicate key: CODEC in " + owner);
+			}
+		}
+
 		return fieldNames;
 	}
 

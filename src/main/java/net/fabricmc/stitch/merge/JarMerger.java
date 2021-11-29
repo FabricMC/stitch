@@ -222,5 +222,5 @@ public class JarMerger implements AutoCloseable {
         for (Entry e : entries) {
             add(e);
         }
-;    }
+    }
 }

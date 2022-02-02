@@ -30,7 +30,7 @@ public class CommandUpdateIntermediary extends Command {
 
     @Override
     public String getHelpString() {
-        return "<old-jar> <new-jar> <old-mapping-file> <new-mapping-file> <match-file> [-t|--target-namespace <namespace>] [-p|--obfuscation-pattern <regex pattern>]";
+        return "<old-jar> <new-jar> <old-mapping-file> <new-mapping-file> <match-file> [-t|--target-namespace <namespace>] [-p|--obfuscation-pattern <regex pattern>] [-c|--conflicts <conflict choices>]";
     }
 
     @Override
@@ -77,6 +77,10 @@ public class CommandUpdateIntermediary extends Command {
                     state.addObfuscatedPattern(args[i + 1]);
                     i++;
                     break;
+                case "-c":
+                case "--conflicts":
+                    state.setConflictChoices(args[i + 1]);
+                    i++;
             }
         }
 

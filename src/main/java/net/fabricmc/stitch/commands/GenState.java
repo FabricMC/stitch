@@ -47,8 +47,21 @@ class GenState {
     private String targetNamespace = "net/minecraft/";
     private final List<Pattern> obfuscatedPatterns = new ArrayList<Pattern>();
 
+    private final List<Integer> conflictChoices = new ArrayList<>();
+
     public GenState() {
         this.obfuscatedPatterns.add(Pattern.compile("^[^/]*$")); // Default ofbfuscation. Minecraft classes without a package are obfuscated.
+    }
+
+    public void setConflictChoices(String choices) {
+        for (String s : choices.split(" ")) {
+            try {
+                Integer i = Integer.parseInt(s);
+                conflictChoices.add(i);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
     }
 
     public void setWriteAll(boolean writeAll) {
@@ -308,18 +321,23 @@ class GenState {
                     System.out.println((i+1) + ") " + s + " <- " + StitchUtil.join(", ", names.get(s)));
                 }
 
-                if (!interactive) {
+                if (!interactive && conflictChoices.isEmpty()) {
                     throw new RuntimeException("Conflict detected!");
                 }
 
                 while (true) {
-                    String cmd = scanner.nextLine();
                     int i;
-                    try {
-                        i = Integer.parseInt(cmd);
-                    } catch (NumberFormatException e) {
-                        e.printStackTrace();
-                        continue;
+                    if (!conflictChoices.isEmpty()) {
+                        i = conflictChoices.remove(0);
+                        System.out.println(i);
+                    } else {
+                        String cmd = scanner.nextLine();
+                        try {
+                            i = Integer.parseInt(cmd);
+                        } catch (NumberFormatException e) {
+                            e.printStackTrace();
+                            continue;
+                        }
                     }
 
                     if (i >= 1 && i <= nameList.size()) {

@@ -29,7 +29,7 @@ public class CommandGenerateIntermediary extends Command {
 
     @Override
     public String getHelpString() {
-        return "<input-jar> <mapping-name> [-t|--target-namespace <namespace>] [-p|--obfuscation-pattern <regex pattern>]...";
+        return "<input-jar> <mapping-name> [-t|--target-namespace <namespace>] [-p|--obfuscation-class-pattern <regex pattern>]... [-f|--obfuscation-field-pattern <regex pattern>]... [-m|--obfuscation-method-pattern <regex pattern>]...";
     }
 
     @Override
@@ -49,7 +49,9 @@ public class CommandGenerateIntermediary extends Command {
         }
 
         GenState state = new GenState();
-        boolean clearedPatterns = false;
+        boolean clearedClassPatterns = false;
+        boolean clearedFieldPatterns = false;
+        boolean clearedMethodPatterns = false;
 
         for (int i = 2; i < args.length; i++) {
             switch (args[i].toLowerCase(Locale.ROOT)) {
@@ -60,11 +62,30 @@ public class CommandGenerateIntermediary extends Command {
                     break;
                 case "-p":
                 case "--obfuscation-pattern":
-                    if (!clearedPatterns)
-                        state.clearObfuscatedPatterns();
-                    clearedPatterns = true;
+                case "--obfuscated-class-pattern":
+                    if (!clearedClassPatterns)
+                        state.clearObfuscatedClassPatterns();
+                    clearedClassPatterns = true;
 
-                    state.addObfuscatedPattern(args[i + 1]);
+                    state.addObfuscatedClassPattern(args[i + 1]);
+                    i++;
+                    break;
+                case "-f":
+                case "--obfuscation-field-pattern":
+                    if (!clearedFieldPatterns)
+                        state.clearObfuscatedFieldPatterns();
+                    clearedFieldPatterns = true;
+
+                    state.addObfuscatedFieldPattern(args[i + 1]);
+                    i++;
+                    break;
+                case "-m":
+                case "--obfuscation-method-pattern":
+                    if (!clearedMethodPatterns)
+                        state.clearObfuscatedMethodPatterns();
+                    clearedMethodPatterns = true;
+
+                    state.addObfuscatedMethodPattern(args[i + 1]);
                     i++;
                     break;
             }

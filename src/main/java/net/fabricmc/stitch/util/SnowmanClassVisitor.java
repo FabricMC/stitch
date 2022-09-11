@@ -21,6 +21,8 @@ import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodVisitor;
 
 public class SnowmanClassVisitor extends ClassVisitor {
+	private int localCounter = 0;
+
 	public static class SnowmanMethodVisitor extends MethodVisitor {
 		public SnowmanMethodVisitor(int api, MethodVisitor methodVisitor) {
 			super(api, methodVisitor);
@@ -45,7 +47,7 @@ public class SnowmanClassVisitor extends ClassVisitor {
 				final int index) {
 			String newName = name;
 			if (name != null && name.startsWith("\u2603")) {
-				newName = "lvt" + index;
+				newName = "var" + localCounter++;
 			}
 			super.visitLocalVariable(newName, descriptor, signature, start, end, index);
 		}

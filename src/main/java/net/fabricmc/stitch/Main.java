@@ -50,12 +50,23 @@ public class Main {
     }
 
     public static void main(String[] args) {
-        if (args.length == 0
-                || !COMMAND_MAP.containsKey(args[0].toLowerCase(Locale.ROOT))
-                || !COMMAND_MAP.get(args[0].toLowerCase(Locale.ROOT)).isArgumentCountValid(args.length - 1)) {
-            if (args.length > 0) {
-                System.out.println("Invalid command: " + args[0]);
-            }
+        boolean commandFailed = false;
+        if (args.length == 0) {
+            commandFailed = true;
+            System.out.println("Invalid command: No arguments supplied!");
+        }
+
+        if (!commandFailed && !COMMAND_MAP.containsKey(args[0].toLowerCase(Locale.ROOT))) {
+            commandFailed = true;
+            System.out.println("Invalid command: " + args[0]);
+        }
+
+        if (!commandFailed && !COMMAND_MAP.get(args[0].toLowerCase(Locale.ROOT)).isArgumentCountValid(args.length - 1)) {
+            commandFailed = true;
+            System.out.println("Invalid command: Arguments don't match the given command " + args[0]);
+        }
+
+        if (commandFailed) {
             System.out.println("Available commands:");
             for (Command command : COMMAND_MAP.values()) {
                 System.out.println("\t" + command.name + " " + command.getHelpString());

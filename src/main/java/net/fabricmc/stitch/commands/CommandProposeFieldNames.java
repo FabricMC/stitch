@@ -16,6 +16,16 @@
 
 package net.fabricmc.stitch.commands;
 
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
+import java.util.HashMap;
+import java.util.Map;
+
 import net.fabricmc.mappings.EntryTriple;
 import net.fabricmc.mappings.FieldEntry;
 import net.fabricmc.mappings.Mappings;
@@ -23,105 +33,104 @@ import net.fabricmc.mappings.MappingsProvider;
 import net.fabricmc.stitch.Command;
 import net.fabricmc.stitch.util.FieldNameFinder;
 
-import java.io.*;
-import java.util.*;
-
 public class CommandProposeFieldNames extends Command {
-    public CommandProposeFieldNames() {
-        super("proposeFieldNames");
-    }
+	public CommandProposeFieldNames() {
+		super("proposeFieldNames");
+	}
 
-    @Override
-    public String getHelpString() {
-        return "<input jar> <input mappings> <output mappings>";
-    }
+	@Override
+	public String getHelpString() {
+		return "<input jar> <input mappings> <output mappings>";
+	}
 
-    @Override
-    public boolean isArgumentCountValid(int count) {
-        return count == 3;
-    }
+	@Override
+	public boolean isArgumentCountValid(int count) {
+		return count == 3;
+	}
 
-    @Override
-    public void run(String[] args) throws Exception {
-        Map<EntryTriple, String> fieldNamesO = new FieldNameFinder().findNames(new File(args[0]));
+	@Override
+	public void run(String[] args) throws Exception {
+		Map<EntryTriple, String> fieldNamesO = new FieldNameFinder().findNames(new File(args[0]));
 
-        System.err.println("Found " + fieldNamesO.size() + " interesting names.");
+		System.err.println("Found " + fieldNamesO.size() + " interesting names.");
 
-        // i didn't fuss too much on this... this needs a rewrite once we get a mapping writer library
-        Map<EntryTriple, String> fieldNames = new HashMap<>();
+		// i didn't fuss too much on this... this needs a rewrite once we get a mapping writer library
+		Map<EntryTriple, String> fieldNames = new HashMap<>();
+		Mappings mappings;
 
-        Mappings mappings;
-        try (FileInputStream fileIn = new FileInputStream(new File(args[1]))) {
-            mappings = MappingsProvider.readTinyMappings(fileIn, false);
-        }
+		try (FileInputStream fileIn = new FileInputStream(new File(args[1]))) {
+			mappings = MappingsProvider.readTinyMappings(fileIn, false);
+		}
 
-        try (FileInputStream fileIn = new FileInputStream(new File(args[1]));
-             FileOutputStream fileOut = new FileOutputStream(new File(args[2]));
-             InputStreamReader fileInReader = new InputStreamReader(fileIn);
-             OutputStreamWriter fileOutWriter = new OutputStreamWriter(fileOut);
-             BufferedReader reader = new BufferedReader(fileInReader);
-             BufferedWriter writer = new BufferedWriter(fileOutWriter)) {
+		try (FileInputStream fileIn = new FileInputStream(new File(args[1]));
+				FileOutputStream fileOut = new FileOutputStream(new File(args[2]));
+				InputStreamReader fileInReader = new InputStreamReader(fileIn);
+				OutputStreamWriter fileOutWriter = new OutputStreamWriter(fileOut);
+				BufferedReader reader = new BufferedReader(fileInReader);
+				BufferedWriter writer = new BufferedWriter(fileOutWriter)) {
+			int headerPos = -1;
+			String line;
 
-            int headerPos = -1;
+			while ((line = reader.readLine()) != null) {
+				String[] tabSplit = line.split("\t");
 
-            String line;
-            while ((line = reader.readLine()) != null) {
-                String[] tabSplit = line.split("\t");
+				if (headerPos < 0) {
+					// first line
+					if (tabSplit.length < 3) {
+						throw new RuntimeException("Invalid mapping file!");
+					}
 
-                if (headerPos < 0) {
-                    // first line
-                    if (tabSplit.length < 3) {
-                        throw new RuntimeException("Invalid mapping file!");
-                    }
+					for (int i = 2; i < tabSplit.length; i++) {
+						if (tabSplit[i].equals("named")) {
+							headerPos = i;
+							break;
+						}
+					}
 
-                    for (int i = 2; i < tabSplit.length; i++) {
-                        if (tabSplit[i].equals("named")) {
-                            headerPos = i;
-                            break;
-                        }
-                    }
+					if (headerPos < 0) {
+						throw new RuntimeException("Could not find 'named' mapping position!");
+					}
 
-                    if (headerPos < 0) {
-                        throw new RuntimeException("Could not find 'named' mapping position!");
-                    }
+					if (!tabSplit[1].equals("official")) {
+						for (FieldEntry e : mappings.getFieldEntries()) {
+							EntryTriple officialFieldMapping = e.get("official");
+							String name = fieldNamesO.get(officialFieldMapping);
 
-                    if (!tabSplit[1].equals("official")) {
-                        for (FieldEntry e : mappings.getFieldEntries()) {
-                            EntryTriple officialFieldMapping = e.get("official");
-                            String name = fieldNamesO.get(officialFieldMapping);
-                            if (name != null) {
-                                fieldNames.put(e.get(tabSplit[1]), name);
-                            }
-                        }
-                    } else {
-                        fieldNames = fieldNamesO;
-                    }
+							if (name != null) {
+								fieldNames.put(e.get(tabSplit[1]), name);
+							}
+						}
+					} else {
+						fieldNames = fieldNamesO;
+					}
 
-                    mappings = null; // save memory
-                } else {
-                    // second+ line
-                    if (tabSplit[0].equals("FIELD")) {
-                        EntryTriple key = new EntryTriple(tabSplit[1], tabSplit[3], tabSplit[2]);
-                        String value = tabSplit[headerPos + 2];
-                        if (value.startsWith("field_") && fieldNames.containsKey(key)) {
-                            tabSplit[headerPos + 2] = fieldNames.get(key);
+					mappings = null; // save memory
+				} else {
+					// second+ line
+					if (tabSplit[0].equals("FIELD")) {
+						EntryTriple key = new EntryTriple(tabSplit[1], tabSplit[3], tabSplit[2]);
+						String value = tabSplit[headerPos + 2];
 
-                            StringBuilder builder = new StringBuilder(tabSplit[0]);
-                            for (int i = 1; i < tabSplit.length; i++) {
-                                builder.append('\t');
-                                builder.append(tabSplit[i]);
-                            }
-                            line = builder.toString();
-                        }
-                    }
-                }
+						if (value.startsWith("field_") && fieldNames.containsKey(key)) {
+							tabSplit[headerPos + 2] = fieldNames.get(key);
+							StringBuilder builder = new StringBuilder(tabSplit[0]);
 
-                if (!line.endsWith("\n")) {
-                    line = line + "\n";
-                }
+							for (int i = 1; i < tabSplit.length; i++) {
+								builder.append('\t');
+								builder.append(tabSplit[i]);
+							}
 
-                writer.write(line);
-            }
-        }
-    }
+							line = builder.toString();
+						}
+					}
+				}
+
+				if (!line.endsWith("\n")) {
+					line = line + "\n";
+				}
+
+				writer.write(line);
+			}
+		}
+	}
 }

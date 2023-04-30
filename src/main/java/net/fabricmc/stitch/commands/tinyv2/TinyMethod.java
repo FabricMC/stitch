@@ -22,7 +22,6 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 public class TinyMethod implements Comparable<TinyMethod>, Mapping {
-
 	@Override
 	public String toString() {
 		return "TinyMethod(names = [" + String.join(", ", methodNames) + "], desc = " + methodDescriptorInFirstNamespace
@@ -79,7 +78,7 @@ public class TinyMethod implements Comparable<TinyMethod>, Mapping {
 	@Override
 	public int compareTo(TinyMethod o) {
 		return (methodNames.get(0) + methodDescriptorInFirstNamespace)
-						.compareTo(o.methodNames.get(0) + o.methodDescriptorInFirstNamespace);
+				.compareTo(o.methodNames.get(0) + o.methodDescriptorInFirstNamespace);
 	}
 
 	public void setMethodDescriptorInFirstNamespace(String methodDescriptorInFirstNamespace) {

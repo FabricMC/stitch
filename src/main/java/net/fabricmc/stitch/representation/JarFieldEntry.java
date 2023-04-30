@@ -19,33 +19,33 @@ package net.fabricmc.stitch.representation;
 import org.objectweb.asm.commons.Remapper;
 
 public class JarFieldEntry extends AbstractJarEntry {
-    protected String desc;
-    protected String signature;
+	protected String desc;
+	protected String signature;
 
-    JarFieldEntry(int access, String name, String desc, String signature) {
-        super(name);
-        this.setAccess(access);
-        this.desc = desc;
-        this.signature = signature;
-    }
+	JarFieldEntry(int access, String name, String desc, String signature) {
+		super(name);
+		this.setAccess(access);
+		this.desc = desc;
+		this.signature = signature;
+	}
 
-    public String getDescriptor() {
-        return desc;
-    }
+	public String getDescriptor() {
+		return desc;
+	}
 
-    public String getSignature() {
-        return signature;
-    }
+	public String getSignature() {
+		return signature;
+	}
 
-    @Override
-    protected String getKey() {
-        return super.getKey() + desc;
-    }
+	@Override
+	protected String getKey() {
+		return super.getKey() + desc;
+	}
 
-    public void remap(JarClassEntry classEntry, String oldOwner, Remapper remapper) {
-        String pastDesc = desc;
+	public void remap(JarClassEntry classEntry, String oldOwner, Remapper remapper) {
+		String pastDesc = desc;
 
-        name = remapper.mapFieldName(oldOwner, name, pastDesc);
-        desc = remapper.mapDesc(pastDesc);
-    }
+		name = remapper.mapFieldName(oldOwner, name, pastDesc);
+		desc = remapper.mapDesc(pastDesc);
+	}
 }

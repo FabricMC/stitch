@@ -43,34 +43,36 @@ import net.fabricmc.stitch.util.Pair;
  * the same namespace as the first column and a different namespace as the second column.
  * The first column of the output will contain the shared namespace,
  * the second column of the output would be the second namespace of input a,
- * and the third column of the output would be the second namespace of input b
- * <p>
- * Descriptors will remain as-is (using the namespace of the first column)
- * <p>
- * <p>
- * For example:
- * <p>
- * Input A:
- * intermediary                 named
- * c    net/minecraft/class_123      net/minecraft/somePackage/someClass
- * m   (Lnet/minecraft/class_124;)V  method_1234 someMethod
- * <p>
- * Input B:
- * intermediary                 official
- * c    net/minecraft/class_123      a
- * m   (Lnet/minecraft/class_124;)V  method_1234 a
- * <p>
- * The output will be:
- * <p>
- * intermediary                 named                                  official
- * c    net/minecraft/class_123      net/minecraft/somePackage/someClass    a
- * m   (Lnet/minecraft/class_124;)V  method_1234 someMethod    a
- * <p>
+ * and the third column of the output would be the second namespace of input b.
+ *
+ * <p>Descriptors will remain as-is (using the namespace of the first column).</p>
+ *
+ * <p>For example, for input A:
+ * <pre><code>
+ * intermediary	 named
+ * c	net/minecraft/class_123	net/minecraft/somePackage/someClass
+ * m	(Lnet/minecraft/class_124;)V	method_1234 someMethod
+ * </code></pre>
+ * and input B:
+ * <pre><code>
+ * intermediary	official
+ * c	net/minecraft/class_123	a
+ * m	(Lnet/minecraft/class_124;)V	method_1234	a
+ * </code></pre>
+ * the output will be:
+ * <pre><code>
+ * intermediary	named	official
+ * c	net/minecraft/class_123	net/minecraft/somePackage/someClass	a
+ * m	(Lnet/minecraft/class_124;)V	method_1234 someMethod	a
+ * </code></pre>
+ * </p>
+ *
  * <p>
  * After intermediary-named mappings are obtained,
  * and official-intermediary mappings are obtained and swapped using CommandReorderTinyV2, Loom merges them using this command,
  * and then reorders it to official-intermediary-named using CommandReorderTinyV2 again.
  * This is a convenient way of storing all the mappings in Loom.
+ * </p>
  */
 public class CommandMergeTinyV2 extends Command {
 	public CommandMergeTinyV2() {
@@ -78,7 +80,7 @@ public class CommandMergeTinyV2 extends Command {
 	}
 
 	/**
-	 * <input-a> and <input-b> are the tiny files to be merged. The result will be written to <output>.
+	 * {@code <input-a>} and {@code <input-b>} are the tiny files to be merged. The result will be written to {@code <output>}.
 	 */
 	@Override
 	public String getHelpString() {
@@ -100,20 +102,21 @@ public class CommandMergeTinyV2 extends Command {
 		TinyFile tinyFileB = TinyV2Reader.read(inputB);
 		TinyHeader headerA = tinyFileA.getHeader();
 		TinyHeader headerB = tinyFileB.getHeader();
+
 		if (headerA.getNamespaces().size() != 2) {
 			throw new IllegalArgumentException(inputA + " must have exactly 2 namespaces.");
 		}
+
 		if (headerB.getNamespaces().size() != 2) {
 			throw new IllegalArgumentException(inputB + " must have exactly 2 namespaces.");
 		}
 
 		if (!headerA.getNamespaces().get(0).equals(headerB.getNamespaces().get(0))) {
-			throw new IllegalArgumentException(
-							String.format("The input tiny files must have the same namespaces as the first column. " +
-															"(%s has %s while %s has %s)",
-											inputA, headerA.getNamespaces().get(0), inputB, headerB.getNamespaces().get(0))
-			);
+			throw new IllegalArgumentException(String.format(
+					"The input tiny files must have the same namespaces as the first column. " + "(%s has %s while %s has %s)",
+					inputA, headerA.getNamespaces().get(0), inputB, headerB.getNamespaces().get(0)));
 		}
+
 		System.out.println("Merging " + inputA + " with " + inputB);
 		TinyFile mergedFile = merge(tinyFileA, tinyFileB);
 
@@ -121,12 +124,10 @@ public class CommandMergeTinyV2 extends Command {
 		System.out.println("Merged mappings written to " + Paths.get(args[2]));
 	}
 
-
 	private TinyFile merge(TinyFile inputA, TinyFile inputB) {
 		//TODO: how to merge properties?
 
 		TinyHeader mergedHeader = mergeHeaders(inputA.getHeader(), inputB.getHeader());
-
 		List<String> keyUnion = keyUnion(inputA.getClassEntries(), inputB.getClassEntries());
 
 		Map<String, TinyClass> inputAClasses = inputA.mapClassesByFirstNamespace();
@@ -153,28 +154,27 @@ public class CommandMergeTinyV2 extends Command {
 	}
 
 	/**
-	 * Takes something like net/minecraft/class_123$class_124 that doesn't have a mapping, tries to find net/minecraft/class_123
-	 * , say the mapping of net/minecraft/class_123 is path/to/someclass and then returns a class of the form
-	 * path/to/someclass$class124
+	 * Takes something like {@code net/minecraft/class_123$class_124} that doesn't have a mapping, tries to find {@code net/minecraft/class_123}.
+	 * Say the mapping of {@code net/minecraft/class_123} is {@code path/to/someclass} and then returns a class of the form
+	 * {@code path/to/someclass$class124}
 	 */
 	@Nonnull
 	private String matchEnclosingClass(String sharedName, Map<String, TinyClass> inputBClassBySharedNamespace) {
 		String[] path = sharedName.split(escape("$"));
 		int parts = path.length;
+
 		for (int i = parts - 2; i >= 0; i--) {
 			String currentPath = String.join("$", Arrays.copyOfRange(path, 0, i + 1));
 			TinyClass match = inputBClassBySharedNamespace.get(currentPath);
 
 			if (match != null && !match.getClassNames().get(1).isEmpty()) {
 				return match.getClassNames().get(1)
-								+ "$" + String.join("$", Arrays.copyOfRange(path, i + 1, path.length));
-
+						+ "$" + String.join("$", Arrays.copyOfRange(path, i + 1, path.length));
 			}
 		}
 
 		return sharedName;
 	}
-
 
 	private TinyClass mergeClasses(String sharedClassName, @Nonnull TinyClass classA, @Nonnull TinyClass classB) {
 		List<String> mergedNames = mergeNames(sharedClassName, classA, classB);
@@ -184,7 +184,7 @@ public class CommandMergeTinyV2 extends Command {
 		Map<Pair<String, String>, TinyMethod> methodsA = classA.mapMethodsByFirstNamespaceAndDescriptor();
 		Map<Pair<String, String>, TinyMethod> methodsB = classB.mapMethodsByFirstNamespaceAndDescriptor();
 		List<TinyMethod> mergedMethods = map(methodKeyUnion,
-						(Pair<String, String> k) -> mergeMethods(k.getLeft(), methodsA.get(k), methodsB.get(k)));
+				(Pair<String, String> k) -> mergeMethods(k.getLeft(), methodsA.get(k), methodsB.get(k)));
 
 		List<String> fieldKeyUnion = keyUnion(classA.getFields(), classB.getFields());
 		Map<String, TinyField> fieldsA = classA.mapFieldsByFirstNamespace();
@@ -194,8 +194,8 @@ public class CommandMergeTinyV2 extends Command {
 		return new TinyClass(mergedNames, mergedMethods, mergedFields, mergedComments);
 	}
 
-	private static final TinyMethod EMPTY_METHOD = new TinyMethod(null, Collections.emptyList(), Collections.emptyList(), Collections.emptyList(), Collections.emptyList());
-
+	private static final TinyMethod EMPTY_METHOD = new TinyMethod(null, Collections.emptyList(), Collections.emptyList(),
+			Collections.emptyList(), Collections.emptyList());
 
 	private TinyMethod mergeMethods(String sharedMethodName, @Nullable TinyMethod methodA, @Nullable TinyMethod methodB) {
 		List<String> mergedNames = mergeNames(sharedMethodName, methodA, methodB);
@@ -204,9 +204,8 @@ public class CommandMergeTinyV2 extends Command {
 		List<String> mergedComments = mergeComments(methodA.getComments(), methodB.getComments());
 
 		String descriptor = methodA.getMethodDescriptorInFirstNamespace() != null ? methodA.getMethodDescriptorInFirstNamespace()
-						: methodB.getMethodDescriptorInFirstNamespace();
+				: methodB.getMethodDescriptorInFirstNamespace();
 		if (descriptor == null) throw new RuntimeException("no descriptor for key " + sharedMethodName);
-
 
 		//TODO: this won't work too well when the first namespace is named or there is more than one named namespace (hack)
 		List<TinyMethodParameter> mergedParameters = new ArrayList<>();
@@ -233,18 +232,17 @@ public class CommandMergeTinyV2 extends Command {
 			List<String> names = new ArrayList<>(localVariable.getLocalVariableNames());
 			names.add(emptySpacePos, "");
 			addTo.add(new TinyLocalVariable(localVariable.getLvIndex(), localVariable.getLvStartOffset(),
-							localVariable.getLvTableIndex(), names, localVariable.getComments()));
+					localVariable.getLvTableIndex(), names, localVariable.getComments()));
 		}
 	}
-
 
 	private TinyField mergeFields(String sharedFieldName, @Nullable TinyField fieldA, @Nullable TinyField fieldB) {
 		List<String> mergedNames = mergeNames(sharedFieldName, fieldA, fieldB);
 		List<String> mergedComments = mergeComments(fieldA != null ? fieldA.getComments() : Collections.emptyList(),
-						fieldB != null ? fieldB.getComments() : Collections.emptyList());
+				fieldB != null ? fieldB.getComments() : Collections.emptyList());
 
 		String descriptor = fieldA != null ? fieldA.getFieldDescriptorInFirstNamespace()
-						: fieldB != null ? fieldB.getFieldDescriptorInFirstNamespace() : null;
+				: fieldB != null ? fieldB.getFieldDescriptorInFirstNamespace() : null;
 		if (descriptor == null) throw new RuntimeException("no descriptor for key " + sharedFieldName);
 
 		return new TinyField(descriptor, mergedNames, mergedComments);
@@ -268,7 +266,6 @@ public class CommandMergeTinyV2 extends Command {
 	private Stream<Pair<String, String>> mapToFirstNamespaceAndDescriptor(TinyClass tinyClass) {
 		return tinyClass.getMethods().stream().map(m -> Pair.of(m.getMapping().get(0), m.getMethodDescriptorInFirstNamespace()));
 	}
-
 
 	private List<String> mergeNames(String key, @Nullable Mapping mappingA, @Nullable Mapping mappingB) {
 		List<String> merged = new ArrayList<>();
@@ -303,5 +300,4 @@ public class CommandMergeTinyV2 extends Command {
 	private <S, E> List<E> map(List<S> from, Function<S, E> mapper) {
 		return from.stream().map(mapper).collect(Collectors.toList());
 	}
-
 }

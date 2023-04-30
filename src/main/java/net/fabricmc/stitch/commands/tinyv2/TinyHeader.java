@@ -20,11 +20,10 @@ import java.util.List;
 import java.util.Map;
 
 public class TinyHeader {
-
 	private final List<String> namespaces;
 	private final int majorVersion;
 	private final int minorVersion;
-	private final Map<String,/*nullable*/ String> properties;
+	private final Map<String, /*nullable*/ String> properties;
 
 	public TinyHeader(List<String> namespaces, int majorVersion, int minorVersion, Map<String, String> properties) {
 		this.namespaces = namespaces;

@@ -20,7 +20,6 @@ import java.util.Collection;
 import java.util.List;
 
 public class TinyField implements Comparable<TinyField>, Mapping {
-
 	/**
 	 * For example when we have official -> named mappings the descriptor will be in official, but in named -> official
 	 * the descriptor will be in named.

@@ -44,9 +44,11 @@ public class SnowmanClassVisitor extends ClassVisitor {
 				final Label end,
 				final int index) {
 			String newName = name;
+
 			if (name != null && name.startsWith("\u2603")) {
 				newName = "lvt" + index;
 			}
+
 			super.visitLocalVariable(newName, descriptor, signature, start, end, index);
 		}
 	}

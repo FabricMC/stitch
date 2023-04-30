@@ -16,34 +16,34 @@
 
 package net.fabricmc.stitch.commands;
 
-import net.fabricmc.stitch.Command;
-import org.objectweb.asm.ClassReader;
-import org.objectweb.asm.ClassVisitor;
-import org.objectweb.asm.util.Textifier;
-import org.objectweb.asm.util.TraceClassVisitor;
-
 import java.io.FileInputStream;
 import java.io.PrintWriter;
 
+import org.objectweb.asm.ClassReader;
+import org.objectweb.asm.ClassVisitor;
+import org.objectweb.asm.util.TraceClassVisitor;
+
+import net.fabricmc.stitch.Command;
+
 public class CommandAsmTrace extends Command {
-    public CommandAsmTrace() {
-        super("asmTrace");
-    }
+	public CommandAsmTrace() {
+		super("asmTrace");
+	}
 
-    @Override
-    public String getHelpString() {
-        return "<class-file>";
-    }
+	@Override
+	public String getHelpString() {
+		return "<class-file>";
+	}
 
-    @Override
-    public boolean isArgumentCountValid(int count) {
-        return count == 1;
-    }
+	@Override
+	public boolean isArgumentCountValid(int count) {
+		return count == 1;
+	}
 
-    @Override
-    public void run(String[] args) throws Exception {
-        ClassReader cr = new ClassReader(new FileInputStream(args[0]));
-        ClassVisitor tcv = new TraceClassVisitor(new PrintWriter(System.out));
-        cr.accept(tcv, 0);
-    }
+	@Override
+	public void run(String[] args) throws Exception {
+		ClassReader cr = new ClassReader(new FileInputStream(args[0]));
+		ClassVisitor tcv = new TraceClassVisitor(new PrintWriter(System.out));
+		cr.accept(tcv, 0);
+	}
 }

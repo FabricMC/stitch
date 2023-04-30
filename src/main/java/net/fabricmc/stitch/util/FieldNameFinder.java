@@ -16,20 +16,6 @@
 
 package net.fabricmc.stitch.util;
 
-import net.fabricmc.mappings.EntryTriple;
-import org.objectweb.asm.ClassReader;
-import org.objectweb.asm.Opcodes;
-import org.objectweb.asm.tree.AbstractInsnNode;
-import org.objectweb.asm.tree.FieldInsnNode;
-import org.objectweb.asm.tree.InsnList;
-import org.objectweb.asm.tree.LdcInsnNode;
-import org.objectweb.asm.tree.MethodInsnNode;
-import org.objectweb.asm.tree.MethodNode;
-import org.objectweb.asm.tree.analysis.Analyzer;
-import org.objectweb.asm.tree.analysis.Frame;
-import org.objectweb.asm.tree.analysis.SourceInterpreter;
-import org.objectweb.asm.tree.analysis.SourceValue;
-
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
@@ -44,8 +30,22 @@ import java.util.Set;
 import java.util.jar.JarEntry;
 import java.util.jar.JarInputStream;
 
-public class FieldNameFinder {
+import org.objectweb.asm.ClassReader;
+import org.objectweb.asm.Opcodes;
+import org.objectweb.asm.tree.AbstractInsnNode;
+import org.objectweb.asm.tree.FieldInsnNode;
+import org.objectweb.asm.tree.InsnList;
+import org.objectweb.asm.tree.LdcInsnNode;
+import org.objectweb.asm.tree.MethodInsnNode;
+import org.objectweb.asm.tree.MethodNode;
+import org.objectweb.asm.tree.analysis.Analyzer;
+import org.objectweb.asm.tree.analysis.Frame;
+import org.objectweb.asm.tree.analysis.SourceInterpreter;
+import org.objectweb.asm.tree.analysis.SourceValue;
 
+import net.fabricmc.mappings.EntryTriple;
+
+public class FieldNameFinder {
 	public Map<EntryTriple, String> findNames(Iterable<byte[]> classes) throws Exception {
 		Map<String, List<MethodNode>> methods = new HashMap<>();
 		Map<String, Set<String>> enumFields = new HashMap<>();
@@ -68,21 +68,25 @@ public class FieldNameFinder {
 		for (Map.Entry<String, List<MethodNode>> entry : classes.entrySet()) {
 			String owner = entry.getKey();
 			Set<String> enumFields = allEnumFields.getOrDefault(owner, Collections.emptySet());
+
 			for (MethodNode mn : entry.getValue()) {
 				Frame<SourceValue>[] frames = analyzer.analyze(owner, mn);
-
 				InsnList instrs = mn.instructions;
+
 				for (int i = 1; i < instrs.size(); i++) {
 					AbstractInsnNode instr1 = instrs.get(i - 1);
 					AbstractInsnNode instr2 = instrs.get(i);
 					String s = null;
 
-					if (instr2.getOpcode() == Opcodes.PUTSTATIC && ((FieldInsnNode) instr2).owner.equals(owner)
-							&& (instr1 instanceof MethodInsnNode && ((MethodInsnNode) instr1).owner.equals(owner) || enumFields.contains(((FieldInsnNode) instr2).desc + ((FieldInsnNode) instr2).name))
-							&& (instr1.getOpcode() == Opcodes.INVOKESTATIC || (instr1.getOpcode() == Opcodes.INVOKESPECIAL && "<init>".equals(((MethodInsnNode) instr1).name)))) {
-
+					if (instr2.getOpcode() == Opcodes.PUTSTATIC
+							&& ((FieldInsnNode) instr2).owner.equals(owner)
+							&& (instr1 instanceof MethodInsnNode
+									&& ((MethodInsnNode) instr1).owner.equals(owner)
+									|| enumFields.contains(((FieldInsnNode) instr2).desc + ((FieldInsnNode) instr2).name))
+									&& (instr1.getOpcode() == Opcodes.INVOKESTATIC || (instr1.getOpcode() == Opcodes.INVOKESPECIAL && "<init>".equals(((MethodInsnNode) instr1).name)))) {
 						for (int j = 0; j < frames[i - 1].getStackSize(); j++) {
 							SourceValue sv = frames[i - 1].getStack(j);
+
 							for (AbstractInsnNode ci : sv.insns) {
 								if (ci instanceof LdcInsnNode && ((LdcInsnNode) ci).cst instanceof String) {
 									//if (s == null || !s.equals(((LdcInsnNode) ci).cst)) {
@@ -104,14 +108,17 @@ public class FieldNameFinder {
 							int separator = s.indexOf('/');
 							String sFirst = s.substring(0, separator);
 							String sLast;
+
 							if (s.contains(".") && s.indexOf('.') > separator) {
 								sLast = s.substring(separator + 1, s.indexOf('.'));
 							} else {
 								sLast = s.substring(separator + 1);
 							}
+
 							if (sFirst.endsWith("s")) {
 								sFirst = sFirst.substring(0, sFirst.length() - 1);
 							}
+
 							s = sLast + "_" + sFirst;
 						}
 
@@ -163,7 +170,7 @@ public class FieldNameFinder {
 
 		try {
 			try (FileInputStream fis = new FileInputStream(file);
-				 JarInputStream jis = new JarInputStream(fis)) {
+					JarInputStream jis = new JarInputStream(fis)) {
 				byte[] buffer = new byte[32768];
 				JarEntry entry;
 
@@ -174,6 +181,7 @@ public class FieldNameFinder {
 
 					ByteArrayOutputStream stream = new ByteArrayOutputStream();
 					int l;
+
 					while ((l = jis.read(buffer, 0, buffer.length)) > 0) {
 						stream.write(buffer, 0, l);
 					}

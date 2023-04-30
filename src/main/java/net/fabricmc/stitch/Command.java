@@ -17,13 +17,13 @@
 package net.fabricmc.stitch;
 
 public abstract class Command {
-    public final String name;
+	public final String name;
 
-    public Command(String name) {
-        this.name = name;
-    }
+	public Command(String name) {
+		this.name = name;
+	}
 
-    public abstract String getHelpString();
-    public abstract boolean isArgumentCountValid(int count);
-    public abstract void run(String[] args) throws Exception;
+	public abstract String getHelpString();
+	public abstract boolean isArgumentCountValid(int count);
+	public abstract void run(String[] args) throws Exception;
 }

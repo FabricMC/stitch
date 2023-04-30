@@ -57,8 +57,6 @@ public class TinyV2Writer {
 		public static final int FIELD_COMMENT = 2;
 		public static final int PARAMETER_COMMENT = 3;
 		public static final int LOCAL_VARIABLE_COMMENT = 3;
-
-
 	}
 
 	private TinyV2Writer() {
@@ -76,10 +74,9 @@ public class TinyV2Writer {
 		}
 	}
 
-
 	private void writeHeader(TinyHeader header) {
 		writeLine(Indents.HEADER, header.getNamespaces(), Prefixes.HEADER,
-						Integer.toString(header.getMajorVersion()), Integer.toString(header.getMinorVersion()));
+				Integer.toString(header.getMajorVersion()), Integer.toString(header.getMinorVersion()));
 		header.getProperties().forEach((key, value) -> writeLine(Indents.PROPERTY, value));
 	}
 
@@ -90,7 +87,6 @@ public class TinyV2Writer {
 
 		tinyClass.getMethods().stream().sorted().forEach(this::writeMethod);
 		tinyClass.getFields().stream().sorted().forEach(this::writeField);
-
 	}
 
 	private void writeMethod(TinyMethod method) {
@@ -100,22 +96,20 @@ public class TinyV2Writer {
 
 		method.getParameters().stream().sorted().forEach(this::writeMethodParameter);
 		method.getLocalVariables().stream().sorted().forEach(this::writeLocalVariable);
-
 	}
 
 	private void writeMethodParameter(TinyMethodParameter parameter) {
 		writeLine(Indents.PARAMETER, parameter.getParameterNames(), Prefixes.PARAMETER, Integer.toString(parameter.getLvIndex()));
+
 		for (String comment : parameter.getComments()) {
 			writeComment(Indents.PARAMETER_COMMENT, comment);
 		}
-
 	}
 
 	private void writeLocalVariable(TinyLocalVariable localVariable) {
 		writeLine(Indents.LOCAL_VARIABLE, localVariable.getLocalVariableNames(), Prefixes.VARIABLE,
-						Integer.toString(localVariable.getLvIndex()), Integer.toString(localVariable.getLvStartOffset()),
-						Integer.toString(localVariable.getLvTableIndex())
-		);
+				Integer.toString(localVariable.getLvIndex()), Integer.toString(localVariable.getLvStartOffset()),
+				Integer.toString(localVariable.getLvTableIndex()));
 
 		for (String comment : localVariable.getComments()) {
 			writeComment(Indents.LOCAL_VARIABLE_COMMENT, comment);
@@ -127,28 +121,29 @@ public class TinyV2Writer {
 		for (String comment : field.getComments()) writeComment(Indents.FIELD_COMMENT, comment);
 	}
 
-
 	private void writeComment(int indentLevel, String comment) {
 		writeLine(indentLevel, Prefixes.COMMENT, escapeComment(comment));
 	}
 
 	private static String escapeComment(String old) {
 		StringBuilder sb = new StringBuilder(old.length());
+
 		for (int i = 0; i < old.length(); i++) {
 			char c = old.charAt(i);
 			int t = TO_ESCAPE.indexOf(c);
+
 			if (t == -1) {
 				sb.append(c);
 			} else {
 				sb.append('\\').append(ESCAPED.charAt(t));
 			}
 		}
+
 		return sb.toString();
 	}
 
 	private static final String TO_ESCAPE = "\\\n\r\0\t";
 	private static final String ESCAPED = "\\nr0t";
-
 
 	private void write(int indentLevel, String... tabSeparatedStrings) {
 		try {

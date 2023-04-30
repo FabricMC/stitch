@@ -1,11 +1,36 @@
-local/
-.gradle/
-out/
-build/
-.idea/
+# FabricMC gitignore v1.0
 
-# eclipse
+# Gradle
+.gradle/
+build/
+out/
+classes/
+
+# IntelliJ Idea
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# Eclipse
+.eclipse/
+*.launch
+
+# VS Code
+.vscode/
 .settings/
 bin/
 .classpath
 .project
+
+# Fleet
+.fleet/
+
+# MacOS
+*.DS_Store
+
+# Java
+hs_err_*.log
+replay_*.log
+*.hprof
+*.jfr

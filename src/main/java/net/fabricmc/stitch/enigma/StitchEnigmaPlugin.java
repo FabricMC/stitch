@@ -21,11 +21,9 @@ import cuchaz.enigma.api.EnigmaPluginContext;
 import cuchaz.enigma.api.service.ObfuscationTestService;
 
 public class StitchEnigmaPlugin implements EnigmaPlugin {
-
 	@Override
 	public void init(EnigmaPluginContext ctx) {
 		StitchNameProposalService.register(ctx);
 		ctx.registerService("stitch:intermediary_obfuscation_test", ObfuscationTestService.TYPE, StitchIntermediaryObfuscationTestService::new);
 	}
-
 }

@@ -19,57 +19,57 @@ package net.fabricmc.stitch.util;
 import java.util.Objects;
 
 public final class Pair<K, V> {
-    private final K left;
-    private final V right;
+	private final K left;
+	private final V right;
 
-    private Pair(K left, V right) {
-        this.left = left;
-        this.right = right;
-    }
+	private Pair(K left, V right) {
+		this.left = left;
+		this.right = right;
+	}
 
-    public static <K, V> Pair<K, V> of(K left, V right) {
-        return new Pair<>(left, right);
-    }
+	public static <K, V> Pair<K, V> of(K left, V right) {
+		return new Pair<>(left, right);
+	}
 
-    public K getLeft() {
-        return left;
-    }
+	public K getLeft() {
+		return left;
+	}
 
-    public V getRight() {
-        return right;
-    }
+	public V getRight() {
+		return right;
+	}
 
-    @Override
-    protected Object clone() throws CloneNotSupportedException {
-        //noinspection unchecked
-        return new Pair(left, right);
-    }
+	@Override
+	protected Object clone() throws CloneNotSupportedException {
+		//noinspection unchecked
+		return new Pair(left, right);
+	}
 
-    @Override
-    public boolean equals(Object o) {
-        if (!(o instanceof Pair)) {
-            return false;
-        } else {
-            Pair other = (Pair) o;
-            return Objects.equals(other.left, left) && Objects.equals(other.right, right);
-        }
-    }
+	@Override
+	public boolean equals(Object o) {
+		if (!(o instanceof Pair)) {
+			return false;
+		} else {
+			Pair other = (Pair) o;
+			return Objects.equals(other.left, left) && Objects.equals(other.right, right);
+		}
+	}
 
-    @Override
-    public int hashCode() {
-        if (left == null && right == null) {
-            return 0;
-        } else if (left == null) {
-            return right.hashCode();
-        } else if (right == null) {
-            return left.hashCode();
-        } else {
-            return left.hashCode() * 19 + right.hashCode();
-        }
-    }
+	@Override
+	public int hashCode() {
+		if (left == null && right == null) {
+			return 0;
+		} else if (left == null) {
+			return right.hashCode();
+		} else if (right == null) {
+			return left.hashCode();
+		} else {
+			return left.hashCode() * 19 + right.hashCode();
+		}
+	}
 
-    @Override
-    public String toString() {
-        return "Pair(" + left + "," + right + ")";
-    }
+	@Override
+	public String toString() {
+		return "Pair(" + left + "," + right + ")";
+	}
 }

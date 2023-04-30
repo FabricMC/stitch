@@ -44,7 +44,7 @@ public class TinyV2Reader {
 
 		private TinyHeader header;
 		private int namespaceAmount;
-		//        private String
+		// private String
 		private Set<TinyClass> classes = new HashSet<>();
 
 		private TinyClass currentClass;
@@ -61,8 +61,8 @@ public class TinyV2Reader {
 
 		@Override
 		public void start(TinyMetadata metadata) {
-			header = new TinyHeader(new ArrayList<>(metadata.getNamespaces()), metadata.getMajorVersion(), metadata.getMinorVersion(),
-							metadata.getProperties());
+			header = new TinyHeader(new ArrayList<>(metadata.getNamespaces()), metadata.getMajorVersion(),
+					metadata.getMinorVersion(), metadata.getProperties());
 			namespaceAmount = header.getNamespaces().size();
 		}
 
@@ -82,35 +82,32 @@ public class TinyV2Reader {
 
 		@Override
 		public void pushMethod(MappingGetter name, String descriptor) {
-			currentMethod = new TinyMethod(
-							descriptor, getNames(name), new HashSet<>(), new HashSet<>(), new ArrayList<>()
-			);
+			currentMethod = new TinyMethod(descriptor, getNames(name), new HashSet<>(), new HashSet<>(), new ArrayList<>());
 			currentClass.getMethods().add(currentMethod);
 			currentCommentType = CommentType.METHOD;
 		}
 
 		@Override
 		public void pushParameter(MappingGetter name, int localVariableIndex) {
-			currentParameter = new TinyMethodParameter(
-							localVariableIndex, getNames(name), new ArrayList<>()
-			);
+			currentParameter = new TinyMethodParameter(localVariableIndex, getNames(name), new ArrayList<>());
 			currentMethod.getParameters().add(currentParameter);
 			currentCommentType = CommentType.PARAMETER;
 		}
 
 		@Override
 		public void pushLocalVariable(MappingGetter name, int localVariableIndex, int localVariableStartOffset, int localVariableTableIndex) {
-			currentLocalVariable = new TinyLocalVariable(
-							localVariableIndex, localVariableStartOffset, localVariableTableIndex, getNames(name), new ArrayList<>()
-			);
+			currentLocalVariable = new TinyLocalVariable(localVariableIndex, localVariableStartOffset,
+					localVariableTableIndex, getNames(name), new ArrayList<>());
 			currentMethod.getLocalVariables().add(currentLocalVariable);
 			currentCommentType = CommentType.LOCAL_VARIABLE;
 		}
 
 		@Override
 		public void pushComment(String comment) {
-			if (inComment)
+			if (inComment) {
 				throw new RuntimeException("commenting on comment");
+			}
+
 			switch (currentCommentType) {
 			case CLASS:
 				currentClass.getComments().add(comment);
@@ -130,6 +127,7 @@ public class TinyV2Reader {
 			default:
 				throw new RuntimeException("unexpected comment without parent");
 			}
+
 			inComment = true;
 		}
 
@@ -143,19 +141,19 @@ public class TinyV2Reader {
 
 				CommentType last = currentCommentType;
 				switch (last) {
-					case CLASS:
-						currentCommentType = null;
-						break;
-					case FIELD:
-					case METHOD:
-						currentCommentType = CommentType.CLASS;
-						break;
-					case PARAMETER:
-					case LOCAL_VARIABLE:
-						currentCommentType = CommentType.METHOD;
-						break;
-					default:
-						throw new IllegalStateException("visit stack is empty!");
+				case CLASS:
+					currentCommentType = null;
+					break;
+				case FIELD:
+				case METHOD:
+					currentCommentType = CommentType.CLASS;
+					break;
+				case PARAMETER:
+				case LOCAL_VARIABLE:
+					currentCommentType = CommentType.METHOD;
+					break;
+				default:
+					throw new IllegalStateException("visit stack is empty!");
 				}
 			}
 		}
@@ -167,6 +165,7 @@ public class TinyV2Reader {
 
 	public static TinyFile read(Path readFrom) throws IOException {
 		Visitor visitor = new Visitor();
+
 		try (BufferedReader reader = Files.newBufferedReader(readFrom)) {
 			TinyV2Factory.visit(reader, visitor);
 		}

@@ -16,11 +16,6 @@
 
 package net.fabricmc.stitch.commands;
 
-import net.fabricmc.mappings.EntryTriple;
-import net.fabricmc.mappings.Mappings;
-import net.fabricmc.mappings.MappingsProvider;
-import net.fabricmc.stitch.Command;
-
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
@@ -28,99 +23,112 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.util.Comparator;
-import java.util.Locale;
+
+import net.fabricmc.mappings.EntryTriple;
+import net.fabricmc.mappings.Mappings;
+import net.fabricmc.mappings.MappingsProvider;
+import net.fabricmc.stitch.Command;
 
 public class CommandReorderTiny extends Command {
-    public CommandReorderTiny() {
-        super("reorderTiny");
-    }
+	public CommandReorderTiny() {
+		super("reorderTiny");
+	}
 
-    @Override
-    public String getHelpString() {
-        return "<old-mapping-file> <new-mapping-file> [name order...]";
-    }
+	@Override
+	public String getHelpString() {
+		return "<old-mapping-file> <new-mapping-file> [name order...]";
+	}
 
-    @Override
-    public boolean isArgumentCountValid(int count) {
-        return count >= 4;
-    }
+	@Override
+	public boolean isArgumentCountValid(int count) {
+		return count >= 4;
+	}
 
-    private int compareTriples(EntryTriple a, EntryTriple b) {
-        int c = a.getOwner().compareTo(b.getOwner());
-        if (c == 0) {
-            c = a.getDesc().compareTo(b.getDesc());
-            if (c == 0) {
-                c = a.getName().compareTo(b.getName());
-            }
-        }
-        return c;
-    }
+	private int compareTriples(EntryTriple a, EntryTriple b) {
+		int c = a.getOwner().compareTo(b.getOwner());
 
-    @Override
-    public void run(String[] args) throws Exception {
-        File fileOld = new File(args[0]);
-        File fileNew = new File(args[1]);
-        String[] names = new String[args.length - 2];
-        System.arraycopy(args, 2, names, 0, names.length);
+		if (c == 0) {
+			c = a.getDesc().compareTo(b.getDesc());
 
-        System.err.println("Loading mapping file...");
+			if (c == 0) {
+				c = a.getName().compareTo(b.getName());
+			}
+		}
 
-        Mappings input;
-        try (FileInputStream stream = new FileInputStream(fileOld)) {
-            input = MappingsProvider.readTinyMappings(stream, false);
-        }
+		return c;
+	}
 
-        System.err.println("Rewriting mappings...");
+	@Override
+	public void run(String[] args) throws Exception {
+		File fileOld = new File(args[0]);
+		File fileNew = new File(args[1]);
+		String[] names = new String[args.length - 2];
+		System.arraycopy(args, 2, names, 0, names.length);
 
-        try (FileOutputStream stream = new FileOutputStream(fileNew);
-             OutputStreamWriter osw = new OutputStreamWriter(stream);
-             BufferedWriter writer = new BufferedWriter(osw)) {
+		System.err.println("Loading mapping file...");
+		Mappings input;
 
-            StringBuilder firstLineBuilder = new StringBuilder("v1");
-            for (String name : names) {
-                firstLineBuilder.append('\t').append(name);
-            }
-            writer.write(firstLineBuilder.append('\n').toString());
-            input.getClassEntries().stream().sorted(Comparator.comparing((a) -> a.get(names[0]))).forEach((entry) -> {
-                try {
-                    StringBuilder s = new StringBuilder("CLASS");
-                    for (String name : names) {
-                        s.append('\t').append(entry.get(name));
-                    }
-                    writer.write(s.append('\n').toString());
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
-                }
-            });
-            input.getFieldEntries().stream().sorted((a, b) -> compareTriples(a.get(names[0]), b.get(names[0]))).forEach((entry) -> {
-                try {
-                    StringBuilder s = new StringBuilder("FIELD");
-                    EntryTriple first = entry.get(names[0]);
-                    s.append('\t').append(first.getOwner()).append('\t').append(first.getDesc());
-                    for (String name : names) {
-                        s.append('\t').append(entry.get(name).getName());
-                    }
-                    writer.write(s.append('\n').toString());
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
-                }
-            });
-            input.getMethodEntries().stream().sorted((a, b) -> compareTriples(a.get(names[0]), b.get(names[0]))).forEach((entry) -> {
-                try {
-                    StringBuilder s = new StringBuilder("METHOD");
-                    EntryTriple first = entry.get(names[0]);
-                    s.append('\t').append(first.getOwner()).append('\t').append(first.getDesc());
-                    for (String name : names) {
-                        s.append('\t').append(entry.get(name).getName());
-                    }
-                    writer.write(s.append('\n').toString());
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
-                }
-            });
-        }
+		try (FileInputStream stream = new FileInputStream(fileOld)) {
+			input = MappingsProvider.readTinyMappings(stream, false);
+		}
 
-        System.err.println("Done!");
-    }
+		System.err.println("Rewriting mappings...");
 
+		try (FileOutputStream stream = new FileOutputStream(fileNew);
+				OutputStreamWriter osw = new OutputStreamWriter(stream);
+				BufferedWriter writer = new BufferedWriter(osw)) {
+			StringBuilder firstLineBuilder = new StringBuilder("v1");
+
+			for (String name : names) {
+				firstLineBuilder.append('\t').append(name);
+			}
+
+			writer.write(firstLineBuilder.append('\n').toString());
+			input.getClassEntries().stream().sorted(Comparator.comparing((a) -> a.get(names[0]))).forEach((entry) -> {
+				try {
+					StringBuilder s = new StringBuilder("CLASS");
+
+					for (String name : names) {
+						s.append('\t').append(entry.get(name));
+					}
+
+					writer.write(s.append('\n').toString());
+				} catch (IOException e) {
+					throw new RuntimeException(e);
+				}
+			});
+			input.getFieldEntries().stream().sorted((a, b) -> compareTriples(a.get(names[0]), b.get(names[0]))).forEach((entry) -> {
+				try {
+					StringBuilder s = new StringBuilder("FIELD");
+					EntryTriple first = entry.get(names[0]);
+					s.append('\t').append(first.getOwner()).append('\t').append(first.getDesc());
+
+					for (String name : names) {
+						s.append('\t').append(entry.get(name).getName());
+					}
+
+					writer.write(s.append('\n').toString());
+				} catch (IOException e) {
+					throw new RuntimeException(e);
+				}
+			});
+			input.getMethodEntries().stream().sorted((a, b) -> compareTriples(a.get(names[0]), b.get(names[0]))).forEach((entry) -> {
+				try {
+					StringBuilder s = new StringBuilder("METHOD");
+					EntryTriple first = entry.get(names[0]);
+					s.append('\t').append(first.getOwner()).append('\t').append(first.getDesc());
+
+					for (String name : names) {
+						s.append('\t').append(entry.get(name).getName());
+					}
+
+					writer.write(s.append('\n').toString());
+				} catch (IOException e) {
+					throw new RuntimeException(e);
+				}
+			});
+		}
+
+		System.err.println("Done!");
+	}
 }

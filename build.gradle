@@ -1,22 +1,19 @@
 plugins {
-	id "java"
-	id "java-library"
-	id "maven-publish"
-	id "org.cadixdev.licenser" version "0.6.1"
+	id 'java-library'
+	id 'maven-publish'
+	id 'org.cadixdev.licenser'
 	id 'checkstyle'
 }
 
 checkstyle {
-	configFile = file("checkstyle.xml")
+	configFile = file('checkstyle.xml')
 }
 
-sourceCompatibility = 1.8
+sourceCompatibility = JavaVersion.VERSION_1_8
+targetCompatibility = JavaVersion.VERSION_1_8
 
 def ENV = System.getenv()
-version = "0.6.2" + (ENV.GITHUB_ACTIONS ? "" : "+local")
-
-group = 'net.fabricmc'
-archivesBaseName = project.name.toLowerCase()
+version += (ENV.GITHUB_ACTIONS ? '' : '+local')
 
 repositories {
 	mavenCentral()
@@ -35,30 +32,30 @@ configurations {
 }
 
 dependencies {
-	ship 'org.ow2.asm:asm:9.1'
-	ship 'org.ow2.asm:asm-commons:9.1'
-	ship 'org.ow2.asm:asm-tree:9.1'
-	ship 'org.ow2.asm:asm-util:9.1'
-	ship 'net.fabricmc:tiny-mappings-parser:0.3.0+build.17'
-	implementation 'com.google.guava:guava:28.0-jre'
-	compileOnly 'org.jetbrains:annotations:20.1.0'
+	ship "org.ow2.asm:asm:${asm_version}"
+	ship "org.ow2.asm:asm-commons:${asm_version}"
+	ship "org.ow2.asm:asm-tree:${asm_version}"
+	ship "org.ow2.asm:asm-util:${asm_version}"
+	ship "net.fabricmc:tiny-mappings-parser:${tiny_mappings_parser_version}"
+	implementation "com.google.guava:guava:${guava_version}-jre"
+	compileOnly "org.jetbrains:annotations:${jetbrains_annotations_version}"
 
-	enigma 'cuchaz:enigma:0.23.2'
+	enigma "cuchaz:enigma:${enigma_version}"
 
-	testImplementation 'org.junit.jupiter:junit-jupiter-api:5.7.1'
-	testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.7.1'
+	testImplementation "org.junit.jupiter:junit-jupiter-api:${junit_jupiter_version}"
+	testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${junit_jupiter_version}"
 }
 
 license {
-	header project.file("HEADER")
-	include "**/*.java"
+	header project.file('HEADER')
+	include '**/*.java'
 }
 
 jar {
 	manifest {
 		attributes 'Implementation-Title': 'Stitch',
 				'Implementation-Version': archiveVersion,
-				'Main-Class': "net.fabricmc.stitch.Main"
+				'Main-Class': 'net.fabricmc.stitch.Main'
 	}
 }
 
@@ -71,7 +68,7 @@ task allJar(type: Jar) {
 	manifest {
 		attributes 'Implementation-Title': 'Stitch',
 				'Implementation-Version': archiveVersion,
-				'Main-Class': "net.fabricmc.stitch.Main"
+				'Main-Class': 'net.fabricmc.stitch.Main'
 	}
 	archiveClassifier = 'all'
 	with jar
@@ -82,7 +79,7 @@ java {
 }
 
 tasks.withType(JavaCompile).configureEach {
-	it.options.encoding = "UTF-8"
+	it.options.encoding = 'UTF-8'
 
 	if (JavaVersion.current().isJava9Compatible()) {
 		it.options.release = 8
@@ -101,7 +98,7 @@ publishing {
 	repositories {
 		if (ENV.MAVEN_URL) {
 			repositories.maven {
-				name "fabric"
+				name 'fabric'
 				url ENV.MAVEN_URL
 				credentials {
 					username ENV.MAVEN_USERNAME
@@ -119,7 +116,7 @@ test {
 // A task to ensure that the version being released has not already been released.
 task checkVersion {
 	doFirst {
-		def xml = new URL("https://maven.fabricmc.net/net/fabricmc/stitch/maven-metadata.xml").text
+		def xml = new URL('https://maven.fabricmc.net/net/fabricmc/stitch/maven-metadata.xml').text
 		def metadata = new XmlSlurper().parseText(xml)
 		def versions = metadata.versioning.versions.version*.text();
 		if (versions.contains(version)) {

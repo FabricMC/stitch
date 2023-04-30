@@ -1,1 +1,11 @@
+pluginManagement {
+	repositories {
+		gradlePluginPortal()
+		mavenCentral();
+	}
+	plugins {
+		id 'org.cadixdev.licenser' version "${cadixdev_licenser_version}"
+	}
+}
+
 rootProject.name = 'stitch'

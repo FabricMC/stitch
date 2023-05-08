@@ -23,7 +23,6 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 public class JarClassEntry extends AbstractJarEntry {
-    String fullyQualifiedName;
     final Map<String, JarClassEntry> innerClasses;
     final Map<String, JarFieldEntry> fields;
     final Map<String, JarMethodEntry> methods;
@@ -34,11 +33,17 @@ public class JarClassEntry extends AbstractJarEntry {
     List<String> interfaces;
     List<String> subclasses;
     List<String> implementers;
+    /** outer class for inner classes */
+    String declaringClass;
+    /** outer class for anonymous and local classes */
+    String enclosingClass;
+    String enclosingMethod;
+    String enclosingMethodDesc;
+    String innerName;
 
-    protected JarClassEntry(String name, String fullyQualifiedName) {
+    protected JarClassEntry(String name) {
         super(name);
 
-        this.fullyQualifiedName = fullyQualifiedName;
         this.innerClasses = new TreeMap<>(Comparator.naturalOrder());
         this.fields = new TreeMap<>(Comparator.naturalOrder());
         this.methods = new TreeMap<>(Comparator.naturalOrder());
@@ -48,23 +53,39 @@ public class JarClassEntry extends AbstractJarEntry {
         this.implementers = new ArrayList<>();
     }
 
-    protected void populate(int access, String signature, String superclass, String[] interfaces) {
-        this.setAccess(access);
-        this.signature = signature;
-        this.superclass = superclass;
-        this.interfaces = Arrays.asList(interfaces);
+    protected void populate(Populator populator) {
+        this.setAccess(populator.access);
+        this.signature = populator.signature;
+        this.superclass = populator.superclass;
+        this.interfaces = Arrays.asList(populator.interfaces);
+        if (populator.nested) {
+            this.declaringClass = populator.declaringClass;
+            this.enclosingClass = populator.enclosingClass;
+            this.enclosingMethod = populator.enclosingMethod;
+            this.enclosingMethodDesc = populator.enclosingMethodDesc;
+            this.innerName = populator.innerName;
+        }
     }
 
-    protected void populateParents(ClassStorage storage) {
+    protected void populateRelations(ClassStorage storage) {
         JarClassEntry superEntry = getSuperClass(storage);
         if (superEntry != null) {
-            superEntry.subclasses.add(fullyQualifiedName);
+            superEntry.subclasses.add(name);
         }
 
         for (JarClassEntry itf : getInterfaces(storage)) {
             if (itf != null) {
-                itf.implementers.add(fullyQualifiedName);
+                itf.implementers.add(name);
             }
+        }
+
+        JarClassEntry declaringEntry = getDeclaringClass(storage);
+        if (declaringEntry != null) {
+            declaringEntry.innerClasses.put(name, this);
+        }
+        JarClassEntry enclosingEntry = getEnclosingClass(storage);
+        if (enclosingEntry != null) {
+            enclosingEntry.innerClasses.put(name, this);
         }
     }
 
@@ -72,10 +93,6 @@ public class JarClassEntry extends AbstractJarEntry {
     public Collection<Pair<JarClassEntry, String>> getRelatedMethods(JarMethodEntry m) {
         //noinspection unchecked
         return relatedMethods.getOrDefault(m.getKey(), Collections.EMPTY_SET);
-    }
-
-    public String getFullyQualifiedName() {
-        return fullyQualifiedName;
     }
 
     public String getSignature() {
@@ -87,7 +104,7 @@ public class JarClassEntry extends AbstractJarEntry {
     }
 
     public JarClassEntry getSuperClass(ClassStorage storage) {
-        return storage.getClass(superclass, false);
+        return storage.getClass(superclass, null);
     }
 
     public List<String> getInterfaceNames() {
@@ -120,9 +137,41 @@ public class JarClassEntry extends AbstractJarEntry {
         }
 
         return stringList.stream()
-                .map((s) -> storage.getClass(s, false))
+                .map((s) -> storage.getClass(s, null))
                 .filter(Objects::nonNull)
                 .collect(Collectors.toList());
+    }
+
+    public String getDeclaringClassName() {
+        return declaringClass;
+    }
+
+    public JarClassEntry getDeclaringClass(ClassStorage storage) {
+        return hasDeclaringClass() ? storage.getClass(declaringClass, null) : null;
+    }
+
+    public String getEnclosingClassName() {
+        return enclosingClass;
+    }
+
+    public JarClassEntry getEnclosingClass(ClassStorage storage) {
+        return hasEnclosingClass() ? storage.getClass(enclosingClass, null) : null;
+    }
+
+    public String getEnclosingMethodName() {
+        return enclosingMethod;
+    }
+
+    public String getEnclosingMethodDescriptor() {
+        return enclosingMethodDesc;
+    }
+
+    public JarMethodEntry getEnclosingMethod(JarRootEntry storage) {
+        return hasEnclosingClass() && hasEnclosingMethod() ? getEnclosingClass(storage).getMethod(enclosingMethod + enclosingMethodDesc) : null;
+    }
+
+    public String getInnerName() {
+        return innerName;
     }
 
     public JarClassEntry getInnerClass(String name) {
@@ -153,20 +202,29 @@ public class JarClassEntry extends AbstractJarEntry {
         return Access.isInterface(getAccess());
     }
 
-    public boolean isAnonymous() {
-        return getName().matches("[0-9]+");
+    public boolean hasDeclaringClass() {
+        return declaringClass != null;
     }
 
-    @Override
-    public String getKey() {
-        return getFullyQualifiedName();
+    public boolean hasEnclosingClass() {
+        return enclosingClass != null;
+    }
+
+    public boolean hasEnclosingMethod() {
+        return enclosingMethod != null;
+    }
+
+    public boolean isAnonymous() {
+        return hasEnclosingClass() && innerName == null;
+    }
+
+    public boolean isLocal() {
+        return hasEnclosingClass() && innerName != null;
     }
 
     public void remap(Remapper remapper) {
-        String oldName = fullyQualifiedName;
-        fullyQualifiedName = remapper.map(fullyQualifiedName);
-        String[] s = fullyQualifiedName.split("\\$");
-        name = s[s.length - 1];
+        String oldName = name;
+        name = remapper.map(name);
 
         if (superclass != null) {
             superclass = remapper.map(superclass);
@@ -207,6 +265,29 @@ public class JarClassEntry extends AbstractJarEntry {
 
         for (Map.Entry<String, Set<Pair<JarClassEntry, String>>> entry : relatedMethodsOld.entrySet()) {
             relatedMethods.put(methodKeyRemaps.getOrDefault(entry.getKey(), entry.getKey()), entry.getValue());
+        }
+    }
+
+    public static class Populator {
+        public int access;
+        public String name;
+        public String signature;
+        public String superclass;
+        public String[] interfaces;
+        public String declaringClass;
+        public String enclosingClass;
+        public String enclosingMethod;
+        public String enclosingMethodDesc;
+        public String innerName;
+
+        boolean nested;
+
+        public Populator(int access, String name, String signature, String superclass, String[] interfaces) {
+            this.access = access;
+            this.name = name;
+            this.signature = signature;
+            this.superclass = superclass;
+            this.interfaces = interfaces;
         }
     }
 }

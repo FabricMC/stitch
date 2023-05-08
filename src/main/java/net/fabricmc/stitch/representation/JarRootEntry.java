@@ -23,49 +23,30 @@ public class JarRootEntry extends AbstractJarEntry implements ClassStorage {
     final Object syncObject = new Object();
     final File file;
     final Map<String, JarClassEntry> classTree;
-    final List<JarClassEntry> allClasses;
+    final Map<String, JarClassEntry> allClasses;
 
     public JarRootEntry(File file) {
         super(file.getName());
 
         this.file = file;
         this.classTree = new TreeMap<>(Comparator.naturalOrder());
-        this.allClasses = new ArrayList<>();
+        this.allClasses = new TreeMap<>();
     }
 
     @Override
-    public JarClassEntry getClass(String name, boolean create) {
+    public JarClassEntry getClass(String name, JarClassEntry.Populator populator) {
         if (name == null) {
             return null;
         }
 
-        String[] nameSplit = name.split("\\$");
-        int i = 0;
-
-        JarClassEntry parent;
-        JarClassEntry entry = classTree.get(nameSplit[i++]);
-        if (entry == null && create) {
-            entry = new JarClassEntry(nameSplit[0], nameSplit[0]);
+        JarClassEntry entry = allClasses.get(name);
+        if (entry == null && populator != null) {
+            entry = new JarClassEntry(name);
+            entry.populate(populator);
             synchronized (syncObject) {
-                allClasses.add(entry);
-                classTree.put(entry.getName(), entry);
-            }
-        }
-
-        StringBuilder fullyQualifiedBuilder = new StringBuilder(nameSplit[0]);
-
-        while (i < nameSplit.length && entry != null) {
-            fullyQualifiedBuilder.append('$');
-            fullyQualifiedBuilder.append(nameSplit[i]);
-
-            parent = entry;
-            entry = entry.getInnerClass(nameSplit[i++]);
-
-            if (entry == null && create) {
-                entry = new JarClassEntry(nameSplit[i - 1], fullyQualifiedBuilder.toString());
-                synchronized (syncObject) {
-                    allClasses.add(entry);
-                    parent.innerClasses.put(entry.getName(), entry);
+                allClasses.put(name, entry);
+                if (!entry.hasDeclaringClass() && !entry.hasEnclosingClass()) {
+                    classTree.put(name, entry);
                 }
             }
         }
@@ -78,6 +59,6 @@ public class JarRootEntry extends AbstractJarEntry implements ClassStorage {
     }
 
     public Collection<JarClassEntry> getAllClasses() {
-        return Collections.unmodifiableList(allClasses);
+        return allClasses.values();
     }
 }

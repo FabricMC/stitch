@@ -17,5 +17,5 @@
 package net.fabricmc.stitch.representation;
 
 public interface ClassStorage {
-    JarClassEntry getClass(String name, boolean create);
+    JarClassEntry getClass(String name, JarClassEntry.Populator populator);
 }

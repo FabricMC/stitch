@@ -61,7 +61,9 @@ public class JarReader {
     }
 
     private class VisitorClass extends ClassVisitor {
-        private JarClassEntry entry;
+        private JarClassEntry.Populator populator;
+        private Set<JarFieldEntry> fields;
+        private Set<JarMethodEntry> methods;
 
         public VisitorClass(int api, ClassVisitor classVisitor) {
             super(api, classVisitor);
@@ -70,132 +72,69 @@ public class JarReader {
         @Override
         public void visit(final int version, final int access, final String name, final String signature,
                           final String superName, final String[] interfaces) {
-            this.entry = jar.getClass(name, true);
-            this.entry.populate(access, signature, superName, interfaces);
+            this.populator = new JarClassEntry.Populator(access, name, signature, superName, interfaces);
+            this.fields = new LinkedHashSet<>();
+            this.methods = new LinkedHashSet<>();
 
             super.visit(version, access, name, signature, superName, interfaces);
+        }
+
+        @Override
+        public void visitOuterClass(String owner, String name, String descriptor) {
+            // attribute for the outer class and method,
+            // used by anonymous and local classes
+            populator.enclosingClass = owner;
+            populator.enclosingMethod = name;
+            populator.enclosingMethodDesc = descriptor;
+
+            super.visitOuterClass(owner, name, descriptor);
+        }
+
+        @Override
+        public void visitInnerClass(String name, String outerName, String innerName, int access) {
+            // the inner class attributes can be added for any
+            // inner class referenced from within this class
+            if (populator.name.equals(name)) {
+                // While the outer class attribute is only present
+                // for anonymous and local classes, the inner class
+                // attribute is present for all nested classes, thus
+                // we only mark a class as nested if this attribute
+                // is present.
+                populator.nested = true;
+                populator.declaringClass = outerName;
+                populator.innerName = innerName;
+            }
+
+            super.visitInnerClass(name, outerName, innerName, access);
         }
 
         @Override
         public FieldVisitor visitField(final int access, final String name, final String descriptor,
                                        final String signature, final Object value) {
-            JarFieldEntry field = new JarFieldEntry(access, name, descriptor, signature);
-            this.entry.fields.put(field.getKey(), field);
+            this.fields.add(new JarFieldEntry(access, name, descriptor, signature));
 
-            return new VisitorField(api, super.visitField(access, name, descriptor, signature, value),
-                    entry, field);
+            return super.visitField(access, name, descriptor, signature, value);
         }
 
         @Override
         public MethodVisitor visitMethod(final int access, final String name, final String descriptor,
                                          final String signature, final String[] exceptions) {
-            JarMethodEntry method = new JarMethodEntry(access, name, descriptor, signature);
-            this.entry.methods.put(method.getKey(), method);
+            this.methods.add(new JarMethodEntry(access, name, descriptor, signature));
 
-            return new VisitorMethod(api, super.visitMethod(access, name, descriptor, signature, exceptions),
-                    entry, method);
-        }
-    }
-
-    private class VisitorClassStageTwo extends ClassVisitor {
-        private JarClassEntry entry;
-
-        public VisitorClassStageTwo(int api, ClassVisitor classVisitor) {
-            super(api, classVisitor);
-        }
-
-        @Override
-        public void visit(final int version, final int access, final String name, final String signature,
-                          final String superName, final String[] interfaces) {
-            this.entry = jar.getClass(name, true);
-            super.visit(version, access, name, signature, superName, interfaces);
-        }
-
-        @Override
-        public MethodVisitor visitMethod(final int access, final String name, final String descriptor,
-                                         final String signature, final String[] exceptions) {
-            JarMethodEntry method = new JarMethodEntry(access, name, descriptor, signature);
-            this.entry.methods.put(method.getKey(), method);
-
-            if ((access & (Opcodes.ACC_BRIDGE | Opcodes.ACC_SYNTHETIC)) != 0) {
-                return new VisitorBridge(api, access, super.visitMethod(access, name, descriptor, signature, exceptions),
-                        entry, method);
-            } else {
-                return super.visitMethod(access, name, descriptor, signature, exceptions);
-            }
-        }
-    }
-
-    private class VisitorField extends FieldVisitor {
-        private final JarClassEntry classEntry;
-        private final JarFieldEntry entry;
-
-        public VisitorField(int api, FieldVisitor fieldVisitor, JarClassEntry classEntry, JarFieldEntry entry) {
-            super(api, fieldVisitor);
-            this.classEntry = classEntry;
-            this.entry = entry;
-        }
-    }
-
-    private static class MethodRef {
-        final String owner, name, descriptor;
-
-        MethodRef(String owner, String name, String descriptor) {
-            this.owner = owner;
-            this.name = name;
-            this.descriptor = descriptor;
-        }
-    }
-
-    private class VisitorBridge extends VisitorMethod {
-        private final boolean hasBridgeFlag;
-        private final List<MethodRef> methodRefs = new ArrayList<>();
-
-        public VisitorBridge(int api, int access, MethodVisitor methodVisitor, JarClassEntry classEntry, JarMethodEntry entry) {
-            super(api, methodVisitor, classEntry, entry);
-            hasBridgeFlag = ((access & Opcodes.ACC_BRIDGE) != 0);
-        }
-
-        @Override
-        public void visitMethodInsn(
-                final int opcode,
-                final String owner,
-                final String name,
-                final String descriptor,
-                final boolean isInterface) {
-            super.visitMethodInsn(opcode, owner, name, descriptor, isInterface);
-            methodRefs.add(new MethodRef(owner, name, descriptor));
+            return super.visitMethod(access, name, descriptor, signature, exceptions);
         }
 
         @Override
         public void visitEnd() {
-            /* boolean isBridge = hasBridgeFlag;
-
-            if (!isBridge && methodRefs.size() == 1) {
-                System.out.println("Found suspicious bridge-looking method: " + classEntry.getFullyQualifiedName() + ":" + entry);
+            JarClassEntry entry = jar.getClass(populator.name, populator);
+            for (JarFieldEntry field : fields) {
+                entry.fields.put(field.getKey(), field);
+            }
+            for (JarMethodEntry method : methods) {
+                entry.methods.put(method.getKey(), method);
             }
 
-            if (isBridge) {
-                for (MethodRef ref : methodRefs) {
-                    JarClassEntry targetClass = jar.getClass(ref.owner, true);
-                    JarMethodEntry targetMethod = new JarMethodEntry(0, ref.name, ref.descriptor, null);
-                    String targetKey = targetMethod.getKey();
-
-                    targetClass.relatedMethods.computeIfAbsent(targetKey, (a) -> new HashSet<>()).add(Pair.of(classEntry, entry.getKey()));
-                    classEntry.relatedMethods.computeIfAbsent(entry.getKey(), (a) -> new HashSet<>()).add(Pair.of(targetClass, targetKey));
-                }
-            } */
-        }
-    }
-
-    private class VisitorMethod extends MethodVisitor {
-        final JarClassEntry classEntry;
-        final JarMethodEntry entry;
-
-        public VisitorMethod(int api, MethodVisitor methodVisitor, JarClassEntry classEntry, JarMethodEntry entry) {
-            super(api, methodVisitor);
-            this.classEntry = classEntry;
-            this.entry = entry;
+            super.visitEnd();
         }
     }
 
@@ -219,9 +158,9 @@ public class JarReader {
 
         System.err.println("Read " + this.jar.getAllClasses().size() + " (" + this.jar.getClasses().size() + ") classes.");
 
-        // Stage 2: find subclasses
-        this.jar.getAllClasses().forEach((c) -> c.populateParents(jar));
-        System.err.println("Populated subclass entries.");
+        // Stage 2: find subclasses and inner classes
+        this.jar.getAllClasses().forEach((c) -> c.populateRelations(jar));
+        System.err.println("Populated subclass and inner class entries.");
 
         // Stage 3: join identical MethodEntries
         if (joinMethodEntries) {

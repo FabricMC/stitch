@@ -117,7 +117,8 @@ class GenState {
     }
 
     public static boolean isMappedClass(ClassStorage storage, JarClassEntry c) {
-        return !c.isAnonymous();
+        // if an anonymous class' name does not follow the $ convention, we give it a new name anyway
+        return !(c.isAnonymous() && c.getName().startsWith(c.getEnclosingClassName() + "$"));
     }
 
     public static boolean isMappedField(ClassStorage storage, JarClassEntry c, JarFieldEntry f) {
@@ -143,7 +144,7 @@ class GenState {
         }
 
         if (newToIntermediary != null) {
-            EntryTriple findEntry = newToIntermediary.getField(c.getFullyQualifiedName(), f.getName(), f.getDescriptor());
+            EntryTriple findEntry = newToIntermediary.getField(c.getName(), f.getName(), f.getDescriptor());
             if (findEntry != null) {
                 if (findEntry.getName().contains("field_")) {
                     return findEntry.getName();
@@ -156,7 +157,7 @@ class GenState {
         }
 
         if (newToOld != null) {
-            EntryTriple findEntry = newToOld.getField(c.getFullyQualifiedName(), f.getName(), f.getDescriptor());
+            EntryTriple findEntry = newToOld.getField(c.getName(), f.getName(), f.getDescriptor());
             if (findEntry != null) {
                 findEntry = oldToIntermediary.getField(findEntry);
                 if (findEntry != null) {
@@ -181,7 +182,7 @@ class GenState {
             return "";
         }
 
-        StringBuilder builder = new StringBuilder(classEntry.getFullyQualifiedName());
+        StringBuilder builder = new StringBuilder(classEntry.getName());
         List<String> strings = new ArrayList<>();
         String scs = getPropagation(storage, classEntry.getSuperClass(storage));
         if (!scs.isEmpty()) {
@@ -240,14 +241,14 @@ class GenState {
         for (JarClassEntry cc : ccList) {
             EntryTriple findEntry = null;
             if (newToIntermediary != null) {
-                findEntry = newToIntermediary.getMethod(cc.getFullyQualifiedName(), m.getName(), m.getDescriptor());
+                findEntry = newToIntermediary.getMethod(cc.getName(), m.getName(), m.getDescriptor());
                 if (findEntry != null) {
                     names.computeIfAbsent(findEntry.getName(), (s) -> new TreeSet<>()).add(getNamesListEntry(storageNew, cc) + suffix);
                 }
             }
 
             if (findEntry == null && newToOld != null) {
-                findEntry = newToOld.getMethod(cc.getFullyQualifiedName(), m.getName(), m.getDescriptor());
+                findEntry = newToOld.getMethod(cc.getName(), m.getName(), m.getDescriptor());
                 if (findEntry != null) {
                     EntryTriple newToOldEntry = findEntry;
                     findEntry = oldToIntermediary.getMethod(newToOldEntry);
@@ -255,13 +256,13 @@ class GenState {
                         names.computeIfAbsent(findEntry.getName(), (s) -> new TreeSet<>()).add(getNamesListEntry(storageNew, cc) + suffix);
                     } else {
                         // more involved...
-                        JarClassEntry oldBase = storageOld.getClass(newToOldEntry.getOwner(), false);
+                        JarClassEntry oldBase = storageOld.getClass(newToOldEntry.getOwner(), null);
                         if (oldBase != null) {
                             JarMethodEntry oldM = oldBase.getMethod(newToOldEntry.getName() + newToOldEntry.getDesc());
                             List<JarClassEntry> cccList = oldM.getMatchingEntries(storageOld, oldBase);
 
                             for (JarClassEntry ccc : cccList) {
-                                findEntry = oldToIntermediary.getMethod(ccc.getFullyQualifiedName(), oldM.getName(), oldM.getDescriptor());
+                                findEntry = oldToIntermediary.getMethod(ccc.getName(), oldM.getName(), oldM.getDescriptor());
                                 if (findEntry != null) {
                                     names.computeIfAbsent(findEntry.getName(), (s) -> new TreeSet<>()).add(getNamesListEntry(storageOld, ccc) + suffix);
                                 }
@@ -349,21 +350,44 @@ class GenState {
     }
 
     private void addClass(BufferedWriter writer, JarClassEntry c, ClassStorage storageOld, ClassStorage storage, String translatedPrefix) throws IOException {
-        String className = c.getName();
+        String fullName = c.getName();
+        // Typically inner class names are of the form com/example/Example$InnerName
+        // but this is not required by the JVM spec! However, for the names we generate
+        // we do follow this convention.
+        if (c.isLocal()) {
+            String enclName = c.getEnclosingClassName();
+            String innerName = c.getInnerName();
+            // typically, local classes' full names have a number prefix
+            // before the inner name part - this is useful for allowing
+            // multiple local classes to have the same inner name, so we add it
+            if (fullName.startsWith(enclName + "$") && fullName.endsWith(innerName)) {
+                translatedPrefix += fullName.substring(enclName.length() + 1, fullName.length() - innerName.length());
+            }
+        }
         String cname = "";
         String prefixSaved = translatedPrefix;
 
-        if(!this.obfuscatedPatterns.stream().anyMatch(p -> p.matcher(className).matches())) {
-            translatedPrefix = c.getFullyQualifiedName();
+        if(!this.obfuscatedPatterns.stream().anyMatch(p -> p.matcher(fullName).matches())) {
+            translatedPrefix = fullName;
         } else {
             if (!isMappedClass(storage, c)) {
-                cname = c.getName();
+                if (c.isAnonymous()) {
+                    // anonymous classes are only unmapped if their name
+                    // follows the standard $ convention
+                    cname = fullName.substring(c.getEnclosingClassName().length() + 1);
+                } else {
+                    // throw exception in case the impl of isMappedClass
+                    // changes but we forget to deal with it here
+                    throw new IllegalStateException("don't know what to do with class " + fullName);
+                }
             } else {
                 cname = null;
 
                 if (newToIntermediary != null) {
-                    String findName = newToIntermediary.getClass(c.getFullyQualifiedName());
+                    String findName = newToIntermediary.getClass(fullName);
                     if (findName != null) {
+                        // the names we generate follow the $ convention for inner class names,
+                        // so we can safely find the inner name like this
                         String[] r = findName.split("\\$");
                         cname = r[r.length - 1];
                         if (r.length == 1) {
@@ -373,10 +397,11 @@ class GenState {
                 }
 
                 if (cname == null && newToOld != null) {
-                    String findName = newToOld.getClass(c.getFullyQualifiedName());
+                    String findName = newToOld.getClass(fullName);
                     if (findName != null) {
                         findName = oldToIntermediary.getClass(findName);
                         if (findName != null) {
+                            // for the same reason as above, we can safely find the inner name like this
                             String[] r = findName.split("\\$");
                             cname = r[r.length - 1];
                             if (r.length == 1) {
@@ -400,7 +425,7 @@ class GenState {
             }
         }
 
-        writer.write("CLASS\t" + c.getFullyQualifiedName() + "\t" + translatedPrefix + cname + "\n");
+        writer.write("CLASS\t" + fullName + "\t" + translatedPrefix + cname + "\n");
 
         for (JarFieldEntry f : c.getFields()) {
             String fName = getFieldName(storage, c, f);
@@ -409,7 +434,7 @@ class GenState {
             }
 
             if (fName != null) {
-                writer.write("FIELD\t" + c.getFullyQualifiedName()
+                writer.write("FIELD\t" + fullName
                         + "\t" + f.getDescriptor()
                         + "\t" + f.getName()
                         + "\t" + fName + "\n");
@@ -425,7 +450,7 @@ class GenState {
             }
 
             if (mName != null) {
-                writer.write("METHOD\t" + c.getFullyQualifiedName()
+                writer.write("METHOD\t" + fullName
                         + "\t" + m.getDescriptor()
                         + "\t" + m.getName()
                         + "\t" + mName + "\n");

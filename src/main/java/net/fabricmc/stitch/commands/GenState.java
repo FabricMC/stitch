@@ -17,18 +17,14 @@
 package net.fabricmc.stitch.commands;
 
 import java.io.BufferedReader;
-import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileReader;
-import java.io.FileWriter;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -37,7 +33,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
 import java.util.Set;
-import java.util.StringJoiner;
 import java.util.TreeSet;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
@@ -45,8 +40,17 @@ import java.util.regex.PatternSyntaxException;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.objectweb.asm.Opcodes;
 
-import net.fabricmc.mappings.EntryTriple;
-import net.fabricmc.mappings.MappingsProvider;
+import net.fabricmc.mapping.util.EntryTriple;
+import net.fabricmc.mappingio.MappedElementKind;
+import net.fabricmc.mappingio.MappingReader;
+import net.fabricmc.mappingio.MappingWriter;
+import net.fabricmc.mappingio.adapter.MappingDstNsReorder;
+import net.fabricmc.mappingio.format.MappingFormat;
+import net.fabricmc.mappingio.tree.MappingTree;
+import net.fabricmc.mappingio.tree.MemoryMappingTree;
+import net.fabricmc.mappingio.tree.MappingTree.ClassMapping;
+import net.fabricmc.mappingio.tree.MappingTree.FieldMapping;
+import net.fabricmc.mappingio.tree.MappingTree.MethodMapping;
 import net.fabricmc.stitch.representation.AbstractJarEntry;
 import net.fabricmc.stitch.representation.ClassStorage;
 import net.fabricmc.stitch.representation.JarClassEntry;
@@ -58,19 +62,47 @@ import net.fabricmc.stitch.util.Pair;
 import net.fabricmc.stitch.util.StitchUtil;
 
 class GenState {
+	private static final String official = "official";
+	private static final String intermediary = "intermediary";
+	private static final int officialIndex = -1;
+	private static final int intermediaryIndex = 0;
+	private final MemoryMappingTree mappingTree = new MemoryMappingTree();
 	private final Map<String, Integer> counters = new HashMap<>();
 	private final Map<AbstractJarEntry, Integer> values = new IdentityHashMap<>();
+	private MappingFormat counterFileFormat = MappingFormat.TINY;
+	private MappingFormat mappingFileFormat = MappingFormat.TINY;
 	private GenMap oldToIntermediary, newToOld;
-	private GenMap newToIntermediary;
+	private boolean targetFileMappingsPresent;
 	private boolean interactive = true;
 	private boolean writeAll = false;
 	private Scanner scanner = new Scanner(System.in);
 
-	private String targetNamespace = "net/minecraft/";
+	private String targetPackage = "net/minecraft/";
 	private final List<Pattern> obfuscatedPatterns = new ArrayList<Pattern>();
 
-	GenState() {
+	GenState() throws IOException {
 		this.obfuscatedPatterns.add(Pattern.compile("^[^/]*$")); // Default obfuscation. Minecraft classes without a package are obfuscated.
+		mappingTree.visitNamespaces(official, Arrays.asList(intermediary, intermediary));
+	}
+
+	private void validateNamespaces(MappingTree tree) {
+		if (tree.getDstNamespaces().size() != 1
+				|| !tree.getSrcNamespace().equals(official)
+				|| !tree.getDstNamespaces().contains(intermediary)) {
+			throw new RuntimeException("Existing namespaces don't match '" + official + "' + '" + intermediary + "'!");
+		}
+	}
+
+	// TODO: Remove this once mapping-io#30 is merged
+	private void clearCounterMetadata() {
+		boolean removedAny;
+
+		do {
+			removedAny = false;
+			removedAny |= mappingTree.removeMetadata("next-intermediary-class") != null;
+			removedAny |= mappingTree.removeMetadata("next-intermediary-field") != null;
+			removedAny |= mappingTree.removeMetadata("next-intermediary-method") != null;
+		} while (removedAny);
 	}
 
 	public void setWriteAll(boolean writeAll) {
@@ -89,11 +121,11 @@ class GenState {
 		});
 	}
 
-	public void setTargetNamespace(final String namespace) {
-		if (namespace.lastIndexOf("/") != (namespace.length() - 1)) {
-			this.targetNamespace = namespace + "/";
+	public void setTargetPackage(final String pkg) {
+		if (pkg.lastIndexOf("/") != (pkg.length() - 1)) {
+			this.targetPackage = pkg + "/";
 		} else {
-			this.targetNamespace = namespace;
+			this.targetPackage = pkg;
 		}
 	}
 
@@ -115,29 +147,37 @@ class GenState {
 
 	public void generate(File file, JarRootEntry jarEntry, JarRootEntry jarOld) throws IOException {
 		if (file.exists()) {
-			System.err.println("Target file exists - loading...");
-			newToIntermediary = new GenMap();
+			// Target file already exists, re-use contained mappings.
+			System.out.println("Target file exists - loading...");
 
-			try (FileInputStream inputStream = new FileInputStream(file)) {
-				newToIntermediary.load(
-						MappingsProvider.readTinyMappings(inputStream),
-						"official",
-						"intermediary"
-				);
+			mappingFileFormat = MappingReader.detectFormat(file.toPath());
+			MemoryMappingTree tempTree = new MemoryMappingTree();
+			MappingReader.read(file.toPath(), mappingFileFormat, tempTree);
+			validateNamespaces(tempTree);
+
+			if (tempTree.getClasses().size() > 0) {
+				targetFileMappingsPresent = true;
 			}
+
+			readCountersFromTree(tempTree);
+			clearCounterMetadata();
+			tempTree.accept(mappingTree);
 		}
 
-		try (FileWriter fileWriter = new FileWriter(file)) {
-			try (BufferedWriter writer = new BufferedWriter(fileWriter)) {
-				writer.write("v1\tofficial\tintermediary\n");
+		readCounterFileIfPresent();
 
-				for (JarClassEntry c : jarEntry.getClasses()) {
-					addClass(writer, c, jarOld, jarEntry, this.targetNamespace);
-				}
-
-				writeCounters(writer);
-			}
+		for (JarClassEntry c : jarEntry.getClasses()) {
+			addClass(c, jarOld, jarEntry, this.targetPackage);
 		}
+
+		writeCounters();
+		mappingTree.visitEnd();
+
+		MappingWriter writer = MappingWriter.create(file.toPath(), mappingFileFormat);
+		MemoryMappingTree treeToWrite = new MemoryMappingTree();
+		mappingTree.accept(new MappingDstNsReorder(treeToWrite, intermediary));
+		treeToWrite.accept(writer);
+		writer.close();
 	}
 
 	public static boolean isMappedClass(ClassStorage storage, JarClassEntry c) {
@@ -167,35 +207,29 @@ class GenState {
 			return null;
 		}
 
-		if (newToIntermediary != null) {
-			EntryTriple findEntry = newToIntermediary.getField(c.getFullyQualifiedName(), f.getName(), f.getDescriptor());
+		Object existingMapping;
+		String existingName = null;
 
-			if (findEntry != null) {
-				if (findEntry.getName().contains("field_")) {
-					return findEntry.getName();
-				} else {
-					String newName = next(f, "field");
-					System.out.println(findEntry.getName() + " is now " + newName);
-					return newName;
-				}
-			}
+		// Check for existing name from target file
+		if ((existingMapping = mappingTree.getField(c.getFullyQualifiedName(), f.getName(), f.getDescriptor())) != null) {
+			existingName = ((FieldMapping) existingMapping).getDstName(intermediaryIndex);
 		}
 
-		if (newToOld != null) {
-			EntryTriple findEntry = newToOld.getField(c.getFullyQualifiedName(), f.getName(), f.getDescriptor());
+		// Check for existing name from supplied old mappings file
+		if (existingName == null
+				&& newToOld != null
+				&& (existingMapping = newToOld.getField(c.getFullyQualifiedName(), f.getName(), f.getDescriptor())) != null
+				&& (existingMapping = oldToIntermediary.getField((EntryTriple) existingMapping)) != null) {
+			existingName = ((EntryTriple) existingMapping).getName();
+		}
 
-			if (findEntry != null) {
-				findEntry = oldToIntermediary.getField(findEntry);
-
-				if (findEntry != null) {
-					if (findEntry.getName().contains("field_")) {
-						return findEntry.getName();
-					} else {
-						String newName = next(f, "field");
-						System.out.println(findEntry.getName() + " is now " + newName);
-						return newName;
-					}
-				}
+		if (existingName != null) {
+			if (existingName.contains("field_")) {
+				return existingName;
+			} else {
+				String newName = next(f, "field");
+				System.out.println(existingName + " is now " + newName);
+				return newName;
 			}
 		}
 
@@ -270,40 +304,41 @@ class GenState {
 		List<JarClassEntry> ccList = m.getMatchingEntries(storageNew, c);
 
 		for (JarClassEntry cc : ccList) {
-			EntryTriple findEntry = null;
+			Object existingMapping = mappingTree.getMethod(cc.getFullyQualifiedName(), m.getName(), m.getDescriptor());
+			String existingName = null;
 
-			if (newToIntermediary != null) {
-				findEntry = newToIntermediary.getMethod(cc.getFullyQualifiedName(), m.getName(), m.getDescriptor());
+			// Check for existing name from target file
+			if ((existingMapping = mappingTree.getMethod(cc.getFullyQualifiedName(), m.getName(), m.getDescriptor())) != null) {
+				existingName = ((MethodMapping) existingMapping).getDstName(intermediaryIndex);
+			}
 
-				if (findEntry != null) {
-					names.computeIfAbsent(findEntry.getName(), (s) -> new TreeSet<>()).add(getNamesListEntry(storageNew, cc) + suffix);
+			// Check for existing name from supplied old mappings file
+			if (existingName == null
+					&& newToOld != null
+					&& (existingMapping = newToOld.getMethod(cc.getFullyQualifiedName(), m.getName(), m.getDescriptor())) != null) {
+				EntryTriple mapping = oldToIntermediary.getMethod((EntryTriple) existingMapping);
+
+				if (mapping != null) {
+					existingName = ((EntryTriple) mapping).getName();
 				}
 			}
 
-			if (findEntry == null && newToOld != null) {
-				findEntry = newToOld.getMethod(cc.getFullyQualifiedName(), m.getName(), m.getDescriptor());
+			if (existingName != null) {
+				names.computeIfAbsent(existingName, (s) -> new TreeSet<>()).add(getNamesListEntry(storageNew, cc) + suffix);
+			} else if (existingMapping != null) {
+				// Check old method's entire hierarchy for potential mappings
+				EntryTriple entry = (EntryTriple) existingMapping;
+				JarClassEntry oldBase = storageOld.getClass(entry.getOwner(), false);
 
-				if (findEntry != null) {
-					EntryTriple newToOldEntry = findEntry;
-					findEntry = oldToIntermediary.getMethod(newToOldEntry);
+				if (oldBase != null) {
+					JarMethodEntry oldM = oldBase.getMethod(entry.getName() + entry.getDescriptor());
+					List<JarClassEntry> cccList = oldM.getMatchingEntries(storageOld, oldBase);
 
-					if (findEntry != null) {
-						names.computeIfAbsent(findEntry.getName(), (s) -> new TreeSet<>()).add(getNamesListEntry(storageNew, cc) + suffix);
-					} else {
-						// more involved...
-						JarClassEntry oldBase = storageOld.getClass(newToOldEntry.getOwner(), false);
+					for (JarClassEntry ccc : cccList) {
+						entry = oldToIntermediary.getMethod(ccc.getFullyQualifiedName(), oldM.getName(), oldM.getDescriptor());
 
-						if (oldBase != null) {
-							JarMethodEntry oldM = oldBase.getMethod(newToOldEntry.getName() + newToOldEntry.getDesc());
-							List<JarClassEntry> cccList = oldM.getMatchingEntries(storageOld, oldBase);
-
-							for (JarClassEntry ccc : cccList) {
-								findEntry = oldToIntermediary.getMethod(ccc.getFullyQualifiedName(), oldM.getName(), oldM.getDescriptor());
-
-								if (findEntry != null) {
-									names.computeIfAbsent(findEntry.getName(), (s) -> new TreeSet<>()).add(getNamesListEntry(storageOld, ccc) + suffix);
-								}
-							}
+						if (entry != null) {
+							names.computeIfAbsent(entry.getName(), (s) -> new TreeSet<>()).add(getNamesListEntry(storageOld, ccc) + suffix);
 						}
 					}
 				}
@@ -327,7 +362,7 @@ class GenState {
 			return methodNames.get(m);
 		}
 
-		if (newToOld != null || newToIntermediary != null) {
+		if (newToOld != null || targetFileMappingsPresent) {
 			Map<String, Set<String>> names = new HashMap<>();
 			Set<JarMethodEntry> allEntries = findNames(storageOld, storageNew, c, m, names);
 
@@ -391,63 +426,61 @@ class GenState {
 		return next(m, "method");
 	}
 
-	private void addClass(BufferedWriter writer, JarClassEntry c, ClassStorage storageOld, ClassStorage storage, String translatedPrefix) throws IOException {
-		String className = c.getName();
-		String cname = "";
-		String prefixSaved = translatedPrefix;
+	private void addClass(JarClassEntry c, ClassStorage storageOld, ClassStorage storage, String prefix) throws IOException {
+		String cName = "";
+		String origPrefix = prefix;
 
-		if (!this.obfuscatedPatterns.stream().anyMatch(p -> p.matcher(className).matches())) {
-			translatedPrefix = c.getFullyQualifiedName();
+		if (!this.obfuscatedPatterns.stream().anyMatch(p -> p.matcher(c.getName()).matches())) {
+			// Class name is not obfuscated. We don't need to generate
+			// an intermediary name, so we just leave it as is and
+			// don't add a prefix.
+			prefix = "";
+		} else if (!isMappedClass(storage, c)) {
+			cName = c.getName();
 		} else {
-			if (!isMappedClass(storage, c)) {
-				cname = c.getName();
-			} else {
-				cname = null;
+			cName = null;
 
-				if (newToIntermediary != null) {
-					String findName = newToIntermediary.getClass(c.getFullyQualifiedName());
+			if (newToOld != null || targetFileMappingsPresent) {
+				Object existingMapping = mappingTree.getClass(c.getFullyQualifiedName());
+				String existingName = null;
 
-					if (findName != null) {
-						String[] r = findName.split("\\$");
-						cname = r[r.length - 1];
+				// Check for existing name from target file
+				if (existingMapping != null) {
+					existingName = ((ClassMapping) existingMapping).getDstName(intermediaryIndex);
+				}
 
-						if (r.length == 1) {
-							translatedPrefix = "";
-						}
+				// Check for existing name from supplied old mappings file
+				if (existingName == null
+						&& newToOld != null
+						&& (existingMapping = newToOld.getClass(c.getFullyQualifiedName())) != null) {
+					existingName = oldToIntermediary.getClass((String) existingMapping);
+				}
+
+				if (existingName != null) {
+					// There is an existing name, so we reuse that.
+					// If we're looking at a subclass, only reuse the
+					// subclass's name, not the parent classes' ones too.
+					String[] r = existingName.split("\\$");
+					cName = r[r.length - 1];
+
+					if (r.length == 1) {
+						// We aren't looking at a subclass;
+						// reuse entire fully qualified name.
+						prefix = "";
 					}
 				}
+			}
 
-				if (cname == null && newToOld != null) {
-					String findName = newToOld.getClass(c.getFullyQualifiedName());
-
-					if (findName != null) {
-						findName = oldToIntermediary.getClass(findName);
-
-						if (findName != null) {
-							String[] r = findName.split("\\$");
-							cname = r[r.length - 1];
-
-							if (r.length == 1) {
-								translatedPrefix = "";
-							}
-						}
-					}
-				}
-
-				if (cname != null && !cname.contains("class_")) {
-					String newName = next(c, "class");
-					System.out.println(cname + " is now " + newName);
-					cname = newName;
-					translatedPrefix = prefixSaved;
-				}
-
-				if (cname == null) {
-					cname = next(c, "class");
-				}
+			if (cName != null && !cName.contains("class_")) {
+				System.out.println(cName + " is now " + (cName = next(c, "class")));
+				prefix = origPrefix;
+			} else if (cName == null) {
+				cName = next(c, "class");
 			}
 		}
 
-		writer.write("CLASS\t" + c.getFullyQualifiedName() + "\t" + translatedPrefix + cname + "\n");
+		mappingTree.visitClass(c.getFullyQualifiedName());
+		mappingTree.visitDstName(MappedElementKind.CLASS, intermediaryIndex, prefix + cName);
 
 		for (JarFieldEntry f : c.getFields()) {
 			String fName = getFieldName(storage, c, f);
@@ -457,10 +490,8 @@ class GenState {
 			}
 
 			if (fName != null) {
-				writer.write("FIELD\t" + c.getFullyQualifiedName()
-						+ "\t" + f.getDescriptor()
-						+ "\t" + f.getName()
-						+ "\t" + fName + "\n");
+				mappingTree.visitField(f.getName(), f.getDescriptor());
+				mappingTree.visitDstName(MappedElementKind.FIELD, intermediaryIndex, fName);
 			}
 		}
 
@@ -474,15 +505,13 @@ class GenState {
 			}
 
 			if (mName != null) {
-				writer.write("METHOD\t" + c.getFullyQualifiedName()
-						+ "\t" + m.getDescriptor()
-						+ "\t" + m.getName()
-						+ "\t" + mName + "\n");
+				mappingTree.visitMethod(m.getName(), m.getDescriptor());
+				mappingTree.visitDstName(MappedElementKind.METHOD, intermediaryIndex, mName);
 			}
 		}
 
 		for (JarClassEntry cc : c.getInnerClasses()) {
-			addClass(writer, cc, storageOld, storage, translatedPrefix + cname + "$");
+			addClass(cc, storageOld, storage, prefix + cName + "$");
 		}
 	}
 
@@ -490,32 +519,14 @@ class GenState {
 		oldToIntermediary = new GenMap();
 		newToOld = new GenMap.Dummy();
 
-		// TODO: only read once
-		readCounters(oldMappings);
-
-		try (FileInputStream inputStream = new FileInputStream(oldMappings)) {
-			oldToIntermediary.load(
-					MappingsProvider.readTinyMappings(inputStream),
-					"official",
-					"intermediary"
-			);
-		}
+		readOldMappings(oldMappings).accept(mappingTree);
 	}
 
 	public void prepareUpdate(File oldMappings, File matches) throws IOException {
 		oldToIntermediary = new GenMap();
 		newToOld = new GenMap();
 
-		// TODO: only read once
-		readCounters(oldMappings);
-
-		try (FileInputStream inputStream = new FileInputStream(oldMappings)) {
-			oldToIntermediary.load(
-					MappingsProvider.readTinyMappings(inputStream),
-					"official",
-					"intermediary"
-			);
-		}
+		oldToIntermediary.load(readOldMappings(oldMappings));
 
 		try (FileReader fileReader = new FileReader(matches)) {
 			try (BufferedReader reader = new BufferedReader(fileReader)) {
@@ -524,14 +535,37 @@ class GenState {
 		}
 	}
 
-	private void readCounters(File counterFile) throws IOException {
+	private MappingTree readOldMappings(File oldMappings) throws IOException {
+		MemoryMappingTree tempTree = new MemoryMappingTree();
+		mappingFileFormat = MappingReader.detectFormat(oldMappings.toPath());
+		MappingReader.read(oldMappings.toPath(), mappingFileFormat, tempTree);
+
+		validateNamespaces(tempTree);
+		readCountersFromTree(tempTree);
+
+		return tempTree;
+	}
+
+	private void readCounterFileIfPresent() throws IOException {
 		Path counterPath = getExternalCounterFile();
 
-		if (counterPath != null && Files.exists(counterPath)) {
-			counterFile = counterPath.toFile();
+		if (counterPath == null || !Files.exists(counterPath)) {
+			return;
 		}
 
-		try (FileReader fileReader = new FileReader(counterFile)) {
+		MappingFormat format = MappingReader.detectFormat(counterPath);
+
+		if (format != null) {
+			MemoryMappingTree mappingTree = new MemoryMappingTree();
+			MappingReader.read(counterPath, format, mappingTree);
+			readCountersFromTree(mappingTree);
+			counterFileFormat = format;
+			return;
+		}
+
+		System.err.println("Counter file isn't a valid mapping file! Switching to fallback mode...");
+
+		try (FileReader fileReader = new FileReader(counterPath.toFile())) {
 			try (BufferedReader reader = new BufferedReader(fileReader)) {
 				String line;
 
@@ -545,18 +579,37 @@ class GenState {
 		}
 	}
 
-	private void writeCounters(BufferedWriter writer) throws IOException {
-		StringJoiner counterLines = new StringJoiner("\n");
+	private void readCountersFromTree(MappingTree tree) {
+		String counter = tree.getMetadata("next-intermediary-class");
+		if (counter != null) counters.put("class", Integer.parseInt(counter));
 
-		for (Map.Entry<String, Integer> counter : counters.entrySet()) {
-			counterLines.add("# INTERMEDIARY-COUNTER " + counter.getKey() + " " + counter.getValue());
+		counter = tree.getMetadata("next-intermediary-field");
+		if (counter != null) counters.put("field", Integer.parseInt(counter));
+
+		counter = tree.getMetadata("next-intermediary-method");
+		if (counter != null) counters.put("method", Integer.parseInt(counter));
+	}
+
+	private void writeCounters() throws IOException {
+		clearCounterMetadata();
+		Path counterPath = getExternalCounterFile();
+		MemoryMappingTree mappingTree;
+
+		if (counterPath == null) {
+			mappingTree = this.mappingTree;
+		} else {
+			mappingTree = new MemoryMappingTree();
+			mappingTree.visitNamespaces(official, Arrays.asList(intermediary));
 		}
 
-		writer.write(counterLines.toString());
-		Path counterPath = getExternalCounterFile();
+		mappingTree.visitMetadata("next-intermediary-class", counters.getOrDefault("class", 0).toString());
+		mappingTree.visitMetadata("next-intermediary-field", counters.getOrDefault("field", 0).toString());
+		mappingTree.visitMetadata("next-intermediary-method", counters.getOrDefault("method", 0).toString());
 
 		if (counterPath != null) {
-			Files.write(counterPath, counterLines.toString().getBytes(StandardCharsets.UTF_8), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
+			MappingWriter writer = MappingWriter.create(counterPath, counterFileFormat);
+			mappingTree.accept(writer);
+			writer.close();
 		}
 	}
 

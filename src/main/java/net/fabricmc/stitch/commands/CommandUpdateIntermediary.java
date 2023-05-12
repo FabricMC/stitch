@@ -68,7 +68,7 @@ public class CommandUpdateIntermediary extends Command {
 			switch (args[i].toLowerCase(Locale.ROOT)) {
 			case "-t":
 			case "--target-namespace":
-				state.setTargetNamespace(args[i + 1]);
+				state.setTargetPackage(args[i + 1]);
 				i++;
 				break;
 			case "-p":

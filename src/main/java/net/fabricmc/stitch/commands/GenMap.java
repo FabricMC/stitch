@@ -22,11 +22,12 @@ import java.util.function.Function;
 
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-import net.fabricmc.mappings.ClassEntry;
-import net.fabricmc.mappings.EntryTriple;
-import net.fabricmc.mappings.FieldEntry;
-import net.fabricmc.mappings.Mappings;
-import net.fabricmc.mappings.MethodEntry;
+import net.fabricmc.mapping.util.EntryTriple;
+import net.fabricmc.mappingio.tree.MappingTree;
+import net.fabricmc.mappingio.tree.MappingTree.ClassMapping;
+import net.fabricmc.mappingio.tree.MappingTree.FieldMapping;
+import net.fabricmc.mappingio.tree.MappingTree.MemberMapping;
+import net.fabricmc.mappingio.tree.MappingTree.MethodMapping;
 
 public class GenMap {
 	private static class Class {
@@ -56,18 +57,26 @@ public class GenMap {
 		map.get(from.getOwner()).methodMaps.put(from, to);
 	}
 
-	public void load(Mappings mappings, String from, String to) {
-		for (ClassEntry classEntry : mappings.getClassEntries()) {
-			map.put(classEntry.get(from), new Class(classEntry.get(to)));
-		}
+	public void load(MappingTree mappings) {
+		for (ClassMapping cls : mappings.getClasses()) {
+			map.put(cls.getSrcName(), new Class(cls.getDstName(0)));
 
-		for (FieldEntry fieldEntry : mappings.getFieldEntries()) {
-			map.get(fieldEntry.get(from).getOwner()).fieldMaps.put(fieldEntry.get(from), fieldEntry.get(to));
-		}
+			for (FieldMapping fld : cls.getFields()) {
+				map.get(fld.getOwner().getSrcName()).fieldMaps.put(srcEntryTripleOf(fld), dstEntryTripleOf(fld));
+			}
 
-		for (MethodEntry methodEntry : mappings.getMethodEntries()) {
-			map.get(methodEntry.get(from).getOwner()).methodMaps.put(methodEntry.get(from), methodEntry.get(to));
+			for (MethodMapping mth : cls.getMethods()) {
+				map.get(mth.getOwner().getSrcName()).methodMaps.put(srcEntryTripleOf(mth), dstEntryTripleOf(mth));
+			}
 		}
+	}
+
+	private EntryTriple srcEntryTripleOf(MemberMapping member) {
+		return new EntryTriple(member.getOwner().getSrcName(), member.getSrcName(), member.getSrcDesc());
+	}
+
+	private EntryTriple dstEntryTripleOf(MemberMapping member) {
+		return new EntryTriple(member.getOwner().getDstName(0), member.getDstName(0), member.getDstDesc(0));
 	}
 
 	@Nullable

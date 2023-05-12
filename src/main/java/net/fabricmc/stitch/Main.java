@@ -25,15 +25,9 @@ import net.fabricmc.stitch.commands.CommandGenerateIntermediary;
 import net.fabricmc.stitch.commands.CommandGeneratePrefixRemapper;
 import net.fabricmc.stitch.commands.CommandMatcherToTiny;
 import net.fabricmc.stitch.commands.CommandMergeJar;
-import net.fabricmc.stitch.commands.CommandMergeTiny;
-import net.fabricmc.stitch.commands.CommandProposeFieldNames;
-import net.fabricmc.stitch.commands.CommandReorderTiny;
 import net.fabricmc.stitch.commands.CommandRewriteIntermediary;
 import net.fabricmc.stitch.commands.CommandUpdateIntermediary;
 import net.fabricmc.stitch.commands.CommandValidateRecords;
-import net.fabricmc.stitch.commands.tinyv2.CommandMergeTinyV2;
-import net.fabricmc.stitch.commands.tinyv2.CommandProposeV2FieldNames;
-import net.fabricmc.stitch.commands.tinyv2.CommandReorderTinyV2;
 
 public class Main {
 	private static final Map<String, Command> COMMAND_MAP = new TreeMap<>();
@@ -48,14 +42,8 @@ public class Main {
 		addCommand(new CommandGeneratePrefixRemapper());
 		addCommand(new CommandMatcherToTiny());
 		addCommand(new CommandMergeJar());
-		addCommand(new CommandMergeTiny());
-		addCommand(new CommandProposeFieldNames());
-		addCommand(new CommandReorderTiny());
 		addCommand(new CommandRewriteIntermediary());
 		addCommand(new CommandUpdateIntermediary());
-		addCommand(new CommandReorderTinyV2());
-		addCommand(new CommandMergeTinyV2());
-		addCommand(new CommandProposeV2FieldNames());
 		addCommand(new CommandValidateRecords());
 	}
 

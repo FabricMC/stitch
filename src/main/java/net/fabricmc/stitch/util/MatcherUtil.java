@@ -20,7 +20,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.util.function.BiConsumer;
 
-import net.fabricmc.mappings.EntryTriple;
+import net.fabricmc.mapping.util.EntryTriple;
 
 public final class MatcherUtil {
 	public static void read(BufferedReader reader, boolean invert, BiConsumer<String, String> classMappingConsumer, BiConsumer<EntryTriple, EntryTriple> fieldMappingConsumer, BiConsumer<EntryTriple, EntryTriple> methodMappingConsumer) throws IOException {

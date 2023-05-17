@@ -36,7 +36,6 @@ dependencies {
 	ship "org.ow2.asm:asm-util:${asm_version}"
 	ship "net.fabricmc:tiny-mappings-parser:${tiny_mappings_parser_version}"
 	ship "net.fabricmc:mapping-io:${mappingio_version}"
-	implementation "com.google.guava:guava:${guava_version}-jre"
 	compileOnly "org.jetbrains:annotations:${jetbrains_annotations_version}"
 
 	testImplementation "org.junit.jupiter:junit-jupiter-api:${junit_jupiter_version}"

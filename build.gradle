@@ -1,7 +1,7 @@
 plugins {
 	id 'java-library'
 	id 'maven-publish'
-	id 'org.cadixdev.licenser'
+	id 'com.diffplug.spotless'
 	id 'com.github.johnrengelman.shadow'
 	id 'checkstyle'
 }
@@ -47,9 +47,10 @@ dependencies {
 	testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${junit_jupiter_version}"
 }
 
-license {
-	header project.file('HEADER')
-	include '**/*.java'
+spotless {
+	java {
+		licenseHeaderFile(rootProject.file('HEADER'))
+	}
 }
 
 jar {

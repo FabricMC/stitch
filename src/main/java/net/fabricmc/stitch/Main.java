@@ -28,6 +28,7 @@ import net.fabricmc.stitch.commands.CommandMergeJar;
 import net.fabricmc.stitch.commands.CommandRewriteIntermediary;
 import net.fabricmc.stitch.commands.CommandUpdateIntermediary;
 import net.fabricmc.stitch.commands.CommandValidateRecords;
+import net.fabricmc.stitch.plugin.PluginLoader;
 
 public class Main {
 	private static final Map<String, Command> COMMAND_MAP = new TreeMap<>();
@@ -72,6 +73,7 @@ public class Main {
 				System.arraycopy(args, 1, argsCommand, 0, argsCommand.length);
 			}
 
+			PluginLoader.loadPlugins();
 			COMMAND_MAP.get(args[0].toLowerCase(Locale.ROOT)).run(argsCommand);
 		} catch (Exception e) {
 			e.printStackTrace();

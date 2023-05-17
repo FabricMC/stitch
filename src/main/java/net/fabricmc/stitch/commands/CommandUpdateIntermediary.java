@@ -31,7 +31,7 @@ public class CommandUpdateIntermediary extends Command {
 
 	@Override
 	public String getHelpString() {
-		return "<old-jar> <new-jar> <old-mapping-file> <new-mapping-file> <match-file> [-t|--target-namespace <namespace>] [-p|--obfuscation-pattern <regex pattern>]";
+		return "<old-jar> <new-jar> <old-mapping-file> <new-mapping-file> <match-file> [-t|--target-namespace <namespace>] [--write-all]";
 	}
 
 	@Override
@@ -62,7 +62,6 @@ public class CommandUpdateIntermediary extends Command {
 		}
 
 		GenState state = new GenState();
-		boolean clearedPatterns = false;
 
 		for (int i = 5; i < args.length; i++) {
 			switch (args[i].toLowerCase(Locale.ROOT)) {
@@ -71,15 +70,8 @@ public class CommandUpdateIntermediary extends Command {
 				state.setTargetPackage(args[i + 1]);
 				i++;
 				break;
-			case "-p":
-			case "--obfuscation-pattern":
-				if (!clearedPatterns) {
-					state.clearObfuscatedPatterns();
-				}
-
-				clearedPatterns = true;
-				state.addObfuscatedPattern(args[i + 1]);
-				i++;
+			case "--write-all":
+				state.setWriteAll(true);
 				break;
 			}
 		}

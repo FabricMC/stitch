@@ -31,7 +31,7 @@ public class CommandGenerateIntermediary extends Command {
 
 	@Override
 	public String getHelpString() {
-		return "<input-jar> <mapping-name> [-t|--target-namespace <namespace>] [-p|--obfuscation-pattern <regex pattern>]...";
+		return "<input-jar> <mapping-name> [-t|--target-namespace <namespace>] [--write-all]";
 	}
 
 	@Override
@@ -52,7 +52,6 @@ public class CommandGenerateIntermediary extends Command {
 		}
 
 		GenState state = new GenState();
-		boolean clearedPatterns = false;
 
 		for (int i = 2; i < args.length; i++) {
 			switch (args[i].toLowerCase(Locale.ROOT)) {
@@ -61,15 +60,8 @@ public class CommandGenerateIntermediary extends Command {
 				state.setTargetPackage(args[i + 1]);
 				i++;
 				break;
-			case "-p":
-			case "--obfuscation-pattern":
-				if (!clearedPatterns) {
-					state.clearObfuscatedPatterns();
-				}
-
-				clearedPatterns = true;
-				state.addObfuscatedPattern(args[i + 1]);
-				i++;
+			case "--write-all":
+				state.setWriteAll(true);
 				break;
 			}
 		}

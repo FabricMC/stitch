@@ -10,3 +10,5 @@ pluginManagement {
 }
 
 rootProject.name = 'stitch'
+
+include ':minecraft-plugin'

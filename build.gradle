@@ -6,23 +6,48 @@ plugins {
 	id 'checkstyle'
 }
 
-checkstyle {
-	configFile = file('checkstyle.xml')
-}
+allprojects {
+	apply plugin: 'java-library'
+	apply plugin: 'maven-publish'
+	apply plugin: 'com.diffplug.spotless'
+	apply plugin: 'checkstyle'
 
-sourceCompatibility = JavaVersion.VERSION_1_8
-targetCompatibility = JavaVersion.VERSION_1_8
+	sourceCompatibility = JavaVersion.VERSION_1_8
+	targetCompatibility = JavaVersion.VERSION_1_8
+
+	repositories {
+		mavenCentral()
+		maven {
+			name = 'Fabric'
+			url = 'https://maven.fabricmc.net/'
+		}
+	}
+
+	checkstyle {
+		configFile = rootProject.file('checkstyle.xml')
+	}
+
+	spotless {
+		java {
+			licenseHeaderFile(rootProject.file('HEADER'))
+		}
+	}
+
+	java {
+		withSourcesJar()
+	}
+
+	tasks.withType(JavaCompile).configureEach {
+		it.options.encoding = 'UTF-8'
+
+		if (JavaVersion.current().isJava9Compatible()) {
+			it.options.release = 8
+		}
+	}
+}
 
 def ENV = System.getenv()
 version += (ENV.GITHUB_ACTIONS ? '' : '+local')
-
-repositories {
-	mavenCentral()
-	maven {
-		name = 'Fabric'
-		url = 'https://maven.fabricmc.net/'
-	}
-}
 
 configurations {
 	ship
@@ -42,12 +67,6 @@ dependencies {
 	testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${junit_jupiter_version}"
 }
 
-spotless {
-	java {
-		licenseHeaderFile(rootProject.file('HEADER'))
-	}
-}
-
 jar {
 	manifest {
 		attributes 'Implementation-Title': 'Stitch',
@@ -57,20 +76,8 @@ jar {
 }
 
 shadowJar {
-    configurations = [project.configurations.ship]
+	configurations = [project.configurations.ship]
 	archiveClassifier = 'all'
-}
-
-java {
-	withSourcesJar()
-}
-
-tasks.withType(JavaCompile).configureEach {
-	it.options.encoding = 'UTF-8'
-
-	if (JavaVersion.current().isJava9Compatible()) {
-		it.options.release = 8
-	}
 }
 
 publishing {

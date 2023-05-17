@@ -31,7 +31,7 @@ public class CommandRewriteIntermediary extends Command {
 
 	@Override
 	public String getHelpString() {
-		return "<jar> <old-mapping-file> <new-mapping-file> [--writeAll]";
+		return "<jar> <old-mapping-file> <new-mapping-file> [--write-all]";
 	}
 
 	@Override
@@ -55,7 +55,7 @@ public class CommandRewriteIntermediary extends Command {
 
 		for (int i = 3; i < args.length; i++) {
 			switch (args[i].toLowerCase(Locale.ROOT)) {
-			case "--writeall":
+			case "--write-all":
 				state.setWriteAll(true);
 				break;
 			}

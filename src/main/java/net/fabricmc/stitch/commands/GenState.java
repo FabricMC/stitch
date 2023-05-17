@@ -34,8 +34,8 @@ import java.util.Map;
 import java.util.Scanner;
 import java.util.Set;
 import java.util.TreeSet;
-import java.util.regex.Pattern;
-import java.util.regex.PatternSyntaxException;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import org.jetbrains.annotations.Nullable;
 import org.objectweb.asm.Opcodes;
@@ -51,6 +51,8 @@ import net.fabricmc.mappingio.tree.MemoryMappingTree;
 import net.fabricmc.mappingio.tree.MappingTree.ClassMapping;
 import net.fabricmc.mappingio.tree.MappingTree.FieldMapping;
 import net.fabricmc.mappingio.tree.MappingTree.MethodMapping;
+import net.fabricmc.stitch.plugin.PluginLoader;
+import net.fabricmc.stitch.plugin.StitchPlugin;
 import net.fabricmc.stitch.representation.AbstractJarEntry;
 import net.fabricmc.stitch.representation.ClassStorage;
 import net.fabricmc.stitch.representation.JarClassEntry;
@@ -76,13 +78,29 @@ class GenState {
 	private boolean interactive = true;
 	private boolean writeAll = false;
 	private Scanner scanner = new Scanner(System.in);
-
-	private String targetPackage = "net/minecraft/";
-	private final List<Pattern> obfuscatedPatterns = new ArrayList<Pattern>();
+	private String targetPackage = "";
 
 	GenState() throws IOException {
-		this.obfuscatedPatterns.add(Pattern.compile("^[^/]*$")); // Default obfuscation. Minecraft classes without a package are obfuscated.
-		mappingTree.visitNamespaces(official, Arrays.asList(intermediary, intermediary));
+		mappingTree.visitNamespaces(official, Arrays.asList(intermediary));
+
+		// Set target package
+		List<String> pkgs = PluginLoader.getLoadedPlugins().stream()
+				.map(plugin -> plugin.getIntermediaryTargetPackage())
+				.filter(pkg -> pkg != null && !pkg.isEmpty())
+				.collect(Collectors.toList());
+		if (pkgs.size() > 1) {
+			throw new IllegalStateException("More than one plugin has declared an intermediary target package!");
+		} else if (pkgs.size() == 1) {
+			setTargetPackage(pkgs.get(0));
+		}
+	}
+
+	public void setTargetPackage(String pkg) {
+		if (pkg.lastIndexOf("/") != (pkg.length() - 1)) {
+			this.targetPackage = pkg + "/";
+		} else {
+			this.targetPackage = pkg;
+		}
 	}
 
 	private void validateNamespaces(MappingTree tree) {
@@ -121,22 +139,6 @@ class GenState {
 		});
 	}
 
-	public void setTargetPackage(final String pkg) {
-		if (pkg.lastIndexOf("/") != (pkg.length() - 1)) {
-			this.targetPackage = pkg + "/";
-		} else {
-			this.targetPackage = pkg;
-		}
-	}
-
-	public void clearObfuscatedPatterns() {
-		this.obfuscatedPatterns.clear();
-	}
-
-	public void addObfuscatedPattern(String regex) throws PatternSyntaxException {
-		this.obfuscatedPatterns.add(Pattern.compile(regex));
-	}
-
 	public void setCounter(String key, int value) {
 		counters.put(key, value);
 	}
@@ -167,7 +169,11 @@ class GenState {
 		readCounterFileIfPresent();
 
 		for (JarClassEntry c : jarEntry.getClasses()) {
-			addClass(c, jarOld, jarEntry, this.targetPackage);
+			MappingTree cMappingTree = addClass(c, jarOld, jarEntry, this.targetPackage);
+
+			if (cMappingTree != null) {
+				cMappingTree.accept(mappingTree);
+			}
 		}
 
 		writeCounters();
@@ -180,30 +186,42 @@ class GenState {
 		writer.close();
 	}
 
-	public static boolean isMappedClass(ClassStorage storage, JarClassEntry c) {
-		return !c.isAnonymous();
+	private boolean needsIntermediaryName(Function<StitchPlugin, Integer> priorityGetter) {
+		List<Integer> results = PluginLoader.getLoadedPlugins().stream()
+				.map(plugin -> priorityGetter.apply(plugin))
+				.sorted((a, b) -> Math.abs(b) - Math.abs(a))
+				.collect(Collectors.toList());
+
+		int first = results.get(0);
+
+		if (results.size() > 1) {
+			int second = results.get(1);
+
+			if (first != 0
+					&& first != second
+					&& Math.abs(first) == Math.abs(second)) {
+				throw new IllegalStateException("Got conflicting scores of the same priority!");
+			}
+		}
+
+		return first > 0;
 	}
 
-	public static boolean isMappedField(ClassStorage storage, JarClassEntry c, JarFieldEntry f) {
-		return isUnmappedFieldName(f.getName());
+	private boolean needsIntermediaryName(ClassStorage storage, JarClassEntry cls) {
+		return needsIntermediaryName((plugin) -> plugin.needsIntermediaryName(storage, cls));
 	}
 
-	public static boolean isUnmappedFieldName(String name) {
-		return name.length() <= 2 || (name.length() == 3 && name.charAt(2) == '_');
+	private boolean needsIntermediaryName(ClassStorage storage, JarClassEntry cls, JarFieldEntry fld) {
+		return needsIntermediaryName((plugin) -> plugin.needsIntermediaryName(storage, cls, fld));
 	}
 
-	public static boolean isMappedMethod(ClassStorage storage, JarClassEntry c, JarMethodEntry m) {
-		return isUnmappedMethodName(m.getName()) && m.isSource(storage, c);
-	}
-
-	public static boolean isUnmappedMethodName(String name) {
-		return (name.length() <= 2 || (name.length() == 3 && name.charAt(2) == '_'))
-				&& name.charAt(0) != '<';
+	private boolean needsIntermediaryName(ClassStorage storage, JarClassEntry cls, JarMethodEntry mth) {
+		return needsIntermediaryName((plugin) -> plugin.needsIntermediaryName(storage, cls, mth));
 	}
 
 	@Nullable
 	private String getFieldName(ClassStorage storage, JarClassEntry c, JarFieldEntry f) {
-		if (!isMappedField(storage, c, f)) {
+		if (!needsIntermediaryName(storage, c, f)) {
 			return null;
 		}
 
@@ -354,7 +372,7 @@ class GenState {
 
 	@Nullable
 	private String getMethodName(ClassStorage storageOld, ClassStorage storageNew, JarClassEntry c, JarMethodEntry m) {
-		if (!isMappedMethod(storageNew, c, m)) {
+		if (!needsIntermediaryName(storageNew, c, m)) {
 			return null;
 		}
 
@@ -426,16 +444,11 @@ class GenState {
 		return next(m, "method");
 	}
 
-	private void addClass(JarClassEntry c, ClassStorage storageOld, ClassStorage storage, String prefix) throws IOException {
+	private MappingTree addClass(JarClassEntry c, ClassStorage storageOld, ClassStorage storage, String prefix) throws IOException {
 		String cName = "";
 		String origPrefix = prefix;
 
-		if (!this.obfuscatedPatterns.stream().anyMatch(p -> p.matcher(c.getName()).matches())) {
-			// Class name is not obfuscated. We don't need to generate
-			// an intermediary name, so we just leave it as is and
-			// don't add a prefix.
-			prefix = "";
-		} else if (!isMappedClass(storage, c)) {
+		if (!needsIntermediaryName(storage, c)) {
 			cName = c.getName();
 		} else {
 			cName = null;
@@ -479,14 +492,19 @@ class GenState {
 			}
 		}
 
+		boolean wroteAnyIntermediaries = false;
+		MemoryMappingTree mappingTree = new MemoryMappingTree();
+		mappingTree.visitNamespaces(official, Arrays.asList(intermediary));
+
 		mappingTree.visitClass(c.getFullyQualifiedName());
 		mappingTree.visitDstName(MappedElementKind.CLASS, intermediaryIndex, prefix + cName);
 
 		for (JarFieldEntry f : c.getFields()) {
 			String fName = getFieldName(storage, c, f);
 
-			if (fName == null) {
-				fName = f.getName();
+			if (fName != null || writeAll) {
+				wroteAnyIntermediaries = true;
+				if (fName == null) fName = f.getName();
 			}
 
 			if (fName != null) {
@@ -498,10 +516,9 @@ class GenState {
 		for (JarMethodEntry m : c.getMethods()) {
 			String mName = getMethodName(storageOld, storage, c, m);
 
-			if (mName == null) {
-				if (!m.getName().startsWith("<") && m.isSource(storage, c)) {
-					mName = m.getName();
-				}
+			if (mName != null || writeAll) {
+				wroteAnyIntermediaries = true;
+				if (mName == null) mName = m.getName();
 			}
 
 			if (mName != null) {
@@ -511,8 +528,15 @@ class GenState {
 		}
 
 		for (JarClassEntry cc : c.getInnerClasses()) {
-			addClass(cc, storageOld, storage, prefix + cName + "$");
+			MappingTree ccMappingTree = addClass(cc, storageOld, storage, prefix + cName + "$");
+
+			if (ccMappingTree != null) {
+				ccMappingTree.accept(mappingTree);
+				wroteAnyIntermediaries = true;
+			}
 		}
+
+		return wroteAnyIntermediaries || writeAll ? mappingTree : null;
 	}
 
 	public void prepareRewrite(File oldMappings) throws IOException {

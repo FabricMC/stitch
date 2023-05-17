@@ -2,6 +2,7 @@ plugins {
 	id 'java-library'
 	id 'maven-publish'
 	id 'org.cadixdev.licenser'
+	id 'com.github.johnrengelman.shadow'
 	id 'checkstyle'
 }
 
@@ -59,19 +60,9 @@ jar {
 	}
 }
 
-task allJar(type: Jar) {
-	from {
-		configurations.ship.collect {
-			it.isDirectory() ? it : zipTree(it)
-		}
-	}
-	manifest {
-		attributes 'Implementation-Title': 'Stitch',
-				'Implementation-Version': archiveVersion,
-				'Main-Class': 'net.fabricmc.stitch.Main'
-	}
+shadowJar {
+    configurations = [project.configurations.ship]
 	archiveClassifier = 'all'
-	with jar
 }
 
 java {
@@ -90,7 +81,6 @@ publishing {
 	publications {
 		mavenJava(MavenPublication) {
 			from components.java
-			artifact(allJar)
 		}
 	}
 

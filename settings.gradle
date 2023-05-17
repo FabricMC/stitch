@@ -5,6 +5,7 @@ pluginManagement {
 	}
 	plugins {
 		id 'org.cadixdev.licenser' version "${cadixdev_licenser_version}"
+		id 'com.github.johnrengelman.shadow' version "${shadow_version}"
 	}
 }
 

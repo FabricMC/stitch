@@ -20,7 +20,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Function;
 
-import org.checkerframework.checker.nullness.qual.Nullable;
+import org.jetbrains.annotations.Nullable;
 
 import net.fabricmc.mapping.util.EntryTriple;
 import net.fabricmc.mappingio.tree.MappingTree;

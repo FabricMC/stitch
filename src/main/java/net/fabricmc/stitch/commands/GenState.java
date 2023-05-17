@@ -37,7 +37,7 @@ import java.util.TreeSet;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
-import org.checkerframework.checker.nullness.qual.Nullable;
+import org.jetbrains.annotations.Nullable;
 import org.objectweb.asm.Opcodes;
 
 import net.fabricmc.mapping.util.EntryTriple;

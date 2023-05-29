@@ -16,75 +16,72 @@
 
 package net.fabricmc.stitch.commands;
 
-import net.fabricmc.stitch.Command;
-import net.fabricmc.stitch.merge.JarMerger;
-
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.Locale;
 
+import net.fabricmc.stitch.Command;
+import net.fabricmc.stitch.merge.JarMerger;
+
 public class CommandMergeJar extends Command {
-    public CommandMergeJar() {
-        super("mergeJar");
-    }
+	public CommandMergeJar() {
+		super("mergeJar");
+	}
 
-    @Override
-    public String getHelpString() {
-        return "<client-jar> <server-jar> <output> [--removeSnowman] [--syntheticparams]";
-    }
+	@Override
+	public String getHelpString() {
+		return "<client-jar> <server-jar> <output> [--removeSnowman] [--syntheticparams]";
+	}
 
-    @Override
-    public boolean isArgumentCountValid(int count) {
-        return count >= 3;
-    }
+	@Override
+	public boolean isArgumentCountValid(int count) {
+		return count >= 3;
+	}
 
-    @Override
-    public void run(String[] args) throws Exception {
-        File in1f = new File(args[0]);
-        File in2f = new File(args[1]);
-        File outf = new File(args[2]);
-        boolean removeSnowman = false, syntheticParams = false;
+	@Override
+	public void run(String[] args) throws Exception {
+		File in1f = new File(args[0]);
+		File in2f = new File(args[1]);
+		File outf = new File(args[2]);
+		boolean removeSnowman = false, syntheticParams = false;
 
-        for (int i = 3; i < args.length; i++) {
-            if (args[i].startsWith("--")) {
-                switch (args[i].substring(2).toLowerCase(Locale.ROOT)) {
-                    case "removesnowman":
-                        removeSnowman = true;
-                        break;
-                    case "syntheticparams":
-                        syntheticParams = true;
-                        break;
-                }
-            }
-        }
+		for (int i = 3; i < args.length; i++) {
+			if (args[i].startsWith("--")) {
+				switch (args[i].substring(2).toLowerCase(Locale.ROOT)) {
+				case "removesnowman":
+					removeSnowman = true;
+					break;
+				case "syntheticparams":
+					syntheticParams = true;
+					break;
+				}
+			}
+		}
 
-        if (!in1f.exists() || !in1f.isFile()) {
-            throw new FileNotFoundException("Client JAR could not be found!");
-        }
+		if (!in1f.exists() || !in1f.isFile()) {
+			throw new FileNotFoundException("Client JAR could not be found!");
+		}
 
-        if (!in2f.exists() || !in2f.isFile()) {
-            throw new FileNotFoundException("Server JAR could not be found!");
-        }
+		if (!in2f.exists() || !in2f.isFile()) {
+			throw new FileNotFoundException("Server JAR could not be found!");
+		}
 
-        try (JarMerger merger = new JarMerger(in1f, in2f, outf)) {
-            if (removeSnowman) {
-                merger.enableSnowmanRemoval();
-            }
+		try (JarMerger merger = new JarMerger(in1f, in2f, outf)) {
+			if (removeSnowman) {
+				merger.enableSnowmanRemoval();
+			}
 
-            if (syntheticParams) {
-                merger.enableSyntheticParamsOffset();
-            }
+			if (syntheticParams) {
+				merger.enableSyntheticParamsOffset();
+			}
 
-            System.out.println("Merging...");
+			System.out.println("Merging...");
+			merger.merge();
 
-            merger.merge();
-
-            System.out.println("Merge completed!");
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
+			System.out.println("Merge completed!");
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
 }

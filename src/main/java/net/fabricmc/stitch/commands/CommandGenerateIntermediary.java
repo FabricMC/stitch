@@ -16,62 +16,66 @@
 
 package net.fabricmc.stitch.commands;
 
-import net.fabricmc.stitch.Command;
-import net.fabricmc.stitch.representation.*;
-
-import java.io.*;
+import java.io.File;
+import java.io.IOException;
 import java.util.Locale;
 
+import net.fabricmc.stitch.Command;
+import net.fabricmc.stitch.representation.JarReader;
+import net.fabricmc.stitch.representation.JarRootEntry;
+
 public class CommandGenerateIntermediary extends Command {
-    public CommandGenerateIntermediary() {
-        super("generateIntermediary");
-    }
+	public CommandGenerateIntermediary() {
+		super("generateIntermediary");
+	}
 
-    @Override
-    public String getHelpString() {
-        return "<input-jar> <mapping-name> [-t|--target-namespace <namespace>] [-p|--obfuscation-pattern <regex pattern>]...";
-    }
+	@Override
+	public String getHelpString() {
+		return "<input-jar> <mapping-name> [-t|--target-namespace <namespace>] [-p|--obfuscation-pattern <regex pattern>]...";
+	}
 
-    @Override
-    public boolean isArgumentCountValid(int count) {
-        return count >= 2;
-    }
+	@Override
+	public boolean isArgumentCountValid(int count) {
+		return count >= 2;
+	}
 
-    @Override
-    public void run(String[] args) throws Exception {
-        File file = new File(args[0]);
-        JarRootEntry jarEntry = new JarRootEntry(file);
-        try {
-            JarReader reader = new JarReader(jarEntry);
-            reader.apply();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+	@Override
+	public void run(String[] args) throws Exception {
+		File file = new File(args[0]);
+		JarRootEntry jarEntry = new JarRootEntry(file);
 
-        GenState state = new GenState();
-        boolean clearedPatterns = false;
+		try {
+			JarReader reader = new JarReader(jarEntry);
+			reader.apply();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
 
-        for (int i = 2; i < args.length; i++) {
-            switch (args[i].toLowerCase(Locale.ROOT)) {
-                case "-t":
-                case "--target-namespace":
-                    state.setTargetNamespace(args[i + 1]);
-                    i++;
-                    break;
-                case "-p":
-                case "--obfuscation-pattern":
-                    if (!clearedPatterns)
-                        state.clearObfuscatedPatterns();
-                    clearedPatterns = true;
+		GenState state = new GenState();
+		boolean clearedPatterns = false;
 
-                    state.addObfuscatedPattern(args[i + 1]);
-                    i++;
-                    break;
-            }
-        }
+		for (int i = 2; i < args.length; i++) {
+			switch (args[i].toLowerCase(Locale.ROOT)) {
+			case "-t":
+			case "--target-namespace":
+				state.setTargetPackage(args[i + 1]);
+				i++;
+				break;
+			case "-p":
+			case "--obfuscation-pattern":
+				if (!clearedPatterns) {
+					state.clearObfuscatedPatterns();
+				}
 
-        System.err.println("Generating new mappings...");
-        state.generate(new File(args[1]), jarEntry, null);
-        System.err.println("Done!");
-    }
+				clearedPatterns = true;
+				state.addObfuscatedPattern(args[i + 1]);
+				i++;
+				break;
+			}
+		}
+
+		System.err.println("Generating new mappings...");
+		state.generate(new File(args[1]), jarEntry, null);
+		System.err.println("Done!");
+	}
 }

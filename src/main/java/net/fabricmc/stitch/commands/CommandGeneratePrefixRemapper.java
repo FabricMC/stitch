@@ -16,11 +16,15 @@
 
 package net.fabricmc.stitch.commands;
 
-import net.fabricmc.stitch.Command;
-
-import java.io.*;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.OutputStreamWriter;
 import java.util.jar.JarEntry;
 import java.util.jar.JarInputStream;
+
+import net.fabricmc.stitch.Command;
 
 public class CommandGeneratePrefixRemapper extends Command {
 	public CommandGeneratePrefixRemapper() {
@@ -40,10 +44,10 @@ public class CommandGeneratePrefixRemapper extends Command {
 	@Override
 	public void run(String[] args) throws Exception {
 		try (FileInputStream fis = new FileInputStream(new File(args[0]));
-		     FileOutputStream fos = new FileOutputStream(new File(args[2]));
-		     OutputStreamWriter osw = new OutputStreamWriter(fos);
-		     BufferedWriter writer = new BufferedWriter(osw)) {
-			writer.write("v1\t" + (args.length >= 5 ? args[3] : "input")  + "\t" + (args.length >= 5 ? args[4] : "output") + "\n");
+				FileOutputStream fos = new FileOutputStream(new File(args[2]));
+				OutputStreamWriter osw = new OutputStreamWriter(fos);
+				BufferedWriter writer = new BufferedWriter(osw)) {
+			writer.write("v1\t" + (args.length >= 5 ? args[3] : "input") + "\t" + (args.length >= 5 ? args[4] : "output") + "\n");
 
 			JarInputStream jis = new JarInputStream(fis);
 			JarEntry entry;

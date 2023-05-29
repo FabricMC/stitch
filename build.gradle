@@ -1,17 +1,20 @@
 plugins {
-	id "java"
-	id "java-library"
-	id "maven-publish"
-	id "net.minecrell.licenser" version "0.4.1"
+	id 'java-library'
+	id 'maven-publish'
+	id 'com.diffplug.spotless'
+	id 'com.github.johnrengelman.shadow'
+	id 'checkstyle'
 }
 
-sourceCompatibility = 1.8
+checkstyle {
+	configFile = file('checkstyle.xml')
+}
+
+sourceCompatibility = JavaVersion.VERSION_1_8
+targetCompatibility = JavaVersion.VERSION_1_8
 
 def ENV = System.getenv()
-version = "0.6.2" + (ENV.GITHUB_ACTIONS ? "" : "+local")
-
-group = 'net.fabricmc'
-archivesBaseName = project.name.toLowerCase()
+version += (ENV.GITHUB_ACTIONS ? '' : '+local')
 
 repositories {
 	mavenCentral()
@@ -23,53 +26,39 @@ repositories {
 
 configurations {
 	ship
-	enigma
 	implementation.extendsFrom ship
-	compileOnly.extendsFrom enigma
-	testImplementation.extendsFrom enigma
 }
 
 dependencies {
-	ship 'org.ow2.asm:asm:9.1'
-	ship 'org.ow2.asm:asm-commons:9.1'
-	ship 'org.ow2.asm:asm-tree:9.1'
-	ship 'org.ow2.asm:asm-util:9.1'
-	ship 'net.fabricmc:tiny-mappings-parser:0.3.0+build.17'
-	implementation 'com.google.guava:guava:28.0-jre'
-	compileOnly 'org.jetbrains:annotations:20.1.0'
+	ship "org.ow2.asm:asm:${asm_version}"
+	ship "org.ow2.asm:asm-commons:${asm_version}"
+	ship "org.ow2.asm:asm-tree:${asm_version}"
+	ship "org.ow2.asm:asm-util:${asm_version}"
+	ship "net.fabricmc:tiny-mappings-parser:${tiny_mappings_parser_version}"
+	ship "net.fabricmc:mapping-io:${mappingio_version}"
+	compileOnly "org.jetbrains:annotations:${jetbrains_annotations_version}"
 
-	enigma 'cuchaz:enigma:0.23.2'
-
-	testImplementation 'org.junit.jupiter:junit-jupiter-api:5.7.1'
-	testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.7.1'
+	testImplementation "org.junit.jupiter:junit-jupiter-api:${junit_jupiter_version}"
+	testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${junit_jupiter_version}"
 }
 
-license {
-	header project.file("HEADER")
-	include "**/*.java"
+spotless {
+	java {
+		licenseHeaderFile(rootProject.file('HEADER'))
+	}
 }
 
 jar {
 	manifest {
 		attributes 'Implementation-Title': 'Stitch',
 				'Implementation-Version': archiveVersion,
-				'Main-Class': "net.fabricmc.stitch.Main"
+				'Main-Class': 'net.fabricmc.stitch.Main'
 	}
 }
 
-task allJar(type: Jar) {
-	from {
-		configurations.ship.collect {
-			it.isDirectory() ? it : zipTree(it)
-		}
-	}
-	manifest {
-		attributes 'Implementation-Title': 'Stitch',
-				'Implementation-Version': archiveVersion,
-				'Main-Class': "net.fabricmc.stitch.Main"
-	}
+shadowJar {
+    configurations = [project.configurations.ship]
 	archiveClassifier = 'all'
-	with jar
 }
 
 java {
@@ -77,7 +66,7 @@ java {
 }
 
 tasks.withType(JavaCompile).configureEach {
-	it.options.encoding = "UTF-8"
+	it.options.encoding = 'UTF-8'
 
 	if (JavaVersion.current().isJava9Compatible()) {
 		it.options.release = 8
@@ -88,7 +77,6 @@ publishing {
 	publications {
 		mavenJava(MavenPublication) {
 			from components.java
-			artifact(allJar)
 		}
 	}
 
@@ -96,7 +84,7 @@ publishing {
 	repositories {
 		if (ENV.MAVEN_URL) {
 			repositories.maven {
-				name "fabric"
+				name 'fabric'
 				url ENV.MAVEN_URL
 				credentials {
 					username ENV.MAVEN_USERNAME
@@ -114,7 +102,7 @@ test {
 // A task to ensure that the version being released has not already been released.
 task checkVersion {
 	doFirst {
-		def xml = new URL("https://maven.fabricmc.net/net/fabricmc/stitch/maven-metadata.xml").text
+		def xml = new URL('https://maven.fabricmc.net/net/fabricmc/stitch/maven-metadata.xml').text
 		def metadata = new XmlSlurper().parseText(xml)
 		def versions = metadata.versioning.versions.version*.text();
 		if (versions.contains(version)) {

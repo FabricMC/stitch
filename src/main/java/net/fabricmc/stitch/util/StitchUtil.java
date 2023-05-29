@@ -16,114 +16,121 @@
 
 package net.fabricmc.stitch.util;
 
-import org.objectweb.asm.Opcodes;
-
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.net.URLEncoder;
 import java.nio.file.FileSystem;
 import java.nio.file.FileSystemAlreadyExistsException;
 import java.nio.file.FileSystems;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.IdentityHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+import org.objectweb.asm.Opcodes;
 
 public final class StitchUtil {
+	private static final Map<String, String> jfsArgsCreate = new HashMap<>();
+	private static final Map<String, String> jfsArgsEmpty = new HashMap<>();
+	public static final int ASM_VERSION = Opcodes.ASM9;
 
-    public static int ASM_VERSION = Opcodes.ASM9;
+	static {
+		jfsArgsCreate.put("create", "true");
+	}
 
-    public static class FileSystemDelegate implements AutoCloseable {
-        private final FileSystem fileSystem;
-        private final boolean owner;
+	public static class FileSystemDelegate implements AutoCloseable {
+		private final FileSystem fileSystem;
+		private final boolean owner;
 
-        public FileSystemDelegate(FileSystem fileSystem, boolean owner) {
-            this.fileSystem = fileSystem;
-            this.owner = owner;
-        }
+		public FileSystemDelegate(FileSystem fileSystem, boolean owner) {
+			this.fileSystem = fileSystem;
+			this.owner = owner;
+		}
 
-        public FileSystem get() {
-            return fileSystem;
-        }
+		public FileSystem get() {
+			return fileSystem;
+		}
 
-        @Override
-        public void close() throws IOException {
-            if (owner) {
-                fileSystem.close();
-            }
-        }
-    }
+		@Override
+		public void close() throws IOException {
+			if (owner) {
+				fileSystem.close();
+			}
+		}
+	}
 
-    private StitchUtil() {
+	public static FileSystemDelegate getJarFileSystem(File f, boolean create) throws IOException {
+		URI jarUri;
 
-    }
+		try {
+			jarUri = new URI("jar:file", null, f.toURI().getPath(), "");
+		} catch (URISyntaxException e) {
+			throw new IOException(e);
+		}
 
-    private static final Map<String, String> jfsArgsCreate = new HashMap<>();
-    private static final Map<String, String> jfsArgsEmpty = new HashMap<>();
+		try {
+			return new FileSystemDelegate(FileSystems.newFileSystem(jarUri, create ? jfsArgsCreate : jfsArgsEmpty), true);
+		} catch (FileSystemAlreadyExistsException e) {
+			return new FileSystemDelegate(FileSystems.getFileSystem(jarUri), false);
+		}
+	}
 
-    static {
-        jfsArgsCreate.put("create", "true");
-    }
+	public static String join(String joiner, Collection<String> c) {
+		StringBuilder builder = new StringBuilder();
+		int i = 0;
 
-    public static FileSystemDelegate getJarFileSystem(File f, boolean create) throws IOException {
-        URI jarUri;
-        try {
-            jarUri = new URI("jar:file", null, f.toURI().getPath(), "");
-        } catch (URISyntaxException e) {
-            throw new IOException(e);
-        }
+		for (String s : c) {
+			if ((i++) > 0) {
+				builder.append(joiner);
+			}
 
-        try {
-            return new FileSystemDelegate(FileSystems.newFileSystem(jarUri, create ? jfsArgsCreate : jfsArgsEmpty), true);
-        } catch (FileSystemAlreadyExistsException e) {
-            return new FileSystemDelegate(FileSystems.getFileSystem(jarUri), false);
-        }
-    }
+			builder.append(s);
+		}
 
-    public static String join(String joiner, Collection<String> c) {
-        StringBuilder builder = new StringBuilder();
-        int i = 0;
-        for (String s : c) {
-            if ((i++) > 0) {
-                builder.append(joiner);
-            }
+		return builder.toString();
+	}
 
-            builder.append(s);
-        }
-        return builder.toString();
-    }
+	public static <T> Set<T> newIdentityHashSet() {
+		return Collections.newSetFromMap(new IdentityHashMap<>());
+	}
 
-    public static <T> Set<T> newIdentityHashSet() {
-        return Collections.newSetFromMap(new IdentityHashMap<>());
-    }
+	public static List<String> mergePreserveOrder(List<String> first, List<String> second) {
+		List<String> out = new ArrayList<>();
+		int i = 0;
+		int j = 0;
 
-    public static List<String> mergePreserveOrder(List<String> first, List<String> second) {
-        List<String> out = new ArrayList<>();
-        int i = 0;
-        int j = 0;
+		while (i < first.size() || j < second.size()) {
+			while (i < first.size() && j < second.size()
+					&& first.get(i).equals(second.get(j))) {
+				out.add(first.get(i));
+				i++;
+				j++;
+			}
 
-        while (i < first.size() || j < second.size()) {
-            while (i < first.size() && j < second.size()
-                    && first.get(i).equals(second.get(j))) {
-                out.add(first.get(i));
-                i++;
-                j++;
-            }
+			while (i < first.size() && !second.contains(first.get(i))) {
+				out.add(first.get(i));
+				i++;
+			}
 
-            while (i < first.size() && !second.contains(first.get(i))) {
-                out.add(first.get(i));
-                i++;
-            }
+			while (j < second.size() && !first.contains(second.get(j))) {
+				out.add(second.get(j));
+				j++;
+			}
+		}
 
-            while (j < second.size() && !first.contains(second.get(j))) {
-                out.add(second.get(j));
-                j++;
-            }
-        }
+		return out;
+	}
 
-        return out;
-    }
+	public static long getTime() {
+		return new Date().getTime();
+	}
 
-    public static long getTime() {
-        return new Date().getTime();
-    }
+	private StitchUtil() {
+	}
 }

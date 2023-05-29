@@ -1,2 +1,12 @@
-rootProject.name = 'stitch'
+pluginManagement {
+	repositories {
+		gradlePluginPortal()
+		mavenCentral();
+	}
+	plugins {
+		id 'com.diffplug.spotless' version "${spotless_version}"
+		id 'com.github.johnrengelman.shadow' version "${shadow_version}"
+	}
+}
 
+rootProject.name = 'stitch'

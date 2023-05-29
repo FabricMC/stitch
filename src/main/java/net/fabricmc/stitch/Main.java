@@ -16,63 +16,66 @@
 
 package net.fabricmc.stitch;
 
-import net.fabricmc.stitch.commands.*;
-import net.fabricmc.stitch.commands.tinyv2.CommandMergeTinyV2;
-import net.fabricmc.stitch.commands.tinyv2.CommandProposeV2FieldNames;
-import net.fabricmc.stitch.commands.tinyv2.CommandReorderTinyV2;
-
 import java.util.Locale;
 import java.util.Map;
 import java.util.TreeMap;
 
+import net.fabricmc.stitch.commands.CommandAsmTrace;
+import net.fabricmc.stitch.commands.CommandGenerateIntermediary;
+import net.fabricmc.stitch.commands.CommandGeneratePrefixRemapper;
+import net.fabricmc.stitch.commands.CommandMatcherToTiny;
+import net.fabricmc.stitch.commands.CommandMergeJar;
+import net.fabricmc.stitch.commands.CommandRewriteIntermediary;
+import net.fabricmc.stitch.commands.CommandUpdateIntermediary;
+import net.fabricmc.stitch.commands.CommandValidateRecords;
+
 public class Main {
-    private static final Map<String, Command> COMMAND_MAP = new TreeMap<>();
+	private static final Map<String, Command> COMMAND_MAP = new TreeMap<>();
 
-    public static void addCommand(Command command) {
-        COMMAND_MAP.put(command.name.toLowerCase(Locale.ROOT), command);
-    }
+	public static void addCommand(Command command) {
+		COMMAND_MAP.put(command.name.toLowerCase(Locale.ROOT), command);
+	}
 
-    static {
-        addCommand(new CommandAsmTrace());
-        addCommand(new CommandGenerateIntermediary());
-        addCommand(new CommandGeneratePrefixRemapper());
-        addCommand(new CommandMatcherToTiny());
-        addCommand(new CommandMergeJar());
-        addCommand(new CommandMergeTiny());
-        addCommand(new CommandProposeFieldNames());
-        addCommand(new CommandReorderTiny());
-        addCommand(new CommandRewriteIntermediary());
-        addCommand(new CommandUpdateIntermediary());
-        addCommand(new CommandReorderTinyV2());
-        addCommand(new CommandMergeTinyV2());
-        addCommand(new CommandProposeV2FieldNames());
-        addCommand(new CommandValidateRecords());
-    }
+	static {
+		addCommand(new CommandAsmTrace());
+		addCommand(new CommandGenerateIntermediary());
+		addCommand(new CommandGeneratePrefixRemapper());
+		addCommand(new CommandMatcherToTiny());
+		addCommand(new CommandMergeJar());
+		addCommand(new CommandRewriteIntermediary());
+		addCommand(new CommandUpdateIntermediary());
+		addCommand(new CommandValidateRecords());
+	}
 
-    public static void main(String[] args) {
-        if (args.length == 0
-                || !COMMAND_MAP.containsKey(args[0].toLowerCase(Locale.ROOT))
-                || !COMMAND_MAP.get(args[0].toLowerCase(Locale.ROOT)).isArgumentCountValid(args.length - 1)) {
-            if (args.length > 0) {
-                System.out.println("Invalid command: " + args[0]);
-            }
-            System.out.println("Available commands:");
-            for (Command command : COMMAND_MAP.values()) {
-                System.out.println("\t" + command.name + " " + command.getHelpString());
-            }
-            System.out.println();
-            return;
-        }
+	public static void main(String[] args) {
+		if (args.length == 0
+				|| !COMMAND_MAP.containsKey(args[0].toLowerCase(Locale.ROOT))
+				|| !COMMAND_MAP.get(args[0].toLowerCase(Locale.ROOT)).isArgumentCountValid(args.length - 1)) {
+			if (args.length > 0) {
+				System.out.println("Invalid command: " + args[0]);
+			}
 
-        try {
-            String[] argsCommand = new String[args.length - 1];
-            if (args.length > 1) {
-                System.arraycopy(args, 1, argsCommand, 0, argsCommand.length);
-            }
-            COMMAND_MAP.get(args[0].toLowerCase(Locale.ROOT)).run(argsCommand);
-        } catch (Exception e) {
-            e.printStackTrace();
-            System.exit(1);
-        }
-    }
+			System.out.println("Available commands:");
+
+			for (Command command : COMMAND_MAP.values()) {
+				System.out.println("\t" + command.name + " " + command.getHelpString());
+			}
+
+			System.out.println();
+			return;
+		}
+
+		try {
+			String[] argsCommand = new String[args.length - 1];
+
+			if (args.length > 1) {
+				System.arraycopy(args, 1, argsCommand, 0, argsCommand.length);
+			}
+
+			COMMAND_MAP.get(args[0].toLowerCase(Locale.ROOT)).run(argsCommand);
+		} catch (Exception e) {
+			e.printStackTrace();
+			System.exit(1);
+		}
+	}
 }

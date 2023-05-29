@@ -17,67 +17,74 @@
 package net.fabricmc.stitch.representation;
 
 import java.io.File;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 
 public class JarRootEntry extends AbstractJarEntry implements ClassStorage {
-    final Object syncObject = new Object();
-    final File file;
-    final Map<String, JarClassEntry> classTree;
-    final List<JarClassEntry> allClasses;
+	final Object syncObject = new Object();
+	final File file;
+	final Map<String, JarClassEntry> classTree;
+	final List<JarClassEntry> allClasses;
 
-    public JarRootEntry(File file) {
-        super(file.getName());
+	public JarRootEntry(File file) {
+		super(file.getName());
 
-        this.file = file;
-        this.classTree = new TreeMap<>(Comparator.naturalOrder());
-        this.allClasses = new ArrayList<>();
-    }
+		this.file = file;
+		this.classTree = new TreeMap<>(Comparator.naturalOrder());
+		this.allClasses = new ArrayList<>();
+	}
 
-    @Override
-    public JarClassEntry getClass(String name, boolean create) {
-        if (name == null) {
-            return null;
-        }
+	@Override
+	public JarClassEntry getClass(String name, boolean create) {
+		if (name == null) {
+			return null;
+		}
 
-        String[] nameSplit = name.split("\\$");
-        int i = 0;
+		String[] nameSplit = name.split("\\$");
+		int i = 0;
 
-        JarClassEntry parent;
-        JarClassEntry entry = classTree.get(nameSplit[i++]);
-        if (entry == null && create) {
-            entry = new JarClassEntry(nameSplit[0], nameSplit[0]);
-            synchronized (syncObject) {
-                allClasses.add(entry);
-                classTree.put(entry.getName(), entry);
-            }
-        }
+		JarClassEntry parent;
+		JarClassEntry entry = classTree.get(nameSplit[i++]);
 
-        StringBuilder fullyQualifiedBuilder = new StringBuilder(nameSplit[0]);
+		if (entry == null && create) {
+			entry = new JarClassEntry(nameSplit[0], nameSplit[0]);
+			synchronized (syncObject) {
+				allClasses.add(entry);
+				classTree.put(entry.getName(), entry);
+			}
+		}
 
-        while (i < nameSplit.length && entry != null) {
-            fullyQualifiedBuilder.append('$');
-            fullyQualifiedBuilder.append(nameSplit[i]);
+		StringBuilder fullyQualifiedBuilder = new StringBuilder(nameSplit[0]);
 
-            parent = entry;
-            entry = entry.getInnerClass(nameSplit[i++]);
+		while (i < nameSplit.length && entry != null) {
+			fullyQualifiedBuilder.append('$');
+			fullyQualifiedBuilder.append(nameSplit[i]);
 
-            if (entry == null && create) {
-                entry = new JarClassEntry(nameSplit[i - 1], fullyQualifiedBuilder.toString());
-                synchronized (syncObject) {
-                    allClasses.add(entry);
-                    parent.innerClasses.put(entry.getName(), entry);
-                }
-            }
-        }
+			parent = entry;
+			entry = entry.getInnerClass(nameSplit[i++]);
 
-        return entry;
-    }
+			if (entry == null && create) {
+				entry = new JarClassEntry(nameSplit[i - 1], fullyQualifiedBuilder.toString());
+				synchronized (syncObject) {
+					allClasses.add(entry);
+					parent.innerClasses.put(entry.getName(), entry);
+				}
+			}
+		}
 
-    public Collection<JarClassEntry> getClasses() {
-        return classTree.values();
-    }
+		return entry;
+	}
 
-    public Collection<JarClassEntry> getAllClasses() {
-        return Collections.unmodifiableList(allClasses);
-    }
+	public Collection<JarClassEntry> getClasses() {
+		return classTree.values();
+	}
+
+	public Collection<JarClassEntry> getAllClasses() {
+		return Collections.unmodifiableList(allClasses);
+	}
 }

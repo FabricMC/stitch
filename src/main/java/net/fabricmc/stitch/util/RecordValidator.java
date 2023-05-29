@@ -16,15 +16,6 @@
 
 package net.fabricmc.stitch.util;
 
-import org.objectweb.asm.ClassReader;
-import org.objectweb.asm.Opcodes;
-import org.objectweb.asm.tree.AbstractInsnNode;
-import org.objectweb.asm.tree.ClassNode;
-import org.objectweb.asm.tree.FieldNode;
-import org.objectweb.asm.tree.InvokeDynamicInsnNode;
-import org.objectweb.asm.tree.MethodNode;
-import org.objectweb.asm.tree.RecordComponentNode;
-
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.FileVisitResult;
@@ -34,6 +25,15 @@ import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.LinkedList;
 import java.util.List;
+
+import org.objectweb.asm.ClassReader;
+import org.objectweb.asm.Opcodes;
+import org.objectweb.asm.tree.AbstractInsnNode;
+import org.objectweb.asm.tree.ClassNode;
+import org.objectweb.asm.tree.FieldNode;
+import org.objectweb.asm.tree.InvokeDynamicInsnNode;
+import org.objectweb.asm.tree.MethodNode;
+import org.objectweb.asm.tree.RecordComponentNode;
 
 public class RecordValidator implements AutoCloseable {
 	private static final String[] REQUIRED_METHOD_SIGNATURES = new String[]{
@@ -45,7 +45,6 @@ public class RecordValidator implements AutoCloseable {
 	private final StitchUtil.FileSystemDelegate inputFs;
 	private final Path inputJar;
 	private final boolean printInfo;
-
 	private final List<String> errors = new LinkedList<>();
 
 	public RecordValidator(File jarFile, boolean printInfo) throws IOException {
@@ -89,6 +88,7 @@ public class RecordValidator implements AutoCloseable {
 		for (RecordComponentNode component : classNode.recordComponents) {
 			// Ensure that a matching method is present
 			boolean foundMethod = false;
+
 			for (MethodNode method : classNode.methods) {
 				if (method.name.equals(component.name) && method.desc.equals("()" +component.descriptor)) {
 					foundMethod = true;
@@ -98,6 +98,7 @@ public class RecordValidator implements AutoCloseable {
 
 			// Ensure that a matching field is present
 			boolean foundField = false;
+
 			for (FieldNode field : classNode.fields) {
 				if (field.name.equals(component.name) && field.desc.equals(component.descriptor)) {
 					foundField = true;
@@ -117,6 +118,7 @@ public class RecordValidator implements AutoCloseable {
 		// Ensure that all of the expected methods are present
 		for (String requiredMethodSignature : REQUIRED_METHOD_SIGNATURES) {
 			boolean foundMethod = false;
+
 			for (MethodNode method : classNode.methods) {
 				if ((method.name + method.desc).equals(requiredMethodSignature)) {
 					foundMethod = true;
@@ -140,7 +142,6 @@ public class RecordValidator implements AutoCloseable {
 	// Just print some info out about the record.
 	private void printInfo(ClassNode classNode) {
 		StringBuilder sb = new StringBuilder();
-
 		sb.append("Found record ").append(classNode.name).append(" with components:\n");
 
 		for (RecordComponentNode componentNode : classNode.recordComponents) {
@@ -174,12 +175,10 @@ public class RecordValidator implements AutoCloseable {
 		for (AbstractInsnNode insnNode : methodNode.instructions) {
 			if (insnNode instanceof InvokeDynamicInsnNode) {
 				InvokeDynamicInsnNode invokeDynamic = (InvokeDynamicInsnNode) insnNode;
-				if (
-					!invokeDynamic.name.equals("toString") ||
-					!invokeDynamic.desc.equals(String.format("(L%s;)Ljava/lang/String;", classNode.name)) ||
-					!invokeDynamic.bsm.getName().equals("bootstrap") ||
-					!invokeDynamic.bsm.getOwner().equals("java/lang/runtime/ObjectMethods")
-				) {
+				if (!invokeDynamic.name.equals("toString")
+						|| !invokeDynamic.desc.equals(String.format("(L%s;)Ljava/lang/String;", classNode.name))
+						|| !invokeDynamic.bsm.getName().equals("bootstrap")
+						|| !invokeDynamic.bsm.getOwner().equals("java/lang/runtime/ObjectMethods")) {
 					// Not what we are looking for
 					continue;
 				}

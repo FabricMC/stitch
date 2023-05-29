@@ -15,121 +15,136 @@
  */
 
 package net.fabricmc.stitch.commands;
-import net.fabricmc.mappings.*;
-import org.checkerframework.checker.nullness.qual.Nullable;
 
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Function;
 
+import org.jetbrains.annotations.Nullable;
+
+import net.fabricmc.mapping.util.EntryTriple;
+import net.fabricmc.mappingio.tree.MappingTree;
+import net.fabricmc.mappingio.tree.MappingTree.ClassMapping;
+import net.fabricmc.mappingio.tree.MappingTree.FieldMapping;
+import net.fabricmc.mappingio.tree.MappingTree.MemberMapping;
+import net.fabricmc.mappingio.tree.MappingTree.MethodMapping;
+
 public class GenMap {
-    private static class Class {
-        private final String name;
-        private final Map<EntryTriple, EntryTriple> fieldMaps = new HashMap<>();
-        private final Map<EntryTriple, EntryTriple> methodMaps = new HashMap<>();
+	private static class Class {
+		private final String name;
+		private final Map<EntryTriple, EntryTriple> fieldMaps = new HashMap<>();
+		private final Map<EntryTriple, EntryTriple> methodMaps = new HashMap<>();
 
-        public Class(String name) {
-            this.name = name;
-        }
-    }
+		Class(String name) {
+			this.name = name;
+		}
+	}
 
-    private final Map<String, Class> map = new HashMap<>();
+	private final Map<String, Class> map = new HashMap<>();
 
-    public GenMap() {
-    }
+	public GenMap() {
+	}
 
-    public void addClass(String from, String to) {
-        map.put(from, new Class(to));
-    }
+	public void addClass(String from, String to) {
+		map.put(from, new Class(to));
+	}
 
-    public void addField(EntryTriple from, EntryTriple to) {
-        map.get(from.getOwner()).fieldMaps.put(from, to);
-    }
+	public void addField(EntryTriple from, EntryTriple to) {
+		map.get(from.getOwner()).fieldMaps.put(from, to);
+	}
 
-    public void addMethod(EntryTriple from, EntryTriple to) {
-        map.get(from.getOwner()).methodMaps.put(from, to);
-    }
+	public void addMethod(EntryTriple from, EntryTriple to) {
+		map.get(from.getOwner()).methodMaps.put(from, to);
+	}
 
-    public void load(Mappings mappings, String from, String to) {
-        for (ClassEntry classEntry : mappings.getClassEntries()) {
-            map.put(classEntry.get(from), new Class(classEntry.get(to)));
-        }
+	public void load(MappingTree mappings) {
+		for (ClassMapping cls : mappings.getClasses()) {
+			map.put(cls.getSrcName(), new Class(cls.getDstName(0)));
 
-        for (FieldEntry fieldEntry : mappings.getFieldEntries()) {
-            map.get(fieldEntry.get(from).getOwner()).fieldMaps.put(fieldEntry.get(from), fieldEntry.get(to));
-        }
+			for (FieldMapping fld : cls.getFields()) {
+				map.get(fld.getOwner().getSrcName()).fieldMaps.put(srcEntryTripleOf(fld), dstEntryTripleOf(fld));
+			}
 
-        for (MethodEntry methodEntry : mappings.getMethodEntries()) {
-            map.get(methodEntry.get(from).getOwner()).methodMaps.put(methodEntry.get(from), methodEntry.get(to));
-        }
-    }
-    
-    @Nullable
-    public String getClass(String from) {
-        return map.containsKey(from) ? map.get(from).name : null;
-    }
+			for (MethodMapping mth : cls.getMethods()) {
+				map.get(mth.getOwner().getSrcName()).methodMaps.put(srcEntryTripleOf(mth), dstEntryTripleOf(mth));
+			}
+		}
+	}
 
-    @Nullable
-    private EntryTriple get(EntryTriple entry, Function<Class, Map<EntryTriple, EntryTriple>> mapGetter) {
-        if (map.containsKey(entry.getOwner())) {
-            return mapGetter.apply(map.get(entry.getOwner())).get(entry);
-        }
+	private EntryTriple srcEntryTripleOf(MemberMapping member) {
+		return new EntryTriple(member.getOwner().getSrcName(), member.getSrcName(), member.getSrcDesc());
+	}
 
-        return null;
-    }
+	private EntryTriple dstEntryTripleOf(MemberMapping member) {
+		return new EntryTriple(member.getOwner().getDstName(0), member.getDstName(0), member.getDstDesc(0));
+	}
 
-    @Nullable
-    public EntryTriple getField(String owner, String name, String desc) {
-        return get(new EntryTriple(owner, name, desc), (c) -> c.fieldMaps);
-    }
+	@Nullable
+	public String getClass(String from) {
+		return map.containsKey(from) ? map.get(from).name : null;
+	}
 
-    @Nullable
-    public EntryTriple getField(EntryTriple entry) {
-        return get(entry, (c) -> c.fieldMaps);
-    }
+	@Nullable
+	private EntryTriple get(EntryTriple entry, Function<Class, Map<EntryTriple, EntryTriple>> mapGetter) {
+		if (map.containsKey(entry.getOwner())) {
+			return mapGetter.apply(map.get(entry.getOwner())).get(entry);
+		}
 
-    @Nullable
-    public EntryTriple getMethod(String owner, String name, String desc) {
-        return get(new EntryTriple(owner, name, desc), (c) -> c.methodMaps);
-    }
+		return null;
+	}
 
-    @Nullable
-    public EntryTriple getMethod(EntryTriple entry) {
-        return get(entry, (c) -> c.methodMaps);
-    }
+	@Nullable
+	public EntryTriple getField(String owner, String name, String desc) {
+		return get(new EntryTriple(owner, name, desc), (c) -> c.fieldMaps);
+	}
 
-    public static class Dummy extends GenMap {
-        public Dummy() {
-        }
+	@Nullable
+	public EntryTriple getField(EntryTriple entry) {
+		return get(entry, (c) -> c.fieldMaps);
+	}
 
-        @Nullable
-        @Override
-        public String getClass(String from) {
-            return from;
-        }
+	@Nullable
+	public EntryTriple getMethod(String owner, String name, String desc) {
+		return get(new EntryTriple(owner, name, desc), (c) -> c.methodMaps);
+	}
 
-        @Nullable
-        @Override
-        public EntryTriple getField(String owner, String name, String desc) {
-            return new EntryTriple(owner, name, desc);
-        }
+	@Nullable
+	public EntryTriple getMethod(EntryTriple entry) {
+		return get(entry, (c) -> c.methodMaps);
+	}
 
-        @Nullable
-        @Override
-        public EntryTriple getField(EntryTriple entry) {
-            return entry;
-        }
+	public static class Dummy extends GenMap {
+		public Dummy() {
+		}
 
-        @Nullable
-        @Override
-        public EntryTriple getMethod(String owner, String name, String desc) {
-            return new EntryTriple(owner, name, desc);
-        }
+		@Nullable
+		@Override
+		public String getClass(String from) {
+			return from;
+		}
 
-        @Nullable
-        @Override
-        public EntryTriple getMethod(EntryTriple entry) {
-            return entry;
-        }
-    }
+		@Nullable
+		@Override
+		public EntryTriple getField(String owner, String name, String desc) {
+			return new EntryTriple(owner, name, desc);
+		}
+
+		@Nullable
+		@Override
+		public EntryTriple getField(EntryTriple entry) {
+			return entry;
+		}
+
+		@Nullable
+		@Override
+		public EntryTriple getMethod(String owner, String name, String desc) {
+			return new EntryTriple(owner, name, desc);
+		}
+
+		@Nullable
+		@Override
+		public EntryTriple getMethod(EntryTriple entry) {
+			return entry;
+		}
+	}
 }

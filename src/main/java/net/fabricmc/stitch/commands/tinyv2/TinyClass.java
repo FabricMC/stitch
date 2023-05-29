@@ -28,7 +28,7 @@ public class TinyClass implements Comparable<TinyClass>, Mapping {
 	@Override
 	public String toString() {
 		return "TinyClass(names = [" + String.join(", ", classNames) + "], " + methods.size() + " methods, "
-						+ fields.size() + " fields, " + comments.size() + " comments)";
+				+ fields.size() + " fields, " + comments.size() + " comments)";
 	}
 
 	private final List<String> classNames;
@@ -50,7 +50,6 @@ public class TinyClass implements Comparable<TinyClass>, Mapping {
 		this.comments = new ArrayList<>();
 	}
 
-
 	/**
 	 * Descriptors are also taken into account because methods can overload.
 	 * The key format is firstMethodName + descriptor
@@ -62,7 +61,6 @@ public class TinyClass implements Comparable<TinyClass>, Mapping {
 	public Map<String, TinyField> mapFieldsByFirstNamespace() {
 		return fields.stream().collect(Collectors.toMap(f -> f.getFieldNames().get(0), f -> f));
 	}
-
 
 	public List<String> getClassNames() {
 		return classNames;

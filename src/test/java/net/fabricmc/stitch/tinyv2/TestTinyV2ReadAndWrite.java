@@ -37,14 +37,13 @@ public class TestTinyV2ReadAndWrite {
 		TinyFile tinyFile = TinyV2Reader.read(intMappings);
 
 		Path tempLocation = Paths.get(path + ".temp");
-//        tempLocation.toFile().deleteOnExit();
+		// tempLocation.toFile().deleteOnExit();
 		TinyV2Writer.write(tinyFile, tempLocation);
 		String originalIntMappings = new String(Files.readAllBytes(intMappings));
 		String writtenIntMappings = new String(Files.readAllBytes(tempLocation));
 
 		// Ensure the file has not changed
-		Assertions.assertEquals(originalIntMappings.replace("\r\n","\n"), writtenIntMappings.replace("\r\n","\n"));
-
+		Assertions.assertEquals(originalIntMappings.replace("\r\n", "\n"), writtenIntMappings.replace("\r\n", "\n"));
 	}
 
 	@Test

@@ -43,6 +43,7 @@ public class StitchIntermediaryObfuscationTestService implements ObfuscationTest
 
 			// all obfuscated components are, at their outermost, class_
 			String lastComponent = components[components.length - 1];
+
 			if (lastComponent.startsWith(this.classPrefix) || lastComponent.startsWith(this.classPackagePrefix)) {
 				return false;
 			}

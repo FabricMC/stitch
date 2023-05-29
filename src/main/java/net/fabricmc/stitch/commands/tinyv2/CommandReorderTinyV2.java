@@ -34,23 +34,29 @@ import com.google.common.base.Strings;
 import net.fabricmc.stitch.Command;
 
 /**
- * - Reorders the columns in the tiny file
- * - Remaps the descriptors to use the newly first column.
- * <p>
- * For example:
- * <p>
- * This:
- * intermediary                 named                                  official
- * c     net/minecraft/class_123      net/minecraft/somePackage/someClass    a
- * m   (Lnet/minecraft/class_124;)V  method_1234 someMethod    a
- * <p>
+ * <ul>
+ * 	<li>Reorders the columns in the tiny file</li>
+ * 	<li>Remaps the descriptors to use the newly first column</li>
+ * </ul>
+ *
+ * <p>For example, this:
+ * <pre><code>
+ * intermediary	named	official
+ * c	net/minecraft/class_123	net/minecraft/somePackage/someClass	a
+ * m	(Lnet/minecraft/class_124;)V	method_1234 someMethod	a
+ * </code></pre>
  * Reordered to official intermediary named:
- * official       intermediary                 named
- * c     a              net/minecraft/class_123      net/minecraft/somePackage/someClass
- * m   (La;)V  a   method_1234                 someMethod
+ * <pre><code>
+ * official	intermediary	named
+ * c	a	net/minecraft/class_123	net/minecraft/somePackage/someClass
+ * m	(La;)V	a	method_1234	someMethod
+ * </code></pre>
+ * </p>
+ *
  * <p>
  * This is used to reorder the the official-intermediary mappings to be intermediary-official, so they can be merged with
  * intermediary-named in CommandMergeTinyV2, and then reorder the outputted intermediary-official-named to official-intermediary-named.
+ * </p>
  */
 public class CommandReorderTinyV2 extends Command {
 	public CommandReorderTinyV2() {
@@ -58,8 +64,8 @@ public class CommandReorderTinyV2 extends Command {
 	}
 
 	/**
-	 * Reorders the columns in <old-mapping-file> according to [new name order...] and puts the result in <new-mapping-file>.
-	 * new name order is for example "official intermediary named"
+	 * Reorders the columns in {@code <old-mapping-file>} according to {@code [new name order...]} and puts the result in {@code <new-mapping-file>}.
+	 * {@code new name order} is, for example, {@code official intermediary named}.
 	 */
 	@Override
 	public String getHelpString() {
@@ -81,8 +87,8 @@ public class CommandReorderTinyV2 extends Command {
 		validateNamespaces(newOrder, tinyFile);
 
 		Map<String, TinyClass> mappingCopy = tinyFile.getClassEntries().stream()
-						.collect(Collectors.toMap(c -> c.getClassNames().get(0),
-										c -> new TinyClass(new ArrayList<>(c.getClassNames()), c.getMethods(), c.getFields(), c.getComments())));
+				.collect(Collectors.toMap(c -> c.getClassNames().get(0),
+						c -> new TinyClass(new ArrayList<>(c.getClassNames()), c.getMethods(), c.getFields(), c.getComments())));
 		int newFirstNamespaceOldIndex = tinyFile.getHeader().getNamespaces().indexOf(newOrder.get(0));
 
 		reorder(tinyFile, newOrder);
@@ -96,13 +102,14 @@ public class CommandReorderTinyV2 extends Command {
 		HashSet<String> providedNamespacesOrderless = new HashSet<>(newOrder);
 
 		if (!fileNamespacesOrderless.equals(providedNamespacesOrderless)) {
-			throw new IllegalArgumentException("The tiny file has different namespaces than those specified." +
-							" specified: " + providedNamespacesOrderless.toString() + ", file: " + fileNamespacesOrderless.toString());
+			throw new IllegalArgumentException("The tiny file has different namespaces than those specified."
+					+ " specified: " + providedNamespacesOrderless.toString() + ", file: " + fileNamespacesOrderless.toString());
 		}
 	}
 
 	private void reorder(TinyFile tinyFile, List<String> newOrder) {
 		Map<Integer, Integer> indexMapping = new HashMap<>();
+
 		for (int i = 0; i < newOrder.size(); i++) {
 			indexMapping.put(tinyFile.getHeader().getNamespaces().indexOf(newOrder.get(i)), i);
 		}
@@ -112,7 +119,9 @@ public class CommandReorderTinyV2 extends Command {
 			for (int i = names.size(); i < newOrder.size(); i++) {
 				names.add("");
 			}
+
 			List<String> namesCopy = new ArrayList<>(names);
+
 			for (int i = 0; i < namesCopy.size(); i++) {
 				names.set(indexMapping.get(i), namesCopy.get(i));
 			}
@@ -124,29 +133,34 @@ public class CommandReorderTinyV2 extends Command {
 			for (TinyMethod method : tinyClass.getMethods()) {
 				remapMethodDescriptor(method, mappings, targetNamespace);
 			}
+
 			for (TinyField field : tinyClass.getFields()) {
 				remapFieldDescriptor(field, mappings, targetNamespace);
 			}
 		}
 	}
 
-
 	/**
-	 * In this case the visitor is not a nice man and reorganizes the house as he sees fit
+	 * In this case the visitor is not a nice man and reorganizes the house as he sees fit.
 	 */
 	private void visitNames(TinyFile tinyFile, Consumer<List<String>> namesVisitor) {
 		namesVisitor.accept(tinyFile.getHeader().getNamespaces());
+
 		for (TinyClass tinyClass : tinyFile.getClassEntries()) {
 			namesVisitor.accept(tinyClass.getClassNames());
+
 			for (TinyMethod method : tinyClass.getMethods()) {
 				namesVisitor.accept(method.getMethodNames());
+
 				for (TinyMethodParameter parameter : method.getParameters()) {
 					namesVisitor.accept(parameter.getParameterNames());
 				}
+
 				for (TinyLocalVariable localVariable : method.getLocalVariables()) {
 					namesVisitor.accept(localVariable.getLocalVariableNames());
 				}
 			}
+
 			for (TinyField field : tinyClass.getFields()) {
 				namesVisitor.accept(field.getFieldNames());
 			}
@@ -164,23 +178,21 @@ public class CommandReorderTinyV2 extends Command {
 	private void remapMethodDescriptor(TinyMethod method, Map<String, TinyClass> mappings, int targetNamespace) {
 		String descriptor = method.getMethodDescriptorInFirstNamespace();
 		String[] paramsAndReturnType = descriptor.split(Pattern.quote(")"));
-        if (paramsAndReturnType.length != 2) {
-            throw new IllegalArgumentException(
-                            "method descriptor '" + descriptor + "' is of an unknown format.");
-        }
+
+		if (paramsAndReturnType.length != 2) {
+			throw new IllegalArgumentException("method descriptor '" + descriptor + "' is of an unknown format.");
+		}
+
 		List<String> params = parseParameterDescriptors(paramsAndReturnType[0].substring(1));
 		String returnType = paramsAndReturnType[1];
-
 		List<String> paramsMapped = params.stream().map(p -> remapType(p, mappings, targetNamespace)).collect(Collectors.toList());
 		String returnTypeMapped = returnType.equals("V") ? "V" : remapType(returnType, mappings, targetNamespace);
-
 		String newDescriptor = "(" + String.join("", paramsMapped) + ")" + returnTypeMapped;
-		method.setMethodDescriptorInFirstNamespace(newDescriptor);
 
+		method.setMethodDescriptorInFirstNamespace(newDescriptor);
 	}
 
 	private static final Collection<String> primitiveTypeNames = Arrays.asList("B", "C", "D", "F", "I", "J", "S", "Z");
-
 
 	private List<String> parseParameterDescriptors(String concatenatedParameterDescriptors) {
 		List<String> parameterDescriptors = new ArrayList<>();
@@ -190,12 +202,14 @@ public class CommandReorderTinyV2 extends Command {
 
 		for (int i = 0; i < concatenatedParameterDescriptors.length(); i++) {
 			char c = concatenatedParameterDescriptors.charAt(i);
+
 			if (inClassName) {
 				if (c == ';') {
-                    if (currentClassName.length() == 0) {
-                        throw new IllegalArgumentException(
-                                        "Empty class name in parameter list " + concatenatedParameterDescriptors + " at position " + i);
-                    }
+					if (currentClassName.length() == 0) {
+						throw new IllegalArgumentException("Empty class name in parameter list " + concatenatedParameterDescriptors
+								+ " at position " + i);
+					}
+
 					parameterDescriptors.add(Strings.repeat("[", inArrayNestingLevel) + "L" + currentClassName.toString() + ";");
 					inArrayNestingLevel = 0;
 					currentClassName = new StringBuilder();
@@ -212,18 +226,14 @@ public class CommandReorderTinyV2 extends Command {
 				} else if (c == 'L') {
 					inClassName = true;
 				} else {
-					throw new IllegalArgumentException(
-									"Unexpected special character " + c + " in parameter descriptor list "
-													+ concatenatedParameterDescriptors);
+					throw new IllegalArgumentException("Unexpected special character " + c + " in parameter descriptor list "
+							+ concatenatedParameterDescriptors);
 				}
 			}
-
 		}
 
 		return parameterDescriptors;
-
 	}
-
 
 	/**
 	 * Remaps type from namespace X, to the namespace of targetNamespaceIndex in mappings, where mappings
@@ -232,9 +242,11 @@ public class CommandReorderTinyV2 extends Command {
 	private String remapType(String type, Map<String, TinyClass> mappings, int targetNamespaceIndex) {
 		if (type.isEmpty()) throw new IllegalArgumentException("types cannot be empty strings");
 		if (primitiveTypeNames.contains(type)) return type;
-        if (type.charAt(0) == '[') {
-            return "[" + remapType(type.substring(1), mappings, targetNamespaceIndex);
-        }
+
+		if (type.charAt(0) == '[') {
+			return "[" + remapType(type.substring(1), mappings, targetNamespaceIndex);
+		}
+
 		if (type.charAt(0) == 'L' && type.charAt(type.length() - 1) == ';') {
 			String className = type.substring(1, type.length() - 1);
 			TinyClass mapping = mappings.get(className);
@@ -243,8 +255,5 @@ public class CommandReorderTinyV2 extends Command {
 		}
 
 		throw new IllegalArgumentException("type descriptor '" + type + "' is of an unknown format.");
-
 	}
-
-
 }

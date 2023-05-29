@@ -20,12 +20,9 @@ import java.util.Collection;
 import java.util.List;
 
 public class TinyLocalVariable implements Comparable<TinyLocalVariable>, Mapping {
-
 	private final int lvIndex;
 	private final int lvStartOffset;
-	/**
-	 * Will be -1 when there is no lvt index
-	 */
+	/** Will be -1 when there is no lvt index. */
 	private final int lvTableIndex;
 	private final List<String> localVariableNames;
 	private final Collection<String> comments;
@@ -37,7 +34,6 @@ public class TinyLocalVariable implements Comparable<TinyLocalVariable>, Mapping
 		this.localVariableNames = localVariableNames;
 		this.comments = comments;
 	}
-
 
 	public int getLvIndex() {
 		return lvIndex;

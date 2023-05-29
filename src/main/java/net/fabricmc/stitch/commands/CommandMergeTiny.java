@@ -16,15 +16,23 @@
 
 package net.fabricmc.stitch.commands;
 
-import net.fabricmc.stitch.Command;
-
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeSet;
+
+import net.fabricmc.stitch.Command;
 
 // TODO: Remap descriptors on fields and methods.
 public class CommandMergeTiny extends Command {
@@ -108,30 +116,36 @@ public class CommandMergeTiny extends Command {
 		public TinyFile(File f) throws IOException {
 			try (BufferedReader reader = Files.newBufferedReader(f.toPath(), Charset.forName("UTF-8"))) {
 				String[] header = reader.readLine().trim().split("\t");
+
 				if (header.length < 3 || !header[0].trim().equals("v1")) {
 					throw new RuntimeException("Invalid header!");
 				}
 
 				typeCount = header.length - 1;
 				indexList = new String[typeCount];
+
 				for (int i = 0; i < typeCount; i++) {
 					indexList[i] = header[i + 1].trim();
 				}
 
 				String line;
+
 				while ((line = reader.readLine()) != null) {
 					line = line.trim();
+
 					if (line.length() == 0 || line.charAt(0) == '#') {
 						continue;
 					}
 
 					String[] parts = line.split("\t");
+
 					for (int i = 0; i < parts.length; i++) {
 						parts[i] = parts[i].trim();
 					}
 
 					StringBuilder prefix = new StringBuilder();
 					prefix.append(parts[0]);
+
 					for (int i = 1; i < parts.length - typeCount; i++) {
 						prefix.append('\t');
 						prefix.append(parts[i]);
@@ -143,15 +157,18 @@ public class CommandMergeTiny extends Command {
 
 					for (int i = 0; i < (type == TinyEntryType.CLASS ? path.length - 1 : path.length); i++) {
 						TinyEntry nextParent = parent.getChild(indexList[0], path[i]);
+
 						if (nextParent == null) {
 							nextParent = new TinyEntry(TinyEntryType.CLASS, "CLASS");
 							nextParent.names.put(indexList[0], path[i]);
 							parent.addChild(nextParent, "");
 						}
+
 						parent = nextParent;
 					}
 
 					TinyEntry entry;
+
 					if (type == TinyEntryType.CLASS && parent.containsChild(indexList[0], path[path.length - 1])) {
 						entry = parent.getChild(indexList[0], path[path.length - 1]);
 					} else {
@@ -159,8 +176,10 @@ public class CommandMergeTiny extends Command {
 					}
 
 					String[] names = new String[typeCount];
+
 					for (int i = 0; i < typeCount; i++) {
 						names[i] = parts[parts.length - typeCount + i];
+
 						if (type == TinyEntryType.CLASS) {
 							// add classes by their final inner class name
 							String[] splitly = names[i].split("\\$");
@@ -171,26 +190,25 @@ public class CommandMergeTiny extends Command {
 					}
 
 					switch (type) {
-						case CLASS:
-							parent.addChild(entry, "");
-							break;
-						case FIELD:
-						case METHOD:
-							parent.addChild(entry, parts[2]);
-							break;
+					case CLASS:
+						parent.addChild(entry, "");
+						break;
+					case FIELD:
+					case METHOD:
+						parent.addChild(entry, parts[2]);
+						break;
 					}
 				}
 			}
 		}
-/*
-		public String match(String[] entries, String key) {
-			if (indexMap.containsKey(key)) {
-				return entries[indexMap.get(key)];
-			} else {
-				return null;
-			}
-		}
-*/
+
+		// public String match(String[] entries, String key) {
+		// 	if (indexMap.containsKey(key)) {
+		// 		return entries[indexMap.get(key)];
+		// 	} else {
+		// 		return null;
+		// 	}
+		// }
 	}
 
 	private List<String> mappingBlankFillOrder = new ArrayList<>();
@@ -221,6 +239,7 @@ public class CommandMergeTiny extends Command {
 			// First, map to the shared index name (sharedIndexName)
 			String officialPath = a.names.get(sharedIndexName);
 			TinyEntry officialEntry = a.getParent();
+
 			while (officialEntry.type == TinyEntryType.CLASS) {
 				officialPath = officialEntry.names.get(sharedIndexName) + "$" + officialPath;
 				officialEntry = officialEntry.getParent();
@@ -305,11 +324,12 @@ public class CommandMergeTiny extends Command {
 
 		for (String index : totalIndexList) {
 			entry.append('\t');
-
 			String match = getMatch(a, b, index, index);
+
 			if (match == null) {
 				for (String s : mappingBlankFillOrder) {
 					match = getMatch(a, b, s, index);
+
 					if (match != null) {
 						break;
 					}
@@ -345,6 +365,7 @@ public class CommandMergeTiny extends Command {
 		Set<String> subKeys = new TreeSet<>();
 		if (classA != null) subKeys.addAll(classA.getChildRow(index).keySet());
 		if (classB != null) subKeys.addAll(classB.getChildRow(index).keySet());
+
 		for (String cc : subKeys) {
 			write(classA, classB, index, cc, writer, totalIndexList, indent + 1);
 		}
@@ -364,6 +385,7 @@ public class CommandMergeTiny extends Command {
 		inputB = new TinyFile(inputBf);
 
 		System.out.println("Processing...");
+
 		try (BufferedWriter writer = Files.newBufferedWriter(outputf.toPath(), Charset.forName("UTF-8"))) {
 			if (!inputA.indexList[0].equals(inputB.indexList[0])) {
 				throw new RuntimeException("TODO");
@@ -374,20 +396,24 @@ public class CommandMergeTiny extends Command {
 			// Set<String> matchedIndexes = Sets.intersection(inputA.indexMap.keySet(), inputB.indexMap.keySet());
 			Set<String> matchedIndexes = Collections.singleton(inputA.indexList[0]);
 			List<String> totalIndexList = new ArrayList<>(Arrays.asList(inputA.indexList));
+
 			for (String s : inputB.indexList) {
 				if (!totalIndexList.contains(s)) {
 					totalIndexList.add(s);
 				}
 			}
+
 			int totalIndexCount = totalIndexList.size();
 
 			// emit header
 			StringBuilder header = new StringBuilder();
 			header.append("v1");
+
 			for (String s : totalIndexList) {
 				header.append('\t');
 				header.append(s);
 			}
+
 			writer.write(header.append('\n').toString());
 
 			// collect classes
@@ -401,6 +427,7 @@ public class CommandMergeTiny extends Command {
 				write(inputA.root, inputB.root, index, c, writer, totalIndexList, 0);
 			}
 		}
+
 		System.out.println("Done!");
 	}
 
@@ -409,8 +436,8 @@ public class CommandMergeTiny extends Command {
 		File inputAf = new File(args[0]);
 		File inputBf = new File(args[1]);
 		File outputf = new File(args[2]);
-
 		String[] mbforder = new String[args.length - 3];
+
 		for (int i = 3; i < args.length; i++) {
 			mbforder[i - 3] = args[i];
 		}

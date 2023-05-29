@@ -16,12 +16,18 @@
 
 package net.fabricmc.stitch.commands;
 
-import net.fabricmc.stitch.Command;
-import net.fabricmc.stitch.util.MatcherUtil;
-
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
 import java.util.HashMap;
 import java.util.Map;
+
+import net.fabricmc.stitch.Command;
+import net.fabricmc.stitch.util.MatcherUtil;
 
 public class CommandMatcherToTiny extends Command {
 	public CommandMatcherToTiny() {
@@ -45,26 +51,19 @@ public class CommandMatcherToTiny extends Command {
 		Map<String, String> methodNames = new HashMap<>();
 
 		System.out.println("Loading...");
-		try (
-				FileInputStream fis = new FileInputStream(new File(args[0]));
+		try (FileInputStream fis = new FileInputStream(new File(args[0]));
 				InputStreamReader isr = new InputStreamReader(fis);
-				BufferedReader reader = new BufferedReader(isr)
-				) {
-
+				BufferedReader reader = new BufferedReader(isr)) {
 			MatcherUtil.read(reader, false,
 					classNames::put,
 					(src, dst) -> fieldNames.put(src.getOwner() + "\t" + src.getDesc() + "\t" + src.getName(), dst.getName()),
-					(src, dst) -> methodNames.put(src.getOwner() + "\t" + src.getDesc() + "\t" + src.getName(), dst.getName())
-			);
+					(src, dst) -> methodNames.put(src.getOwner() + "\t" + src.getDesc() + "\t" + src.getName(), dst.getName()));
 		}
 
 		System.out.println("Saving...");
-		try (
-				FileOutputStream fos = new FileOutputStream(new File(args[1]));
+		try (FileOutputStream fos = new FileOutputStream(new File(args[1]));
 				OutputStreamWriter osw = new OutputStreamWriter(fos);
-				BufferedWriter writer = new BufferedWriter(osw)
-				) {
-
+				BufferedWriter writer = new BufferedWriter(osw)) {
 			writer.write("v1\t" + args[2] + "\t" + args[3] + "\n");
 
 			for (String s : classNames.keySet()) {

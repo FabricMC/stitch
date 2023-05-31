@@ -30,6 +30,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Scanner;
 import java.util.Set;
@@ -69,7 +70,7 @@ class GenState {
 	private static final int officialIndex = -1;
 	private static final int intermediaryIndex = 0;
 	private final MemoryMappingTree mappingTree = new MemoryMappingTree();
-	private final Map<String, Integer> counters = new HashMap<>();
+	private final Map<IntermediaryType, Integer> counters = new HashMap<>();
 	private final Map<AbstractJarEntry, Integer> values = new IdentityHashMap<>();
 	private MappingFormat counterFileFormat = MappingFormat.TINY;
 	private MappingFormat mappingFileFormat = MappingFormat.TINY;
@@ -79,6 +80,18 @@ class GenState {
 	private boolean writeAll = false;
 	private Scanner scanner = new Scanner(System.in);
 	private String targetPackage = "";
+
+	public enum IntermediaryType {
+		CLASS("class"),
+		FIELD("field"),
+		METHOD("method");
+
+		public final String prefix;
+
+		IntermediaryType(String prefix) {
+			this.prefix = prefix;
+		}
+	}
 
 	GenState() throws IOException {
 		mappingTree.visitNamespaces(official, Arrays.asList(intermediary));
@@ -131,19 +144,19 @@ class GenState {
 		interactive = false;
 	}
 
-	public String next(AbstractJarEntry entry, String name) {
-		return name + "_" + values.computeIfAbsent(entry, (e) -> {
-			int v = counters.getOrDefault(name, 1);
-			counters.put(name, v + 1);
+	public String next(AbstractJarEntry entry, IntermediaryType type) {
+		return type.prefix + "_" + values.computeIfAbsent(entry, (e) -> {
+			int v = counters.getOrDefault(type, 1);
+			counters.put(type, v + 1);
 			return v;
 		});
 	}
 
-	public void setCounter(String key, int value) {
+	public void setCounter(IntermediaryType key, int value) {
 		counters.put(key, value);
 	}
 
-	public Map<String, Integer> getCounters() {
+	public Map<IntermediaryType, Integer> getCounters() {
 		return Collections.unmodifiableMap(counters);
 	}
 
@@ -242,16 +255,16 @@ class GenState {
 		}
 
 		if (existingName != null) {
-			if (existingName.contains("field_")) {
+			if (existingName.contains(IntermediaryType.FIELD.prefix + "_")) {
 				return existingName;
 			} else {
-				String newName = next(f, "field");
+				String newName = next(f, IntermediaryType.FIELD);
 				System.out.println(existingName + " is now " + newName);
 				return newName;
 			}
 		}
 
-		return next(f, "field");
+		return next(f, IntermediaryType.FIELD);
 	}
 
 	private final Map<JarMethodEntry, String> methodNames = new IdentityHashMap<>();
@@ -431,17 +444,17 @@ class GenState {
 					methodNames.put(mm, s);
 				}
 
-				if (s.contains("method_")) {
+				if (s.contains(IntermediaryType.METHOD.prefix + "_")) {
 					return s;
 				} else {
-					String newName = next(m, "method");
+					String newName = next(m, IntermediaryType.METHOD);
 					System.out.println(s + " is now " + newName);
 					return newName;
 				}
 			}
 		}
 
-		return next(m, "method");
+		return next(m, IntermediaryType.METHOD);
 	}
 
 	private MappingTree addClass(JarClassEntry c, ClassStorage storageOld, ClassStorage storage, String prefix) throws IOException {
@@ -485,12 +498,12 @@ class GenState {
 				}
 			}
 
-			if (cName != null && !cName.contains("class_")) {
-				System.out.println(cName + " is now " + (cName = next(c, "class")));
+			if (cName != null && !cName.contains(IntermediaryType.CLASS.prefix + "_")) {
+				System.out.println(cName + " is now " + (cName = next(c, IntermediaryType.CLASS)));
 				prefix = origPrefix;
 				anyIntermediaries = true;
 			} else if (cName == null) {
-				cName = next(c, "class");
+				cName = next(c, IntermediaryType.CLASS);
 				anyIntermediaries = true;
 			}
 		}
@@ -598,7 +611,14 @@ class GenState {
 				while ((line = reader.readLine()) != null) {
 					if (line.startsWith("# INTERMEDIARY-COUNTER")) {
 						String[] parts = line.split(" ");
-						counters.put(parts[2], Integer.parseInt(parts[3]));
+						IntermediaryType type;
+
+						try {
+							type = IntermediaryType.valueOf(parts[2].toUpperCase(Locale.ROOT));
+							counters.put(type, Integer.parseInt(parts[3]));
+						} catch (IllegalArgumentException e) {
+							System.err.println("Encountered unknown intermediary type '" + parts[2] + "'");
+						}
 					}
 				}
 			}
@@ -607,13 +627,13 @@ class GenState {
 
 	private void readCountersFromTree(MappingTree tree) {
 		String counter = tree.getMetadata("next-intermediary-class");
-		if (counter != null) counters.put("class", Integer.parseInt(counter));
+		if (counter != null) counters.put(IntermediaryType.CLASS, Integer.parseInt(counter));
 
 		counter = tree.getMetadata("next-intermediary-field");
-		if (counter != null) counters.put("field", Integer.parseInt(counter));
+		if (counter != null) counters.put(IntermediaryType.FIELD, Integer.parseInt(counter));
 
 		counter = tree.getMetadata("next-intermediary-method");
-		if (counter != null) counters.put("method", Integer.parseInt(counter));
+		if (counter != null) counters.put(IntermediaryType.METHOD, Integer.parseInt(counter));
 	}
 
 	private void writeCounters() throws IOException {
@@ -628,9 +648,9 @@ class GenState {
 			mappingTree.visitNamespaces(official, Arrays.asList(intermediary));
 		}
 
-		mappingTree.visitMetadata("next-intermediary-class", counters.getOrDefault("class", 0).toString());
-		mappingTree.visitMetadata("next-intermediary-field", counters.getOrDefault("field", 0).toString());
-		mappingTree.visitMetadata("next-intermediary-method", counters.getOrDefault("method", 0).toString());
+		mappingTree.visitMetadata("next-intermediary-class", counters.getOrDefault(IntermediaryType.CLASS, 0).toString());
+		mappingTree.visitMetadata("next-intermediary-field", counters.getOrDefault(IntermediaryType.FIELD, 0).toString());
+		mappingTree.visitMetadata("next-intermediary-method", counters.getOrDefault(IntermediaryType.METHOD, 0).toString());
 
 		if (counterPath != null) {
 			MappingWriter writer = MappingWriter.create(counterPath, counterFileFormat);

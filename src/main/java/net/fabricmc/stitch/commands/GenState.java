@@ -447,6 +447,7 @@ class GenState {
 	private MappingTree addClass(JarClassEntry c, ClassStorage storageOld, ClassStorage storage, String prefix) throws IOException {
 		String cName = "";
 		String origPrefix = prefix;
+		boolean anyIntermediaries = false;
 
 		if (!needsIntermediaryName(storage, c)) {
 			cName = c.getName();
@@ -487,12 +488,13 @@ class GenState {
 			if (cName != null && !cName.contains("class_")) {
 				System.out.println(cName + " is now " + (cName = next(c, "class")));
 				prefix = origPrefix;
+				anyIntermediaries = true;
 			} else if (cName == null) {
 				cName = next(c, "class");
+				anyIntermediaries = true;
 			}
 		}
 
-		boolean wroteAnyIntermediaries = false;
 		MemoryMappingTree mappingTree = new MemoryMappingTree();
 		mappingTree.visitNamespaces(official, Arrays.asList(intermediary));
 
@@ -503,7 +505,7 @@ class GenState {
 			String fName = getFieldName(storage, c, f);
 
 			if (fName != null || writeAll) {
-				wroteAnyIntermediaries = true;
+				anyIntermediaries = true;
 				if (fName == null) fName = f.getName();
 			}
 
@@ -517,7 +519,7 @@ class GenState {
 			String mName = getMethodName(storageOld, storage, c, m);
 
 			if (mName != null || writeAll) {
-				wroteAnyIntermediaries = true;
+				anyIntermediaries = true;
 				if (mName == null) mName = m.getName();
 			}
 
@@ -532,11 +534,11 @@ class GenState {
 
 			if (ccMappingTree != null) {
 				ccMappingTree.accept(mappingTree);
-				wroteAnyIntermediaries = true;
+				anyIntermediaries = true;
 			}
 		}
 
-		return wroteAnyIntermediaries || writeAll ? mappingTree : null;
+		return anyIntermediaries || writeAll ? mappingTree : null;
 	}
 
 	public void prepareRewrite(File oldMappings) throws IOException {

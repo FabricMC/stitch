@@ -16,17 +16,17 @@
 
 package net.fabricmc.stitch.util;
 
-import org.objectweb.asm.ClassVisitor;
-import org.objectweb.asm.FieldVisitor;
-import org.objectweb.asm.MethodVisitor;
-import org.objectweb.asm.Opcodes;
-import org.objectweb.asm.tree.MethodNode;
-
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+
+import org.objectweb.asm.ClassVisitor;
+import org.objectweb.asm.FieldVisitor;
+import org.objectweb.asm.MethodVisitor;
+import org.objectweb.asm.Opcodes;
+import org.objectweb.asm.tree.MethodNode;
 
 public class NameFinderVisitor extends ClassVisitor {
 	private String owner;
@@ -52,6 +52,7 @@ public class NameFinderVisitor extends ClassVisitor {
 				throw new IllegalArgumentException("Found two enum fields with the same name \"" + name + "\"!");
 			}
 		}
+
 		return super.visitField(access, name, descriptor, signature, value);
 	}
 

@@ -1,0 +1,30 @@
+archivesBaseName = 'stitch-minecraft-plugin'
+version = rootProject.version
+group = rootProject.group
+
+dependencies {
+	implementation project(':')
+}
+
+def ENV = System.getenv()
+
+publishing {
+	publications {
+		mavenJava(MavenPublication) {
+			from components.java
+		}
+	}
+
+	repositories {
+		if (ENV.MAVEN_URL) {
+			repositories.maven {
+				name 'fabric'
+				url ENV.MAVEN_URL
+				credentials {
+					username ENV.MAVEN_USERNAME
+					password ENV.MAVEN_PASSWORD
+				}
+			}
+		}
+	}
+}

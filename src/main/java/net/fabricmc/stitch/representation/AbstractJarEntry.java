@@ -17,41 +17,41 @@
 package net.fabricmc.stitch.representation;
 
 public abstract class AbstractJarEntry {
-    protected String name;
-    protected int access;
+	protected String name;
+	protected int access;
 
-    public AbstractJarEntry(String name) {
-        this.name = name;
-    }
+	public AbstractJarEntry(String name) {
+		this.name = name;
+	}
 
-    public int getAccess() {
-        return access;
-    }
+	public int getAccess() {
+		return access;
+	}
 
-    protected void setAccess(int value) {
-        this.access = value;
-    }
+	protected void setAccess(int value) {
+		this.access = value;
+	}
 
-    public String getName() {
-        return name;
-    }
+	public String getName() {
+		return name;
+	}
 
-    protected String getKey() {
-        return name;
-    }
+	protected String getKey() {
+		return name;
+	}
 
-    @Override
-    public boolean equals(Object other) {
-        return other != null && other.getClass() == getClass() && ((AbstractJarEntry) other).getKey().equals(getKey());
-    }
+	@Override
+	public boolean equals(Object other) {
+		return other != null && other.getClass() == getClass() && ((AbstractJarEntry) other).getKey().equals(getKey());
+	}
 
-    @Override
-    public int hashCode() {
-        return getKey().hashCode();
-    }
+	@Override
+	public int hashCode() {
+		return getKey().hashCode();
+	}
 
-    @Override
-    public String toString() {
-        return getClass().getSimpleName() + "(" + getKey() + ")";
-    }
+	@Override
+	public String toString() {
+		return getClass().getSimpleName() + "(" + getKey() + ")";
+	}
 }

@@ -16,61 +16,62 @@
 
 package net.fabricmc.stitch.commands;
 
-import net.fabricmc.stitch.Command;
-import net.fabricmc.stitch.representation.JarRootEntry;
-import net.fabricmc.stitch.representation.JarReader;
-
 import java.io.File;
 import java.io.IOException;
 import java.util.Locale;
 
+import net.fabricmc.stitch.Command;
+import net.fabricmc.stitch.representation.JarReader;
+import net.fabricmc.stitch.representation.JarRootEntry;
+
 public class CommandRewriteIntermediary extends Command {
-    public CommandRewriteIntermediary() {
-        super("rewriteIntermediary");
-    }
+	public CommandRewriteIntermediary() {
+		super("rewriteIntermediary");
+	}
 
-    @Override
-    public String getHelpString() {
-        return "<jar> <old-mapping-file> <new-mapping-file> [--writeAll]";
-    }
+	@Override
+	public String getHelpString() {
+		return "<jar> <old-mapping-file> <new-mapping-file> [--write-all]";
+	}
 
-    @Override
-    public boolean isArgumentCountValid(int count) {
-        return count >= 3;
-    }
+	@Override
+	public boolean isArgumentCountValid(int count) {
+		return count >= 3;
+	}
 
-    @Override
-    public void run(String[] args) throws Exception {
-        File fileOld = new File(args[0]);
-        JarRootEntry jarOld = new JarRootEntry(fileOld);
-        try {
-            JarReader reader = new JarReader(jarOld);
-            reader.apply();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+	@Override
+	public void run(String[] args) throws Exception {
+		File fileOld = new File(args[0]);
+		JarRootEntry jarOld = new JarRootEntry(fileOld);
 
-        GenState state = new GenState();
+		try {
+			JarReader reader = new JarReader(jarOld);
+			reader.apply();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
 
-        for (int i = 3; i < args.length; i++) {
-            switch (args[i].toLowerCase(Locale.ROOT)) {
-                case "--writeall":
-                    state.setWriteAll(true);
-                    break;
-            }
-        }
+		GenState state = new GenState();
 
-        System.err.println("Loading mapping file...");
-        state.prepareRewrite(new File(args[1]));
+		for (int i = 3; i < args.length; i++) {
+			switch (args[i].toLowerCase(Locale.ROOT)) {
+			case "--write-all":
+				state.setWriteAll(true);
+				break;
+			}
+		}
 
-        File outFile = new File(args[2]);
-        if (outFile.exists()) {
-            outFile.delete();
-        }
+		System.err.println("Loading mapping file...");
+		state.prepareRewrite(new File(args[1]));
 
-        System.err.println("Rewriting mappings...");
-        state.generate(outFile, jarOld, jarOld);
-        System.err.println("Done!");
-    }
+		File outFile = new File(args[2]);
 
+		if (outFile.exists()) {
+			outFile.delete();
+		}
+
+		System.err.println("Rewriting mappings...");
+		state.generate(outFile, jarOld, jarOld);
+		System.err.println("Done!");
+	}
 }

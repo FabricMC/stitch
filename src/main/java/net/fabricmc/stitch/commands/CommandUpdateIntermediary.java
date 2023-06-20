@@ -16,76 +16,71 @@
 
 package net.fabricmc.stitch.commands;
 
-import net.fabricmc.stitch.Command;
-import net.fabricmc.stitch.representation.*;
-
 import java.io.File;
 import java.io.IOException;
 import java.util.Locale;
 
+import net.fabricmc.stitch.Command;
+import net.fabricmc.stitch.representation.JarReader;
+import net.fabricmc.stitch.representation.JarRootEntry;
+
 public class CommandUpdateIntermediary extends Command {
-    public CommandUpdateIntermediary() {
-        super("updateIntermediary");
-    }
+	public CommandUpdateIntermediary() {
+		super("updateIntermediary");
+	}
 
-    @Override
-    public String getHelpString() {
-        return "<old-jar> <new-jar> <old-mapping-file> <new-mapping-file> <match-file> [-t|--target-namespace <namespace>] [-p|--obfuscation-pattern <regex pattern>]";
-    }
+	@Override
+	public String getHelpString() {
+		return "<old-jar> <new-jar> <old-mapping-file> <new-mapping-file> <match-file> [-t|--target-namespace <namespace>] [--write-all]";
+	}
 
-    @Override
-    public boolean isArgumentCountValid(int count) {
-        return count >= 5;
-    }
+	@Override
+	public boolean isArgumentCountValid(int count) {
+		return count >= 5;
+	}
 
-    @Override
-    public void run(String[] args) throws Exception {
-        File fileOld = new File(args[0]);
-        JarRootEntry jarOld = new JarRootEntry(fileOld);
-        try {
-            JarReader reader = new JarReader(jarOld);
-            reader.apply();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+	@Override
+	public void run(String[] args) throws Exception {
+		File fileOld = new File(args[0]);
+		JarRootEntry jarOld = new JarRootEntry(fileOld);
 
-        File fileNew = new File(args[1]);
-        JarRootEntry jarNew = new JarRootEntry(fileNew);
-        try {
-            JarReader reader = new JarReader(jarNew);
-            reader.apply();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+		try {
+			JarReader reader = new JarReader(jarOld);
+			reader.apply();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
 
-        GenState state = new GenState();
-        boolean clearedPatterns = false;
+		File fileNew = new File(args[1]);
+		JarRootEntry jarNew = new JarRootEntry(fileNew);
 
-        for (int i = 5; i < args.length; i++) {
-            switch (args[i].toLowerCase(Locale.ROOT)) {
-                case "-t":
-                case "--target-namespace":
-                    state.setTargetNamespace(args[i + 1]);
-                    i++;
-                    break;
-                case "-p":
-                case "--obfuscation-pattern":
-                    if (!clearedPatterns)
-                        state.clearObfuscatedPatterns();
-                    clearedPatterns = true;
+		try {
+			JarReader reader = new JarReader(jarNew);
+			reader.apply();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
 
-                    state.addObfuscatedPattern(args[i + 1]);
-                    i++;
-                    break;
-            }
-        }
+		GenState state = new GenState();
 
-        System.err.println("Loading remapping files...");
-        state.prepareUpdate(new File(args[2]), new File(args[4]));
+		for (int i = 5; i < args.length; i++) {
+			switch (args[i].toLowerCase(Locale.ROOT)) {
+			case "-t":
+			case "--target-namespace":
+				state.setTargetPackage(args[i + 1]);
+				i++;
+				break;
+			case "--write-all":
+				state.setWriteAll(true);
+				break;
+			}
+		}
 
-        System.err.println("Generating new mappings...");
-        state.generate(new File(args[3]), jarNew, jarOld);
-        System.err.println("Done!");
-    }
+		System.err.println("Loading remapping files...");
+		state.prepareUpdate(new File(args[2]), new File(args[4]));
 
+		System.err.println("Generating new mappings...");
+		state.generate(new File(args[3]), jarNew, jarOld);
+		System.err.println("Done!");
+	}
 }

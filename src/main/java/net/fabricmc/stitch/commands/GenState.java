@@ -498,9 +498,12 @@ class GenState {
 				}
 			}
 
-			if (cName != null && !cName.contains(IntermediaryType.CLASS.prefix + "_")) {
-				System.out.println(cName + " is now " + (cName = next(c, IntermediaryType.CLASS)));
-				prefix = origPrefix;
+			if (cName != null && cName != c.getName()) {
+				if (!cName.contains(IntermediaryType.CLASS.prefix + "_")) {
+					System.out.println(cName + " is now " + (cName = next(c, IntermediaryType.CLASS)));
+					prefix = origPrefix;
+				}
+
 				anyIntermediaries = true;
 			} else if (cName == null) {
 				cName = next(c, IntermediaryType.CLASS);
